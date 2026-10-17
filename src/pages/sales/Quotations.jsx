@@ -5,7 +5,13 @@ import { useStore } from "@/hooks/use-store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -14,7 +20,7 @@ import {
   Search01Icon,
   CheckmarkBadgeIcon,
   ArrowLeft01Icon,
-  ArrowRight01Icon
+  ArrowRight01Icon,
 } from "@hugeicons/core-free-icons";
 
 export default function Quotations() {
@@ -85,7 +91,12 @@ export default function Quotations() {
 
   // Convert Quotation to Invoice (One-click!)
   const handleConvertQuote = async (quote) => {
-    if (!window.confirm("Convert this quotation to a completed invoice? This updates inventory stock counts.")) return;
+    if (
+      !window.confirm(
+        "Convert this quotation to a completed invoice? This updates inventory stock counts.",
+      )
+    )
+      return;
 
     // Parse quotation items
     let parsedItems = [];
@@ -103,7 +114,7 @@ export default function Quotations() {
       product_name: item.product_name,
       quantity: item.quantity,
       unit_price: item.price || item.unit_price,
-      total: item.total
+      total: item.total,
     }));
 
     try {
@@ -116,12 +127,22 @@ export default function Quotations() {
         total: quote.total,
         amountPaid: quote.total, // assume paid in cash fully on convert
         paymentMethod: "CASH",
-        items
+        items,
       });
       alert("Successfully converted quotation to Invoice #" + invoice.id.substring(0, 8));
       navigate("/sales/invoices");
     } catch (e) {
       alert("Failed to convert quotation: " + e);
+    }
+  };
+
+  // Was referenced by the table headers but never defined (clicking a header threw).
+  const toggleSort = (field) => {
+    if (sortBy === field) {
+      setSortOrder(sortOrder === "ASC" ? "DESC" : "ASC");
+    } else {
+      setSortBy(field);
+      setSortOrder("ASC");
     }
   };
 
@@ -136,9 +157,13 @@ export default function Quotations() {
       setQuoteItems(
         quoteItems.map((item) =>
           item.product_id === prod.id
-            ? { ...item, quantity: item.quantity + selectedProductQty, total: (item.quantity + selectedProductQty) * item.price }
-            : item
-        )
+            ? {
+                ...item,
+                quantity: item.quantity + selectedProductQty,
+                total: (item.quantity + selectedProductQty) * item.price,
+              }
+            : item,
+        ),
       );
     } else {
       setQuoteItems([
@@ -150,8 +175,8 @@ export default function Quotations() {
           quantity: selectedProductQty,
           price: prod.price,
           cost: prod.cost,
-          total: prod.price * selectedProductQty
-        }
+          total: prod.price * selectedProductQty,
+        },
       ]);
     }
     setSelectedProductId("");
@@ -182,7 +207,7 @@ export default function Quotations() {
         customerId: selectedCustomerId,
         total,
         status: "PENDING",
-        items
+        items,
       });
       setIsQuoteModalOpen(false);
       setQuoteItems([]);
@@ -195,28 +220,32 @@ export default function Quotations() {
 
   return (
     <div>
-
       {loading ? (
         <div className="flex h-[40vh] items-center justify-center">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
         </div>
       ) : (
         <div className="space-y-4">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-            <div className="flex flex-1 gap-2 w-full sm:w-auto">
-              <div className="relative flex-1 max-w-sm">
-                <HugeiconsIcon icon={Search01Icon} size={18} strokeWidth={2} className="absolute left-3 top-2.5 text-muted-foreground" />
+          <div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
+            <div className="flex w-full flex-1 gap-2 sm:w-auto">
+              <div className="relative max-w-sm flex-1">
+                <HugeiconsIcon
+                  icon={Search01Icon}
+                  size={18}
+                  strokeWidth={2}
+                  className="absolute top-2.5 left-3 text-muted-foreground"
+                />
                 <Input
                   placeholder="Search quotations by customer name..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9 bg-card border-border/40"
+                  className="border-border/40 bg-card pl-9"
                 />
               </div>
               <select
                 value={selectedStatus}
                 onChange={(e) => setSelectedStatus(e.target.value)}
-                className="p-2 border rounded-md text-xs bg-card border-border/40 text-foreground max-w-xs focus:outline-none"
+                className="max-w-xs rounded-md border border-border/40 bg-card p-2 text-xs text-foreground focus:outline-none"
               >
                 <option value="">All Statuses</option>
                 <option value="PENDING">Pending</option>
@@ -231,25 +260,42 @@ export default function Quotations() {
           <Card className="border-border/40 bg-card/65 backdrop-blur-sm">
             <CardContent className="p-0">
               <div className="overflow-x-auto">
-                <table className="w-full text-sm text-left border-collapse">
+                <table className="w-full border-collapse text-left text-sm">
                   <thead>
-                    <tr className="border-b border-border/40 text-muted-foreground text-xs uppercase bg-muted/20">
-                      <th className="p-4 font-medium cursor-pointer select-none" onClick={() => toggleSort("created_at")}>
+                    <tr className="border-b border-border/40 bg-muted/20 text-xs text-muted-foreground uppercase">
+                      <th
+                        className="cursor-pointer p-4 font-medium select-none"
+                        onClick={() => toggleSort("created_at")}
+                      >
                         Date {sortBy === "created_at" ? (sortOrder === "ASC" ? "▲" : "▼") : ""}
                       </th>
-                      <th className="p-4 font-medium cursor-pointer select-none" onClick={() => toggleSort("id")}>
+                      <th
+                        className="cursor-pointer p-4 font-medium select-none"
+                        onClick={() => toggleSort("id")}
+                      >
                         Quotation ID {sortBy === "id" ? (sortOrder === "ASC" ? "▲" : "▼") : ""}
                       </th>
-                      <th className="p-4 font-medium cursor-pointer select-none" onClick={() => toggleSort("customer_name")}>
-                        Customer Name {sortBy === "customer_name" ? (sortOrder === "ASC" ? "▲" : "▼") : ""}
+                      <th
+                        className="cursor-pointer p-4 font-medium select-none"
+                        onClick={() => toggleSort("customer_name")}
+                      >
+                        Customer Name{" "}
+                        {sortBy === "customer_name" ? (sortOrder === "ASC" ? "▲" : "▼") : ""}
                       </th>
-                      <th className="p-4 font-medium text-right cursor-pointer select-none" onClick={() => toggleSort("total")}>
-                        Estimated Total {sortBy === "total" ? (sortOrder === "ASC" ? "▲" : "▼") : ""}
+                      <th
+                        className="cursor-pointer p-4 text-right font-medium select-none"
+                        onClick={() => toggleSort("total")}
+                      >
+                        Estimated Total{" "}
+                        {sortBy === "total" ? (sortOrder === "ASC" ? "▲" : "▼") : ""}
                       </th>
-                      <th className="p-4 font-medium text-center cursor-pointer select-none" onClick={() => toggleSort("status")}>
+                      <th
+                        className="cursor-pointer p-4 text-center font-medium select-none"
+                        onClick={() => toggleSort("status")}
+                      >
                         Status {sortBy === "status" ? (sortOrder === "ASC" ? "▲" : "▼") : ""}
                       </th>
-                      <th className="p-4 font-medium text-right">Actions</th>
+                      <th className="p-4 text-right font-medium">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border/20">
@@ -258,17 +304,22 @@ export default function Quotations() {
                         <td className="p-4 font-mono text-xs text-muted-foreground">
                           {new Date(q.created_at).toLocaleString()}
                         </td>
-                        <td className="p-4 font-semibold font-mono text-xs">
+                        <td className="p-4 font-mono text-xs font-semibold">
                           #{q.id.substring(0, 8).toUpperCase()}
                         </td>
                         <td className="p-4 font-medium">{q.customer_name}</td>
-                        <td className="p-4 text-right font-mono font-bold">{currencySymbol}{q.total.toFixed(2)}</td>
+                        <td className="p-4 text-right font-mono font-bold">
+                          {currencySymbol}
+                          {q.total.toFixed(2)}
+                        </td>
                         <td className="p-4 text-center">
-                          <span className={`px-2 py-0.5 text-[10px] font-semibold rounded-full border ${
-                            q.status === "PENDING"
-                              ? "bg-amber-500/10 text-amber-600 border-amber-500/20"
-                              : "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
-                          }`}>
+                          <span
+                            className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${
+                              q.status === "PENDING"
+                                ? "border-amber-500/20 bg-amber-500/10 text-amber-600"
+                                : "border-emerald-500/20 bg-emerald-500/10 text-emerald-600"
+                            }`}
+                          >
                             {q.status}
                           </span>
                         </td>
@@ -277,10 +328,11 @@ export default function Quotations() {
                             <Button
                               size="sm"
                               variant="outline"
-                              className="h-8 border-emerald-500/20 text-emerald-600 hover:bg-emerald-500/10 text-xs flex items-center gap-1 ml-auto"
+                              className="ml-auto flex h-8 items-center gap-1 border-emerald-500/20 text-xs text-emerald-600 hover:bg-emerald-500/10"
                               onClick={() => handleConvertQuote(q)}
                             >
-                              <HugeiconsIcon icon={CheckmarkBadgeIcon} size={12} /> Convert to Invoice
+                              <HugeiconsIcon icon={CheckmarkBadgeIcon} size={12} /> Convert to
+                              Invoice
                             </Button>
                           )}
                         </td>
@@ -288,7 +340,7 @@ export default function Quotations() {
                     ))}
                     {quotations.length === 0 && (
                       <tr>
-                        <td colSpan={6} className="py-8 text-center text-muted-foreground text-xs">
+                        <td colSpan={6} className="py-8 text-center text-xs text-muted-foreground">
                           No quotations active. Create customer quotes to display here.
                         </td>
                       </tr>
@@ -298,7 +350,7 @@ export default function Quotations() {
               </div>
 
               {/* Pagination controls */}
-              <div className="p-4 border-t border-border/40 flex flex-col sm:flex-row justify-between items-center gap-4 text-xs text-muted-foreground print:hidden">
+              <div className="flex flex-col items-center justify-between gap-4 border-t border-border/40 p-4 text-xs text-muted-foreground sm:flex-row print:hidden">
                 <div className="flex items-center gap-2">
                   <span>Rows per page:</span>
                   <select
@@ -307,7 +359,7 @@ export default function Quotations() {
                       setLimit(parseInt(e.target.value));
                       setPage(1);
                     }}
-                    className="p-1 border rounded bg-card border-border/40 text-foreground text-xs focus:outline-none"
+                    className="rounded border border-border/40 bg-card p-1 text-xs text-foreground focus:outline-none"
                   >
                     <option value={5}>5</option>
                     <option value={10}>10</option>
@@ -324,7 +376,9 @@ export default function Quotations() {
                   >
                     <HugeiconsIcon icon={ArrowLeft01Icon} size={14} />
                   </Button>
-                  <span className="px-2 font-medium">Page {page} of {Math.ceil(totalCount / limit) || 1}</span>
+                  <span className="px-2 font-medium">
+                    Page {page} of {Math.ceil(totalCount / limit) || 1}
+                  </span>
                   <Button
                     variant="outline"
                     size="icon"
@@ -342,7 +396,7 @@ export default function Quotations() {
 
       {/* Quotation Creator Dialog */}
       <Dialog open={isQuoteModalOpen} onOpenChange={setIsQuoteModalOpen}>
-        <DialogContent className="sm:max-w-lg font-sans">
+        <DialogContent className="font-sans sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>New Sales Quotation</DialogTitle>
           </DialogHeader>
@@ -350,32 +404,43 @@ export default function Quotations() {
             <div className="space-y-2">
               <Label>Customer *</Label>
               <select
-                className="w-full p-2 border rounded-md text-sm bg-card border-border/40 text-foreground"
+                className="w-full rounded-md border border-border/40 bg-card p-2 text-sm text-foreground"
                 value={selectedCustomerId}
                 onChange={(e) => setSelectedCustomerId(e.target.value)}
                 required
               >
-                <option value="" disabled>Choose Customer</option>
+                <option value="" disabled>
+                  Choose Customer
+                </option>
                 {customers.map((c) => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
                 ))}
               </select>
             </div>
 
             {/* Item selector block */}
-            <div className="border p-3 rounded-lg bg-muted/10 space-y-3">
-              <h4 className="text-xs font-semibold text-muted-foreground uppercase">Add Quotation Items</h4>
-              <div className="grid grid-cols-3 gap-2 items-end">
+            <div className="space-y-3 rounded-lg border bg-muted/10 p-3">
+              <h4 className="text-xs font-semibold text-muted-foreground uppercase">
+                Add Quotation Items
+              </h4>
+              <div className="grid grid-cols-3 items-end gap-2">
                 <div className="col-span-2">
                   <Label className="text-[10px]">Select Product</Label>
                   <select
-                    className="w-full mt-1 p-2 border rounded-md text-sm bg-card border-border/40 text-foreground"
+                    className="mt-1 w-full rounded-md border border-border/40 bg-card p-2 text-sm text-foreground"
                     value={selectedProductId}
                     onChange={(e) => setSelectedProductId(e.target.value)}
                   >
-                    <option value="" disabled>Choose Product</option>
+                    <option value="" disabled>
+                      Choose Product
+                    </option>
                     {products.map((p) => (
-                      <option key={p.id} value={p.id}>{p.name} ({currencySymbol}{p.price.toFixed(2)})</option>
+                      <option key={p.id} value={p.id}>
+                        {p.name} ({currencySymbol}
+                        {p.price.toFixed(2)})
+                      </option>
                     ))}
                   </select>
                 </div>
@@ -384,7 +449,7 @@ export default function Quotations() {
                   <Input
                     type="number"
                     min="1"
-                    className="mt-1 bg-card border-border/40"
+                    className="mt-1 border-border/40 bg-card"
                     value={selectedProductQty}
                     onChange={(e) => setSelectedProductQty(parseInt(e.target.value) || 1)}
                   />
@@ -398,16 +463,26 @@ export default function Quotations() {
             {/* Current Quote Items Grid */}
             <div className="space-y-2">
               <Label className="text-xs font-semibold">Quotation Cart Items</Label>
-              <ScrollArea className="h-32 border rounded-lg p-2 bg-card">
+              <ScrollArea className="h-32 rounded-lg border bg-card p-2">
                 {quoteItems.map((item) => (
-                  <div key={item.product_id} className="flex justify-between items-center text-xs py-1.5 border-b last:border-b-0">
-                    <span className="font-medium">{item.product_name} x {item.quantity}</span>
-                    <div className="flex gap-2 items-center">
-                      <span className="font-semibold">{currencySymbol}{item.total.toFixed(2)}</span>
+                  <div
+                    key={item.product_id}
+                    className="flex items-center justify-between border-b py-1.5 text-xs last:border-b-0"
+                  >
+                    <span className="font-medium">
+                      {item.product_name} x {item.quantity}
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold">
+                        {currencySymbol}
+                        {item.total.toFixed(2)}
+                      </span>
                       <button
                         type="button"
-                        className="text-destructive font-bold hover:underline"
-                        onClick={() => setQuoteItems(quoteItems.filter((i) => i.product_id !== item.product_id))}
+                        className="font-bold text-destructive hover:underline"
+                        onClick={() =>
+                          setQuoteItems(quoteItems.filter((i) => i.product_id !== item.product_id))
+                        }
                       >
                         Remove
                       </button>
@@ -415,13 +490,17 @@ export default function Quotations() {
                   </div>
                 ))}
                 {quoteItems.length === 0 && (
-                  <p className="text-xs text-center text-muted-foreground py-6">No items added to quote.</p>
+                  <p className="py-6 text-center text-xs text-muted-foreground">
+                    No items added to quote.
+                  </p>
                 )}
               </ScrollArea>
             </div>
 
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsQuoteModalOpen(false)}>Cancel</Button>
+              <Button type="button" variant="outline" onClick={() => setIsQuoteModalOpen(false)}>
+                Cancel
+              </Button>
               <Button type="submit">Create Quotation</Button>
             </DialogFooter>
           </form>

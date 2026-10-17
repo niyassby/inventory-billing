@@ -1,8 +1,13 @@
+#![allow(
+    clippy::too_many_arguments,
+    reason = "legacy commands take flat arguments; replaced by typed DTOs in Phase 3"
+)]
+
+mod auth;
+mod commands;
 mod database;
 mod models;
 mod repositories;
-mod auth;
-mod commands;
 
 use tauri::Manager;
 

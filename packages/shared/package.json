@@ -1,0 +1,13 @@
+{
+  "name": "@inventory/shared",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Types, Zod schemas, constants and money/quantity/tax utilities shared by the app and its tests.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "zod": "^4.4.3"
+  }
+}
