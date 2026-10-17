@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import { invoke } from "@tauri-apps/api/core";
-import { useStore } from "@/hooks/use-store";
+import { useStore } from "@/stores/app-store";
 import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -24,9 +24,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useCreateOrUpdateProduct } from "@/hooks/tanstack/useProducts";
-import { useBrands, useCategories } from "@/hooks/tanstack/useCategorie&Brand";
-import { useUnits } from "@/hooks/tanstack/useUnits";
+import { useCreateOrUpdateProduct } from "@/api/hooks/products";
+import { useBrands, useCategories } from "@/api/hooks/catalog";
+import { useUnits } from "@/api/hooks/catalog";
 
 export default function AddEditProduct() {
   const navigate = useNavigate();

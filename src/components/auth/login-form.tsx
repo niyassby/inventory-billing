@@ -1,33 +1,50 @@
-import { cn } from "@/lib/utils";
+import type { ComponentProps, SyntheticEvent } from "react";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { loginSchema } from "@inventory/shared";
 import { Button } from "@/components/ui/button";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { useState } from "react";
-import { useStore } from "@/hooks/use-store";
-import { useNavigate } from "react-router-dom";
+import { cn } from "@/lib/utils";
+import { useStore } from "@/stores/app-store";
 
-export function LoginForm({ className, ...props }) {
+export function LoginForm({ className, ...props }: ComponentProps<"form">) {
+  // Known issue (audit S-1): the seeded demo account is prefilled until first-run onboarding
+  // replaces it in Phase 3.
   const [formData, setFormData] = useState({
     email: "admin@example.com",
     password: "password123",
   });
   const [errorMsg, setErrorMsg] = useState("");
+  const [submitting, setSubmitting] = useState(false);
   const login = useStore((state) => state.login);
   const navigate = useNavigate();
 
-  const onsubmit = async (e) => {
+  const onSubmit = async (e: SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     setErrorMsg("");
-    const res = await login(formData.email, formData.password);
+    const parsed = loginSchema.safeParse(formData);
+    if (!parsed.success) {
+      setErrorMsg(parsed.error.issues[0]?.message ?? "Check the form and try again.");
+      return;
+    }
+    setSubmitting(true);
+    const res = await login(parsed.data.email, parsed.data.password);
+    setSubmitting(false);
     if (res.success) {
-      navigate("/dashboard");
+      void navigate("/dashboard");
     } else {
       setErrorMsg(res.error || "Invalid credentials. Please try again.");
     }
   };
 
   return (
-    <form onSubmit={onsubmit} className={cn("flex flex-col gap-6", className)} {...props}>
+    <form
+      onSubmit={(e) => void onSubmit(e)}
+      className={cn("flex flex-col gap-6", className)}
+      noValidate
+      {...props}
+    >
       <FieldGroup>
         <div className="flex flex-col items-center gap-1 text-center">
           <h1 className="text-2xl font-bold">Sign In</h1>
@@ -37,7 +54,10 @@ export function LoginForm({ className, ...props }) {
         </div>
 
         {errorMsg && (
-          <div className="rounded-md border border-destructive/25 bg-destructive/15 p-3 text-center text-sm text-destructive">
+          <div
+            role="alert"
+            className="rounded-md border border-destructive/25 bg-destructive/15 p-3 text-center text-sm text-destructive"
+          >
             {errorMsg}
           </div>
         )}
@@ -46,31 +66,35 @@ export function LoginForm({ className, ...props }) {
           <FieldLabel htmlFor="email">Email Address</FieldLabel>
           <Input
             value={formData.email}
-            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+            onChange={(e) => {
+              setFormData({ ...formData, email: e.target.value });
+            }}
             id="email"
             type="email"
-            placeholder="admin@example.com"
+            autoComplete="username"
+            placeholder="you@business.com"
             required
           />
         </Field>
 
         <Field>
-          <div className="flex items-center justify-between">
-            <FieldLabel htmlFor="password">Password</FieldLabel>
-          </div>
+          <FieldLabel htmlFor="password">Password</FieldLabel>
           <Input
             value={formData.password}
-            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+            onChange={(e) => {
+              setFormData({ ...formData, password: e.target.value });
+            }}
             id="password"
             type="password"
+            autoComplete="current-password"
             placeholder="••••••••"
             required
           />
         </Field>
 
         <Field>
-          <Button type="submit" className="w-full">
-            Sign In
+          <Button type="submit" className="w-full" disabled={submitting}>
+            {submitting ? "Signing in…" : "Sign In"}
           </Button>
         </Field>
 

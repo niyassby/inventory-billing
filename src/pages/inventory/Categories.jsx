@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { invoke } from "@tauri-apps/api/core";
-import { useStore } from "@/hooks/use-store";
+import { useStore } from "@/stores/app-store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -26,11 +26,11 @@ import {
   useBrands,
   useCategories,
   useCreateBrand,
-  useCreateCategorie,
+  useCreateCategory,
   useDeleteBrand,
   useDeleteCategory,
-} from "@/hooks/tanstack/useCategorie&Brand";
-import { useUnits, useCreateUnit, useDeleteUnit } from "@/hooks/tanstack/useUnits";
+} from "@/api/hooks/catalog";
+import { useUnits, useCreateUnit, useDeleteUnit } from "@/api/hooks/catalog";
 import { toast } from "sonner";
 
 export default function Categories() {
@@ -46,7 +46,7 @@ export default function Categories() {
   const { data: brands, isLoading: brandLoading } = useBrands({ token });
   const { data: units, isLoading: unitLoading } = useUnits({ token });
 
-  const { mutate: createCategory, isPending: isCreatingCategory } = useCreateCategorie();
+  const { mutate: createCategory, isPending: isCreatingCategory } = useCreateCategory();
   const { mutate: createBrand, isPending: isCreatingBrand } = useCreateBrand();
   const { mutate: createUnit, isPending: isCreatingUnit } = useCreateUnit();
 

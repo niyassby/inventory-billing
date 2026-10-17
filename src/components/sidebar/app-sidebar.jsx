@@ -250,7 +250,7 @@ const data = {
   ],
 };
 
-import { useStore } from "@/hooks/use-store";
+import { useStore } from "@/stores/app-store";
 
 export function AppSidebar({ ...props }) {
   const user = useStore((state) => state.user);

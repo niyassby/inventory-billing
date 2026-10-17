@@ -1,6 +1,8 @@
 "use client";
 
 import { useTheme } from "next-themes";
+import type * as React from "react";
+import type { ToasterProps } from "sonner";
 import { Toaster as Sonner } from "sonner";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
@@ -11,12 +13,12 @@ import {
   Loading03Icon,
 } from "@hugeicons/core-free-icons";
 
-const Toaster = ({ ...props }) => {
+const Toaster = ({ ...props }: ToasterProps) => {
   const { theme = "system" } = useTheme();
 
   return (
     <Sonner
-      theme={theme}
+      theme={theme as ToasterProps["theme"]}
       className="toaster group"
       icons={{
         success: <HugeiconsIcon icon={CheckmarkCircle02Icon} strokeWidth={2} className="size-4" />,
@@ -29,12 +31,14 @@ const Toaster = ({ ...props }) => {
           <HugeiconsIcon icon={Loading03Icon} strokeWidth={2} className="size-4 animate-spin" />
         ),
       }}
-      style={{
-        "--normal-bg": "var(--popover)",
-        "--normal-text": "var(--popover-foreground)",
-        "--normal-border": "var(--border)",
-        "--border-radius": "var(--radius)",
-      }}
+      style={
+        {
+          "--normal-bg": "var(--popover)",
+          "--normal-text": "var(--popover-foreground)",
+          "--normal-border": "var(--border)",
+          "--border-radius": "var(--radius)",
+        } as React.CSSProperties
+      }
       toastOptions={{
         classNames: {
           toast: "cn-toast",

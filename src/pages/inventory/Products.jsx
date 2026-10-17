@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { invoke } from "@tauri-apps/api/core";
-import { useStore } from "@/hooks/use-store";
+import { useStore } from "@/stores/app-store";
 import * as XLSX from "xlsx";
 import {
   Dialog,
@@ -22,8 +22,8 @@ import {
   ArrowRight01Icon,
   ArrowUp01Icon,
 } from "@hugeicons/core-free-icons/index";
-import { useDeleteProduct, useProducts } from "@/hooks/tanstack/useProducts";
-import { useBrands, useCategories } from "@/hooks/tanstack/useCategorie&Brand";
+import { useDeleteProduct, useProducts } from "@/api/hooks/products";
+import { useBrands, useCategories } from "@/api/hooks/catalog";
 import {
   Select,
   SelectContent,

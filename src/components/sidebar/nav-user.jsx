@@ -21,7 +21,7 @@ import {
   NotificationIcon,
   LogoutIcon,
 } from "@hugeicons/core-free-icons";
-import { useStore } from "@/hooks/use-store";
+import { useStore } from "@/stores/app-store";
 import { useNavigate } from "react-router-dom";
 
 export function NavUser({ user }) {

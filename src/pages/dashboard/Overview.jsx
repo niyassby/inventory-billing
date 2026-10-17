@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { useStore } from "@/hooks/use-store";
+import { useStore } from "@/stores/app-store";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { invoke } from "@tauri-apps/api/core";
-import { useStore } from "@/hooks/use-store";
+import { useStore } from "@/stores/app-store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -24,7 +24,7 @@ import {
   Clock01Icon,
 } from "@hugeicons/core-free-icons";
 import { PrinterIcon } from "@hugeicons/core-free-icons/index";
-import { useCategories } from "@/hooks/tanstack/useCategorie&Brand";
+import { useCategories } from "@/api/hooks/catalog";
 
 export default function POS() {
   const navigate = useNavigate();
