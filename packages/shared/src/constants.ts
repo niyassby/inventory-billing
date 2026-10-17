@@ -191,6 +191,8 @@ export const ERROR_CODES = [
   "RATE_LIMITED",
   "LOCKED_OUT",
   "HUB_OFFLINE",
+  "SETUP_REQUIRED",
+  "PASSWORD_CHANGE_REQUIRED",
   "INTERNAL",
 ] as const;
 export type ErrorCode = (typeof ERROR_CODES)[number];

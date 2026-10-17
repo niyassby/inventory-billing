@@ -7,7 +7,8 @@ pub const QTY_SCALE: i64 = 1_000;
 /// 100% in parts per million.
 pub const RATE_SCALE: i64 = 1_000_000;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum RoundingMode {
     /// .5 away from zero (commercial rounding; the default).
     HalfUp,

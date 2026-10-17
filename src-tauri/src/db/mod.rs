@@ -40,7 +40,7 @@ pub fn open_in_memory() -> Result<Connection, DbError> {
 
 /// Settings every connection must have. Foreign keys are per-connection in SQLite, so this runs
 /// on every open, not once.
-fn configure(conn: &Connection, wal: bool) -> Result<(), DbError> {
+pub(crate) fn configure(conn: &Connection, wal: bool) -> Result<(), DbError> {
     if wal {
         // WAL lets the hub serve readers while one writer commits (docs/ARCHITECTURE.md §5).
         let mode: String = conn.query_row("PRAGMA journal_mode = WAL", [], |r| r.get(0))?;
