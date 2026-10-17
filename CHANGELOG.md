@@ -5,6 +5,48 @@ All notable changes to this project. The format follows
 
 ## [Unreleased]
 
+### Phase 3: backend services and permissions (2026-10-17)
+
+#### Added
+- v2 backend foundations: `AppError` with 15 stable codes (shared with TypeScript), r2d2
+  connection pool (WAL, `BEGIN IMMEDIATE` writes), injectable clock, rate limiter, daily rolling
+  logs (`APP_LOG` filter, 14 days kept).
+- Rust pricing engine (`domain::pricing`) checked against 14 golden vectors generated from the
+  TypeScript engine, so both sides price a bill identically. Financial year and number formats.
+- Services on the v2 database, each checking permissions from `role_permissions`:
+  - setup (business, owner, main branch, store, register, number series), sign-in with password
+    or PIN, sessions with expiry and idle timeout, lockout, password change, users and roles;
+  - settings (business, tax, inventory, security, invoice) with validation and audit;
+  - catalogue masters, products with variants, pack sizes, barcodes, opening stock and full-text
+    search; customers and suppliers with opening balances, statements and open documents;
+  - stock adjustments, transfers and physical counts;
+  - sales invoices (server-side pricing and totals check, credit limit, stock policy, payments,
+    ledger and journal), returns, quotations/orders with conversion, held bills, voids;
+  - payments in and out with allocation, cash registers;
+  - purchase orders, goods receipts (GRNI), bills with landed costs, purchase returns, expenses.
+- Manager approval inline per request (`APPROVAL_REQUIRED` → PIN → retry); every sensitive change
+  is audited with who approved it. Idempotency keys on every create. Optimistic concurrency
+  (`expected_updated_at`) on edits.
+- Migrations 0007 (`sales.credit_override` permission) and 0008 (GRNI account 2050).
+- Typed command layer (`src-tauri/src/api`): 87 commands with a `{ token, input, approval }`
+  envelope, generated JSON schema contract and TypeScript types
+  (`packages/shared/src/generated`), `createV2Client` in `src/api/client.ts`. CI fails when the
+  contract or the generated types are stale.
+- 83 Rust tests, 50 of them new. 37 end-to-end service tests check permissions, approvals,
+  concurrency (two counters selling the last unit) and that the books balance after every flow
+  (trial balance, receivables, payables and stock value).
+- 162 TypeScript tests.
+
+#### Changed
+- The app opens `inventory_v2.db` at startup next to the v1 database. v1 and v2 commands share
+  one invoke handler, routed by name. The screens still use v1 until Phase 5.
+- `migrate-legacy` may replace the v2 file only while it is empty and unused.
+
+#### Notes
+- FIFO valuation is accepted as a setting but behaves as weighted average until Phase 6.
+- The v2 commands are tested through the services and the contract. They have not been called
+  from a running app window yet (no screen uses them before Phase 5).
+
 ### Phase 2: database schema and migration (2026-10-17)
 
 #### Added

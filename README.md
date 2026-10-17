@@ -6,8 +6,9 @@ offline. Multi-counter shops connect their devices to one **hub** PC over the lo
 (see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)).
 
 > **Status:** under active rebuild. Phase 0 (audit), Phase 1 (tooling, TypeScript, shared
-> package) and Phase 2 (v2 database schema and the v1 data migration) are done. The running app
-> is still the legacy single-device version. Read [docs/AUDIT.md](docs/AUDIT.md) for its known
+> package), Phase 2 (v2 database schema and the v1 data migration) and Phase 3 (v2 backend
+> services, permissions and tests) are done. The screens still run on the legacy single-device
+> version until Phase 5. Read [docs/AUDIT.md](docs/AUDIT.md) for its known
 > issues before using it with real data.
 
 ## Stack

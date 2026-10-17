@@ -13,8 +13,9 @@ packages/shared/           @inventory/shared: pure TS, no React and no Tauri
   src/schemas.ts           Zod form schemas (string input → domain values)
   src/constants.ts         roles, permissions, document/movement types, error codes
   src/types/legacy.ts      types of the current (v1) Tauri commands
+  src/generated/           api-schema.json (from Rust) and api.ts (npm run gen:api): do not edit
 src/
-  api/client.ts            typed API client over a Transport (Tauri IPC today, HTTP to the hub later)
+  api/client.ts            typed clients over a Transport: v1 `api` and v2 `createV2Client`
   api/errors.ts            ApiError + normalisation of backend errors into stable codes
   api/hooks/*.ts           TanStack Query hooks per domain
   stores/app-store.ts      Zustand: session + UI state (legacy POS cart lives here for now)
@@ -22,11 +23,14 @@ src/
   components/ui/           shadcn primitives (TSX; the rest are converted as they are touched)
   pages/**                 legacy pages (.jsx), rebuilt module by module in Phases 5–7
 src-tauri/src/
+  api/                     v2 commands (one macro: session, approval, logging) + contract.rs (JSON schema)
+  services/                v2 business logic, one module per area; tests/ and testkit.rs
+  app.rs, error.rs         AppState (pool, clock, rate limiter), AppError and its codes
   db/                      v2 database: connection settings, migration runner, migrations/*.sql, schema tests
-  domain/                  pure logic shared by services and migrations (money, ids); mirrors packages/shared
+  domain/                  pure logic (money, pricing, numbering, ids); mirrors packages/shared
   legacy_migration/        v1 → v2 data migration (reader, transform, report, end-to-end tests)
   bin/migrate_legacy.rs    command-line front end for the migration
-  commands/, repositories/, database/   v1 backend, still serving the app until Phase 3
+  commands/, repositories/, database/   v1 backend, still serving the screens until Phase 5
 packages/shared/test-vectors/  JSON vectors both the TS and Rust money code must pass
 docs/                      audit, architecture, assumptions, this guide
 ```
@@ -64,6 +68,44 @@ npm run rust:fmt && npm run rust:lint && npm run rust:test
   Ubuntu and Rust runs on Windows, the primary target.
 - Commits follow Conventional Commits (`feat:`, `fix:`, `refactor:`, `chore:`, `docs:`, `test:`).
   Every commit should build.
+
+## Backend (v2)
+
+A command is declared once in `src-tauri/src/api/mod.rs`:
+
+```rust
+authed products_save(catalog::ProductInput) -> catalog::ProductDetail = catalog::save_product;
+```
+
+That generates the Tauri command (session check, optional manager approval, blocking thread,
+logging), registers it and adds it to the contract. Services take a `Ctx` (connection, actor,
+approver, clock) and must:
+
+- check a permission first (`ctx.require(...)`, or `ctx.approve(...)` when a manager may allow it);
+- do every write inside `services::write` (one `BEGIN IMMEDIATE` transaction);
+- post stock, party ledger and journal through `stock_posting`, `party_ledger` and `journal`
+  (never update cached balances directly) and write an audit entry;
+- return `AppError` with a code from `error.rs`; the UI branches on the code.
+
+Service tests use `services::testkit::Kit` (temporary database, fixed clock, a set-up business)
+and end with `kit.assert_books_balance()`.
+
+After changing a command or a DTO, regenerate the contract and the TS types and commit both:
+
+```bash
+UPDATE_CONTRACT=1 cargo test --manifest-path src-tauri/Cargo.toml --lib contract
+```
+
+```bash
+npm run gen:api
+```
+
+In the UI, call v2 through the generated types:
+
+```ts
+const v2 = createV2Client(tauriTransport, () => session.token);
+const page = await v2.call("products_list", { search: "rice", page: 1 });
+```
 
 ## Database
 
