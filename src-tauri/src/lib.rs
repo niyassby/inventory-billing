@@ -12,6 +12,7 @@ mod repositories;
 // v2 foundations (Phase 2). Public so the maintenance binaries in src/bin can use them.
 pub mod db;
 pub mod domain;
+pub mod legacy_migration;
 
 use tauri::Manager;
 

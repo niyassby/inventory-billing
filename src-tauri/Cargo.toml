@@ -15,6 +15,10 @@ default-run = "tauri-app"
 name = "tauri_app_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
+[[bin]]
+name = "migrate-legacy"
+path = "src/bin/migrate_legacy.rs"
+
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 
