@@ -1,0 +1,7399 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "additionalProperties": false,
+  "definitions": {
+    "AdjustInput": {
+      "properties": {
+        "idempotencyKey": {
+          "type": "string"
+        },
+        "lines": {
+          "items": {
+            "$ref": "#/definitions/AdjustLine"
+          },
+          "type": "array"
+        },
+        "notes": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "reason": {
+          "type": "string"
+        },
+        "warehouseId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "idempotencyKey",
+        "lines",
+        "reason"
+      ],
+      "type": "object"
+    },
+    "AdjustLine": {
+      "properties": {
+        "batchId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "qtyChange": {
+          "description": "Signed change in thousandths of the base unit (+ found / received, − damaged / lost).",
+          "format": "int64",
+          "type": "integer"
+        },
+        "unitCost": {
+          "description": "Cost per base unit for stock added (default: current average cost).",
+          "format": "int64",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "variantId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "qtyChange",
+        "variantId"
+      ],
+      "type": "object"
+    },
+    "AllocateInput": {
+      "properties": {
+        "allocations": {
+          "items": {
+            "$ref": "#/definitions/AllocationInput"
+          },
+          "type": "array"
+        },
+        "paymentId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "allocations",
+        "paymentId"
+      ],
+      "type": "object"
+    },
+    "AllocationDetail": {
+      "properties": {
+        "amount": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "docNo": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "targetId": {
+          "type": "string"
+        },
+        "targetType": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "amount",
+        "targetId",
+        "targetType"
+      ],
+      "type": "object"
+    },
+    "AllocationInput": {
+      "properties": {
+        "amount": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "targetId": {
+          "type": "string"
+        },
+        "targetType": {
+          "description": "\"sales_invoice\", \"purchase_bill\", \"sales_return\", \"purchase_return\" or \"expense\".",
+          "type": "string"
+        }
+      },
+      "required": [
+        "amount",
+        "targetId",
+        "targetType"
+      ],
+      "type": "object"
+    },
+    "AppError": {
+      "properties": {
+        "code": {
+          "$ref": "#/definitions/ErrorCode"
+        },
+        "details": true,
+        "message": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "code",
+        "message"
+      ],
+      "type": "object"
+    },
+    "ApprovalInput": {
+      "description": "A manager's credentials typed on the cashier's screen to approve one action.",
+      "properties": {
+        "email": {
+          "type": "string"
+        },
+        "password": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "pin": {
+          "description": "Either the approver's PIN or their password.",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "email"
+      ],
+      "type": "object"
+    },
+    "AuthSession": {
+      "properties": {
+        "expiresAt": {
+          "type": "string"
+        },
+        "mustChangePassword": {
+          "type": "boolean"
+        },
+        "token": {
+          "type": "string"
+        },
+        "user": {
+          "$ref": "#/definitions/SessionUser"
+        }
+      },
+      "required": [
+        "expiresAt",
+        "mustChangePassword",
+        "token",
+        "user"
+      ],
+      "type": "object"
+    },
+    "Brand": {
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "productCount": {
+          "format": "int64",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "productCount"
+      ],
+      "type": "object"
+    },
+    "BrandInput": {
+      "properties": {
+        "id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "type": "object"
+    },
+    "BusinessSettings": {
+      "properties": {
+        "address": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "currency": {
+          "default": "INR",
+          "type": "string"
+        },
+        "currencyMinorDigits": {
+          "default": 2,
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "email": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "fyStartMonth": {
+          "default": 4,
+          "description": "Month the financial year starts (India: 4 = April).",
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "gstin": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "locale": {
+          "default": "en-IN",
+          "type": "string"
+        },
+        "name": {
+          "default": "",
+          "type": "string"
+        },
+        "phone": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "stateCode": {
+          "default": null,
+          "description": "Two-digit GST state code of the business (decides CGST+SGST vs IGST).",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "timezone": {
+          "default": "Asia/Kolkata",
+          "description": "IANA timezone used for business dates (\"today\").",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "Category": {
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "parentId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "productCount": {
+          "format": "int64",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "productCount"
+      ],
+      "type": "object"
+    },
+    "CategoryInput": {
+      "properties": {
+        "id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "parentId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "type": "object"
+    },
+    "ChangePasswordInput": {
+      "properties": {
+        "currentPassword": {
+          "type": "string"
+        },
+        "newPassword": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "currentPassword",
+        "newPassword"
+      ],
+      "type": "object"
+    },
+    "ChargeInput": {
+      "properties": {
+        "allocation": {
+          "description": "\"value\" or \"qty\" (added to stock cost), or \"none\" (expensed).",
+          "type": "string"
+        },
+        "amount": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "description": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "allocation",
+        "amount",
+        "description"
+      ],
+      "type": "object"
+    },
+    "CloseRegisterInput": {
+      "properties": {
+        "countedCash": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "notes": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "sessionId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "countedCash",
+        "sessionId"
+      ],
+      "type": "object"
+    },
+    "ConvertInput": {
+      "properties": {
+        "documentId": {
+          "type": "string"
+        },
+        "expectedTotal": {
+          "format": "int64",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "idempotencyKey": {
+          "type": "string"
+        },
+        "payments": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/PaymentInput"
+          },
+          "type": "array"
+        },
+        "registerSessionId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "documentId",
+        "idempotencyKey"
+      ],
+      "type": "object"
+    },
+    "CountDetail": {
+      "properties": {
+        "businessDate": {
+          "type": "string"
+        },
+        "countedLines": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "docNo": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "lines": {
+          "items": {
+            "$ref": "#/definitions/CountLine"
+          },
+          "type": "array"
+        },
+        "scopeNote": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "status": {
+          "type": "string"
+        },
+        "totalVarianceValue": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "warehouseId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "businessDate",
+        "countedLines",
+        "docNo",
+        "id",
+        "lines",
+        "status",
+        "totalVarianceValue",
+        "warehouseId"
+      ],
+      "type": "object"
+    },
+    "CountEntriesInput": {
+      "properties": {
+        "countId": {
+          "type": "string"
+        },
+        "entries": {
+          "items": {
+            "$ref": "#/definitions/CountEntry"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "countId",
+        "entries"
+      ],
+      "type": "object"
+    },
+    "CountEntry": {
+      "properties": {
+        "countedQty": {
+          "description": "None clears the count; thousandths of the base unit.",
+          "format": "int64",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "lineId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "lineId"
+      ],
+      "type": "object"
+    },
+    "CountFinalizeInput": {
+      "properties": {
+        "countId": {
+          "type": "string"
+        },
+        "idempotencyKey": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "countId",
+        "idempotencyKey"
+      ],
+      "type": "object"
+    },
+    "CountLine": {
+      "properties": {
+        "countedQty": {
+          "format": "int64",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "sku": {
+          "type": "string"
+        },
+        "systemQty": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "unitCost": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "varianceQty": {
+          "format": "int64",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "varianceValue": {
+          "format": "int64",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "variantId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "sku",
+        "systemQty",
+        "unitCost",
+        "variantId"
+      ],
+      "type": "object"
+    },
+    "CountStartInput": {
+      "properties": {
+        "categoryId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "scopeNote": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "variantIds": {
+          "description": "Limit the count to these variants (default: every stocked item).",
+          "items": {
+            "type": "string"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "warehouseId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "type": "object"
+    },
+    "CreateUserInput": {
+      "properties": {
+        "email": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "phone": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "roleId": {
+          "type": "string"
+        },
+        "temporaryPassword": {
+          "description": "Temporary password; the user must change it at first sign-in.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "email",
+        "name",
+        "roleId",
+        "temporaryPassword"
+      ],
+      "type": "object"
+    },
+    "DeleteMasterInput": {
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "description": "\"categories\", \"brands\" or \"units\".",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "kind"
+      ],
+      "type": "object"
+    },
+    "Discount": {
+      "oneOf": [
+        {
+          "properties": {
+            "amount": {
+              "format": "int64",
+              "type": "integer"
+            },
+            "kind": {
+              "enum": [
+                "amount"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "amount",
+            "kind"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "kind": {
+              "enum": [
+                "percent"
+              ],
+              "type": "string"
+            },
+            "rate": {
+              "format": "int64",
+              "type": "integer"
+            }
+          },
+          "required": [
+            "kind",
+            "rate"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "ErrorCode": {
+      "enum": [
+        "UNAUTHORIZED",
+        "FORBIDDEN",
+        "APPROVAL_REQUIRED",
+        "VALIDATION",
+        "NOT_FOUND",
+        "CONFLICT",
+        "INSUFFICIENT_STOCK",
+        "TOTALS_MISMATCH",
+        "DOCUMENT_FINALIZED",
+        "RATE_LIMITED",
+        "LOCKED_OUT",
+        "HUB_OFFLINE",
+        "SETUP_REQUIRED",
+        "PASSWORD_CHANGE_REQUIRED",
+        "INTERNAL"
+      ],
+      "type": "string"
+    },
+    "ExpenseCategory": {
+      "properties": {
+        "accountId": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "accountId",
+        "id",
+        "name"
+      ],
+      "type": "object"
+    },
+    "ExpenseCategoryInput": {
+      "properties": {
+        "accountId": {
+          "description": "Expense account to post to (default: General Expenses).",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "type": "object"
+    },
+    "ExpenseDetail": {
+      "properties": {
+        "amount": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "amountPaid": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "businessDate": {
+          "type": "string"
+        },
+        "categoryId": {
+          "type": "string"
+        },
+        "categoryName": {
+          "type": "string"
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "docNo": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "partyId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "referenceNo": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "status": {
+          "type": "string"
+        },
+        "taxTotal": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "title": {
+          "type": "string"
+        },
+        "total": {
+          "format": "int64",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "amount",
+        "amountPaid",
+        "businessDate",
+        "categoryId",
+        "categoryName",
+        "docNo",
+        "id",
+        "status",
+        "taxTotal",
+        "title",
+        "total"
+      ],
+      "type": "object"
+    },
+    "ExpenseInput": {
+      "properties": {
+        "amount": {
+          "description": "Amount before tax.",
+          "format": "int64",
+          "type": "integer"
+        },
+        "businessDate": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "categoryId": {
+          "type": "string"
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "idempotencyKey": {
+          "type": "string"
+        },
+        "partyId": {
+          "description": "Supplier, when the expense is on credit or should appear on their statement.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "payment": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/PaymentInput"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Paid now (otherwise owed to the supplier)."
+        },
+        "referenceNo": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "taxRate": {
+          "default": 0,
+          "description": "Input tax rate in ppm (0 when there's no tax invoice).",
+          "format": "int64",
+          "type": "integer"
+        },
+        "title": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "amount",
+        "categoryId",
+        "idempotencyKey",
+        "title"
+      ],
+      "type": "object"
+    },
+    "ExpenseListQuery": {
+      "properties": {
+        "categoryId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "from": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "page": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "pageSize": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "search": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "to": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "type": "object"
+    },
+    "GoodsReceiptDetail": {
+      "properties": {
+        "businessDate": {
+          "type": "string"
+        },
+        "docNo": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "lines": {
+          "items": {
+            "$ref": "#/definitions/PurchaseDocLine"
+          },
+          "type": "array"
+        },
+        "partyId": {
+          "type": "string"
+        },
+        "purchaseOrderId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "value": {
+          "format": "int64",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "businessDate",
+        "docNo",
+        "id",
+        "lines",
+        "partyId",
+        "value"
+      ],
+      "type": "object"
+    },
+    "GoodsReceiptInput": {
+      "properties": {
+        "idempotencyKey": {
+          "type": "string"
+        },
+        "lines": {
+          "items": {
+            "$ref": "#/definitions/PurchaseLineInput"
+          },
+          "type": "array"
+        },
+        "notes": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "partyId": {
+          "type": "string"
+        },
+        "purchaseOrderId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "supplierReference": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "warehouseId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "idempotencyKey",
+        "lines",
+        "partyId"
+      ],
+      "type": "object"
+    },
+    "HeldBill": {
+      "properties": {
+        "cart": true,
+        "cartFormat": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string"
+        },
+        "createdByName": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "id": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "partyId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "cart",
+        "cartFormat",
+        "createdAt",
+        "id",
+        "label"
+      ],
+      "type": "object"
+    },
+    "HoldInput": {
+      "properties": {
+        "cart": {
+          "description": "The POS cart as the client stores it (opaque to the backend)."
+        },
+        "label": {
+          "type": "string"
+        },
+        "partyId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "cart",
+        "label"
+      ],
+      "type": "object"
+    },
+    "IdInput": {
+      "properties": {
+        "id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "type": "object"
+    },
+    "IdOut": {
+      "properties": {
+        "id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "type": "object"
+    },
+    "InventorySettings": {
+      "properties": {
+        "lowStockAlerts": {
+          "default": true,
+          "type": "boolean"
+        },
+        "negativeStockPolicy": {
+          "$ref": "#/definitions/NegativeStockPolicy",
+          "default": "block"
+        },
+        "valuationMethod": {
+          "default": "weighted_average",
+          "description": "\"weighted_average\" (implemented) or \"fifo\" (reports only, Phase 6).",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "InvoiceDetail": {
+      "properties": {
+        "amountPaid": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "balanceDue": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "billDiscount": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "billingAddress": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "businessDate": {
+          "type": "string"
+        },
+        "createdByName": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "customerGstin": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "customerName": {
+          "type": "string"
+        },
+        "customerPhone": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "docNo": {
+          "type": "string"
+        },
+        "finalizedAt": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "gross": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "id": {
+          "type": "string"
+        },
+        "isInterState": {
+          "type": "boolean"
+        },
+        "lineDiscount": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "lines": {
+          "items": {
+            "$ref": "#/definitions/InvoiceLine"
+          },
+          "type": "array"
+        },
+        "notes": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "partyId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "paymentStatus": {
+          "type": "string"
+        },
+        "payments": {
+          "items": {
+            "$ref": "#/definitions/PaymentSummary"
+          },
+          "type": "array"
+        },
+        "placeOfSupply": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "pricesIncludeTax": {
+          "type": "boolean"
+        },
+        "roundOff": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "snapshotSource": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "taxSummary": {
+          "items": {
+            "$ref": "#/definitions/TaxSummaryRow"
+          },
+          "type": "array"
+        },
+        "taxTotal": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "taxable": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "total": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "voidReason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "voidedAt": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "warnings": {
+          "default": [],
+          "description": "Items that went below zero stock under the \"warn\" policy (only on creation).",
+          "items": {
+            "$ref": "#/definitions/StockWarning"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "amountPaid",
+        "balanceDue",
+        "billDiscount",
+        "businessDate",
+        "customerName",
+        "docNo",
+        "gross",
+        "id",
+        "isInterState",
+        "lineDiscount",
+        "lines",
+        "paymentStatus",
+        "payments",
+        "pricesIncludeTax",
+        "roundOff",
+        "snapshotSource",
+        "status",
+        "taxSummary",
+        "taxTotal",
+        "taxable",
+        "total"
+      ],
+      "type": "object"
+    },
+    "InvoiceLine": {
+      "properties": {
+        "billDiscountShare": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "cess": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "cgst": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "hsnSac": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "id": {
+          "type": "string"
+        },
+        "igst": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "itemName": {
+          "type": "string"
+        },
+        "lineDiscount": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "lineNo": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "lineTotal": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "mrp": {
+          "format": "int64",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "otherTax": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "qty": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "returnedQty": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "sgst": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "sku": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "taxRate": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "taxTotal": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "taxable": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "unitName": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "unitPrice": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "variantId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "billDiscountShare",
+        "cess",
+        "cgst",
+        "id",
+        "igst",
+        "itemName",
+        "lineDiscount",
+        "lineNo",
+        "lineTotal",
+        "otherTax",
+        "qty",
+        "returnedQty",
+        "sgst",
+        "taxRate",
+        "taxTotal",
+        "taxable",
+        "unitPrice",
+        "variantId"
+      ],
+      "type": "object"
+    },
+    "InvoiceListItem": {
+      "properties": {
+        "amountPaid": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "balanceDue": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "businessDate": {
+          "type": "string"
+        },
+        "customerName": {
+          "type": "string"
+        },
+        "customerPhone": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "docNo": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "paymentStatus": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "total": {
+          "format": "int64",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "amountPaid",
+        "balanceDue",
+        "businessDate",
+        "customerName",
+        "docNo",
+        "id",
+        "paymentStatus",
+        "status",
+        "total"
+      ],
+      "type": "object"
+    },
+    "InvoiceListQuery": {
+      "properties": {
+        "from": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "page": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "pageSize": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "partyId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "paymentStatus": {
+          "description": "\"unpaid\", \"partial\" or \"paid\".",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "search": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "status": {
+          "description": "\"finalized\" or \"voided\".",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "to": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "type": "object"
+    },
+    "InvoiceSettings": {
+      "properties": {
+        "footerText": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "paper": {
+          "default": "thermal_80",
+          "description": "\"a4\", \"thermal_80\" or \"thermal_58\".",
+          "type": "string"
+        },
+        "showQr": {
+          "default": false,
+          "type": "boolean"
+        },
+        "terms": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "type": "object"
+    },
+    "LoginInput": {
+      "properties": {
+        "email": {
+          "type": "string"
+        },
+        "password": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "email",
+        "password"
+      ],
+      "type": "object"
+    },
+    "NegativeStockPolicy": {
+      "oneOf": [
+        {
+          "enum": [
+            "allow"
+          ],
+          "type": "string"
+        },
+        {
+          "description": "Refuse a sale or issue that would take stock below zero (safest; the default).",
+          "enum": [
+            "block"
+          ],
+          "type": "string"
+        },
+        {
+          "description": "Allow it but return a warning.",
+          "enum": [
+            "warn"
+          ],
+          "type": "string"
+        }
+      ]
+    },
+    "NoInput": {
+      "description": "Empty input for commands that take none.",
+      "type": "object"
+    },
+    "OpenDocument": {
+      "properties": {
+        "balanceDue": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "businessDate": {
+          "type": "string"
+        },
+        "docNo": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "paid": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "targetType": {
+          "description": "\"sales_invoice\", \"purchase_bill\", \"sales_return\", \"purchase_return\" or \"expense\".",
+          "type": "string"
+        },
+        "total": {
+          "format": "int64",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "balanceDue",
+        "businessDate",
+        "docNo",
+        "id",
+        "paid",
+        "targetType",
+        "total"
+      ],
+      "type": "object"
+    },
+    "OpenRegisterInput": {
+      "properties": {
+        "openingFloat": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "registerId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "openingFloat"
+      ],
+      "type": "object"
+    },
+    "OwnerInput": {
+      "properties": {
+        "email": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "password": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "email",
+        "name",
+        "password"
+      ],
+      "type": "object"
+    },
+    "Page_for_ExpenseDetail": {
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/definitions/ExpenseDetail"
+          },
+          "type": "array"
+        },
+        "page": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "pageSize": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "total": {
+          "format": "int64",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "items",
+        "page",
+        "pageSize",
+        "total"
+      ],
+      "type": "object"
+    },
+    "Page_for_InvoiceListItem": {
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/definitions/InvoiceListItem"
+          },
+          "type": "array"
+        },
+        "page": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "pageSize": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "total": {
+          "format": "int64",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "items",
+        "page",
+        "pageSize",
+        "total"
+      ],
+      "type": "object"
+    },
+    "Page_for_PartyListItem": {
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/definitions/PartyListItem"
+          },
+          "type": "array"
+        },
+        "page": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "pageSize": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "total": {
+          "format": "int64",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "items",
+        "page",
+        "pageSize",
+        "total"
+      ],
+      "type": "object"
+    },
+    "Page_for_PaymentListItem": {
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/definitions/PaymentListItem"
+          },
+          "type": "array"
+        },
+        "page": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "pageSize": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "total": {
+          "format": "int64",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "items",
+        "page",
+        "pageSize",
+        "total"
+      ],
+      "type": "object"
+    },
+    "Page_for_ProductListItem": {
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/definitions/ProductListItem"
+          },
+          "type": "array"
+        },
+        "page": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "pageSize": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "total": {
+          "format": "int64",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "items",
+        "page",
+        "pageSize",
+        "total"
+      ],
+      "type": "object"
+    },
+    "Page_for_PurchaseListItem": {
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/definitions/PurchaseListItem"
+          },
+          "type": "array"
+        },
+        "page": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "pageSize": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "total": {
+          "format": "int64",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "items",
+        "page",
+        "pageSize",
+        "total"
+      ],
+      "type": "object"
+    },
+    "Page_for_SalesDocListItem": {
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/definitions/SalesDocListItem"
+          },
+          "type": "array"
+        },
+        "page": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "pageSize": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "total": {
+          "format": "int64",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "items",
+        "page",
+        "pageSize",
+        "total"
+      ],
+      "type": "object"
+    },
+    "PartyDetail": {
+      "properties": {
+        "balance": {
+          "description": "> 0 the party owes us; < 0 we owe the party.",
+          "format": "int64",
+          "type": "integer"
+        },
+        "billingAddress": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "code": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "creditDays": {
+          "format": "int64",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "creditLimit": {
+          "format": "int64",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "email": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "gstin": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "id": {
+          "type": "string"
+        },
+        "isActive": {
+          "type": "boolean"
+        },
+        "name": {
+          "type": "string"
+        },
+        "notes": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "partyType": {
+          "type": "string"
+        },
+        "phone": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "shippingAddress": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "stateCode": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "updatedAt": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "balance",
+        "id",
+        "isActive",
+        "name",
+        "partyType",
+        "updatedAt"
+      ],
+      "type": "object"
+    },
+    "PartyInput": {
+      "properties": {
+        "billingAddress": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "code": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "creditDays": {
+          "format": "int64",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "creditLimit": {
+          "format": "int64",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "email": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "expectedUpdatedAt": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "gstin": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "isActive": {
+          "default": true,
+          "type": "boolean"
+        },
+        "name": {
+          "type": "string"
+        },
+        "notes": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "openingBalance": {
+          "description": "New parties only: > 0 they owe us, < 0 we owe them.",
+          "format": "int64",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "partyType": {
+          "description": "\"customer\", \"supplier\" or \"both\".",
+          "type": "string"
+        },
+        "phone": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "shippingAddress": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "stateCode": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "name",
+        "partyType"
+      ],
+      "type": "object"
+    },
+    "PartyListItem": {
+      "properties": {
+        "balance": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "creditLimit": {
+          "format": "int64",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "gstin": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "id": {
+          "type": "string"
+        },
+        "isActive": {
+          "type": "boolean"
+        },
+        "name": {
+          "type": "string"
+        },
+        "partyType": {
+          "type": "string"
+        },
+        "phone": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "balance",
+        "id",
+        "isActive",
+        "name",
+        "partyType"
+      ],
+      "type": "object"
+    },
+    "PartyListQuery": {
+      "properties": {
+        "includeInactive": {
+          "default": false,
+          "type": "boolean"
+        },
+        "page": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "pageSize": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "partyType": {
+          "description": "\"customer\" or \"supplier\" (parties of type \"both\" appear in both lists).",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "search": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "withBalanceOnly": {
+          "default": false,
+          "type": "boolean"
+        }
+      },
+      "type": "object"
+    },
+    "PartyStatement": {
+      "properties": {
+        "closingBalance": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "from": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "lines": {
+          "items": {
+            "$ref": "#/definitions/StatementLine"
+          },
+          "type": "array"
+        },
+        "openingBalance": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "party": {
+          "$ref": "#/definitions/PartyDetail"
+        },
+        "to": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "closingBalance",
+        "lines",
+        "openingBalance",
+        "party"
+      ],
+      "type": "object"
+    },
+    "PaymentAccount": {
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "subtype": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "code",
+        "id",
+        "name",
+        "subtype"
+      ],
+      "type": "object"
+    },
+    "PaymentDetail": {
+      "properties": {
+        "accountId": {
+          "type": "string"
+        },
+        "allocated": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "allocations": {
+          "items": {
+            "$ref": "#/definitions/AllocationDetail"
+          },
+          "type": "array"
+        },
+        "amount": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "businessDate": {
+          "type": "string"
+        },
+        "changeGiven": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "direction": {
+          "type": "string"
+        },
+        "docNo": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "mode": {
+          "type": "string"
+        },
+        "notes": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "partyId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "partyName": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "referenceNo": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "status": {
+          "type": "string"
+        },
+        "tendered": {
+          "format": "int64",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "unallocated": {
+          "format": "int64",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "accountId",
+        "allocated",
+        "allocations",
+        "amount",
+        "businessDate",
+        "changeGiven",
+        "direction",
+        "docNo",
+        "id",
+        "mode",
+        "status",
+        "unallocated"
+      ],
+      "type": "object"
+    },
+    "PaymentEntryInput": {
+      "properties": {
+        "allocations": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/AllocationInput"
+          },
+          "type": "array"
+        },
+        "autoAllocate": {
+          "default": false,
+          "description": "Apply to the party's oldest open documents (ignored when allocations are given).",
+          "type": "boolean"
+        },
+        "businessDate": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "direction": {
+          "description": "\"in\" (received) or \"out\" (paid).",
+          "type": "string"
+        },
+        "idempotencyKey": {
+          "type": "string"
+        },
+        "notes": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "partyId": {
+          "type": "string"
+        },
+        "payment": {
+          "$ref": "#/definitions/PaymentInput"
+        }
+      },
+      "required": [
+        "direction",
+        "idempotencyKey",
+        "partyId",
+        "payment"
+      ],
+      "type": "object"
+    },
+    "PaymentInput": {
+      "properties": {
+        "accountId": {
+          "description": "Cash or bank account; default by mode.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "amount": {
+          "description": "Amount applied to the document.",
+          "format": "int64",
+          "type": "integer"
+        },
+        "mode": {
+          "description": "cash, card, upi, bank_transfer, cheque, wallet or other.",
+          "type": "string"
+        },
+        "reference": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "tendered": {
+          "description": "Cash handed over (≥ amount); the difference is change, never \"paid\".",
+          "format": "int64",
+          "type": [
+            "integer",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "amount",
+        "mode"
+      ],
+      "type": "object"
+    },
+    "PaymentListItem": {
+      "properties": {
+        "amount": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "businessDate": {
+          "type": "string"
+        },
+        "direction": {
+          "type": "string"
+        },
+        "docNo": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "mode": {
+          "type": "string"
+        },
+        "partyName": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "referenceNo": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "status": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "amount",
+        "businessDate",
+        "direction",
+        "docNo",
+        "id",
+        "mode",
+        "status"
+      ],
+      "type": "object"
+    },
+    "PaymentListQuery": {
+      "properties": {
+        "direction": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "from": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "mode": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "page": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "pageSize": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "partyId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "search": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "to": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "type": "object"
+    },
+    "PaymentSummary": {
+      "properties": {
+        "amount": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "businessDate": {
+          "type": "string"
+        },
+        "changeGiven": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "docNo": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "mode": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "tendered": {
+          "format": "int64",
+          "type": [
+            "integer",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "amount",
+        "businessDate",
+        "changeGiven",
+        "docNo",
+        "id",
+        "mode",
+        "status"
+      ],
+      "type": "object"
+    },
+    "PermissionInfo": {
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "code",
+        "description"
+      ],
+      "type": "object"
+    },
+    "PinLoginInput": {
+      "properties": {
+        "email": {
+          "type": "string"
+        },
+        "pin": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "email",
+        "pin"
+      ],
+      "type": "object"
+    },
+    "Preview": {
+      "properties": {
+        "discount": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "gross": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "isInterState": {
+          "type": "boolean"
+        },
+        "lines": {
+          "items": {
+            "$ref": "#/definitions/PreviewLine"
+          },
+          "type": "array"
+        },
+        "roundOff": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "tax": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "taxable": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "total": {
+          "format": "int64",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "discount",
+        "gross",
+        "isInterState",
+        "lines",
+        "roundOff",
+        "tax",
+        "taxable",
+        "total"
+      ],
+      "type": "object"
+    },
+    "PreviewInput": {
+      "properties": {
+        "billDiscount": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Discount"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "lines": {
+          "items": {
+            "$ref": "#/definitions/SaleLineInput"
+          },
+          "type": "array"
+        },
+        "partyId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "placeOfSupply": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "pricesIncludeTax": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "warehouseId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "lines"
+      ],
+      "type": "object"
+    },
+    "PreviewLine": {
+      "properties": {
+        "billDiscount": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "catalogPrice": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "gross": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "itemName": {
+          "type": "string"
+        },
+        "lineDiscount": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "qty": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "tax": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "taxable": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "total": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "unitName": {
+          "type": "string"
+        },
+        "unitPrice": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "variantId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "billDiscount",
+        "catalogPrice",
+        "gross",
+        "itemName",
+        "lineDiscount",
+        "qty",
+        "tax",
+        "taxable",
+        "total",
+        "unitName",
+        "unitPrice",
+        "variantId"
+      ],
+      "type": "object"
+    },
+    "ProductDetail": {
+      "properties": {
+        "baseUnitCode": {
+          "type": "string"
+        },
+        "baseUnitId": {
+          "type": "string"
+        },
+        "brandId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "brandName": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "categoryId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "categoryName": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "hsnSac": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "id": {
+          "type": "string"
+        },
+        "isActive": {
+          "type": "boolean"
+        },
+        "isService": {
+          "type": "boolean"
+        },
+        "name": {
+          "type": "string"
+        },
+        "taxRate": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "taxRateId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "trackBatches": {
+          "type": "boolean"
+        },
+        "trackExpiry": {
+          "type": "boolean"
+        },
+        "unitConversions": {
+          "items": {
+            "$ref": "#/definitions/UnitConversionDetail"
+          },
+          "type": "array"
+        },
+        "updatedAt": {
+          "type": "string"
+        },
+        "variants": {
+          "items": {
+            "$ref": "#/definitions/VariantDetail"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "baseUnitCode",
+        "baseUnitId",
+        "id",
+        "isActive",
+        "isService",
+        "name",
+        "taxRate",
+        "trackBatches",
+        "trackExpiry",
+        "unitConversions",
+        "updatedAt",
+        "variants"
+      ],
+      "type": "object"
+    },
+    "ProductInput": {
+      "properties": {
+        "baseUnitId": {
+          "type": "string"
+        },
+        "brandId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "categoryId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "expectedUpdatedAt": {
+          "description": "The `updatedAt` the editor loaded; a newer one means someone else saved meanwhile.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "hsnSac": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "isActive": {
+          "default": true,
+          "type": "boolean"
+        },
+        "isService": {
+          "default": false,
+          "type": "boolean"
+        },
+        "name": {
+          "type": "string"
+        },
+        "taxRateId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "trackBatches": {
+          "default": false,
+          "type": "boolean"
+        },
+        "trackExpiry": {
+          "default": false,
+          "type": "boolean"
+        },
+        "unitConversions": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/UnitConversionInput"
+          },
+          "type": "array"
+        },
+        "variants": {
+          "items": {
+            "$ref": "#/definitions/VariantInput"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "baseUnitId",
+        "name",
+        "variants"
+      ],
+      "type": "object"
+    },
+    "ProductListItem": {
+      "properties": {
+        "barcode": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "brandName": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "categoryName": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "costPrice": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "isActive": {
+          "type": "boolean"
+        },
+        "isLowStock": {
+          "type": "boolean"
+        },
+        "mrp": {
+          "format": "int64",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "productId": {
+          "type": "string"
+        },
+        "reorderLevel": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "salePrice": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "sku": {
+          "type": "string"
+        },
+        "stock": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "taxRate": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "unitCode": {
+          "type": "string"
+        },
+        "updatedAt": {
+          "type": "string"
+        },
+        "variantId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "costPrice",
+        "isActive",
+        "isLowStock",
+        "name",
+        "productId",
+        "reorderLevel",
+        "salePrice",
+        "sku",
+        "stock",
+        "taxRate",
+        "unitCode",
+        "updatedAt",
+        "variantId"
+      ],
+      "type": "object"
+    },
+    "ProductListQuery": {
+      "properties": {
+        "brandId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "categoryId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "descending": {
+          "default": false,
+          "type": "boolean"
+        },
+        "includeInactive": {
+          "default": false,
+          "type": "boolean"
+        },
+        "lowStockOnly": {
+          "default": false,
+          "type": "boolean"
+        },
+        "page": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "pageSize": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "search": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "sort": {
+          "description": "\"name\" (default), \"sku\", \"price\", \"stock\" or \"updated\".",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "type": "object"
+    },
+    "PurchaseBillInput": {
+      "properties": {
+        "billDiscount": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Discount"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "businessDate": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "charges": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/ChargeInput"
+          },
+          "type": "array"
+        },
+        "dueDate": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "expectedTotal": {
+          "format": "int64",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "goodsReceiptId": {
+          "description": "Goods already received with this receipt (the bill then doesn't move stock again).",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "idempotencyKey": {
+          "type": "string"
+        },
+        "lines": {
+          "items": {
+            "$ref": "#/definitions/PurchaseLineInput"
+          },
+          "type": "array"
+        },
+        "notes": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "partyId": {
+          "type": "string"
+        },
+        "payments": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/PaymentInput"
+          },
+          "type": "array"
+        },
+        "pricesIncludeTax": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "purchaseOrderId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "supplierInvoiceDate": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "supplierInvoiceNo": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "warehouseId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "idempotencyKey",
+        "lines",
+        "partyId"
+      ],
+      "type": "object"
+    },
+    "PurchaseDocDetail": {
+      "properties": {
+        "amountPaid": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "businessDate": {
+          "type": "string"
+        },
+        "chargesTotal": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "docNo": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "lines": {
+          "items": {
+            "$ref": "#/definitions/PurchaseDocLine"
+          },
+          "type": "array"
+        },
+        "notes": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "partyId": {
+          "type": "string"
+        },
+        "roundOff": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "status": {
+          "type": "string"
+        },
+        "supplierInvoiceNo": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "supplierName": {
+          "type": "string"
+        },
+        "taxTotal": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "taxable": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "total": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "warnings": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/StockWarning"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "amountPaid",
+        "businessDate",
+        "chargesTotal",
+        "docNo",
+        "id",
+        "kind",
+        "lines",
+        "partyId",
+        "roundOff",
+        "status",
+        "supplierName",
+        "taxTotal",
+        "taxable",
+        "total"
+      ],
+      "type": "object"
+    },
+    "PurchaseDocLine": {
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "itemName": {
+          "type": "string"
+        },
+        "lineTotal": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "progressQty": {
+          "description": "Received so far (orders) or returned so far (bills).",
+          "format": "int64",
+          "type": "integer"
+        },
+        "qty": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "taxTotal": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "taxable": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "unitCost": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "variantId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "itemName",
+        "lineTotal",
+        "progressQty",
+        "qty",
+        "taxTotal",
+        "taxable",
+        "unitCost",
+        "variantId"
+      ],
+      "type": "object"
+    },
+    "PurchaseLineInput": {
+      "properties": {
+        "batchNo": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "discount": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Discount"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "expiryDate": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "mfgDate": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "poItemId": {
+          "description": "Purchase-order line being fulfilled.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "qty": {
+          "description": "Thousandths of the purchase unit.",
+          "format": "int64",
+          "type": "integer"
+        },
+        "unitCost": {
+          "description": "Cost per purchase unit (before tax unless the bill's prices include tax).",
+          "format": "int64",
+          "type": "integer"
+        },
+        "unitId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "variantId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "qty",
+        "unitCost",
+        "variantId"
+      ],
+      "type": "object"
+    },
+    "PurchaseListItem": {
+      "properties": {
+        "amountPaid": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "businessDate": {
+          "type": "string"
+        },
+        "docNo": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "supplierInvoiceNo": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "supplierName": {
+          "type": "string"
+        },
+        "total": {
+          "format": "int64",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "amountPaid",
+        "businessDate",
+        "docNo",
+        "id",
+        "status",
+        "supplierName",
+        "total"
+      ],
+      "type": "object"
+    },
+    "PurchaseListQuery": {
+      "properties": {
+        "from": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "kind": {
+          "description": "\"purchase_order\", \"purchase_bill\" or \"purchase_return\".",
+          "type": "string"
+        },
+        "page": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "pageSize": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "partyId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "search": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "status": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "to": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "type": "object"
+    },
+    "PurchaseOrderInput": {
+      "properties": {
+        "expectedDate": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "lines": {
+          "items": {
+            "$ref": "#/definitions/PurchaseLineInput"
+          },
+          "type": "array"
+        },
+        "notes": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "partyId": {
+          "type": "string"
+        },
+        "warehouseId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "lines",
+        "partyId"
+      ],
+      "type": "object"
+    },
+    "PurchaseReturnInput": {
+      "properties": {
+        "idempotencyKey": {
+          "type": "string"
+        },
+        "lines": {
+          "items": {
+            "$ref": "#/definitions/PurchaseReturnLineInput"
+          },
+          "type": "array"
+        },
+        "originalBillId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "partyId": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "refund": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/PaymentInput"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Money the supplier pays back now."
+        },
+        "warehouseId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "idempotencyKey",
+        "lines",
+        "partyId",
+        "reason"
+      ],
+      "type": "object"
+    },
+    "PurchaseReturnLineInput": {
+      "properties": {
+        "originalItemId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "qty": {
+          "description": "Thousandths of the bill line's unit (or base unit without a bill).",
+          "format": "int64",
+          "type": "integer"
+        },
+        "unitCost": {
+          "description": "Without a bill: what the supplier credits per base unit (default: current cost).",
+          "format": "int64",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "variantId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "qty"
+      ],
+      "type": "object"
+    },
+    "RegisterSession": {
+      "properties": {
+        "cashIn": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "cashOut": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "closedAt": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "countedCash": {
+          "format": "int64",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "difference": {
+          "format": "int64",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "expectedCash": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "id": {
+          "type": "string"
+        },
+        "openedAt": {
+          "type": "string"
+        },
+        "openedByName": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "openingFloat": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "registerId": {
+          "type": "string"
+        },
+        "registerName": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "cashIn",
+        "cashOut",
+        "expectedCash",
+        "id",
+        "openedAt",
+        "openingFloat",
+        "registerId",
+        "registerName",
+        "status"
+      ],
+      "type": "object"
+    },
+    "ResetPasswordInput": {
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "temporaryPassword": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "temporaryPassword"
+      ],
+      "type": "object"
+    },
+    "ReturnDetail": {
+      "properties": {
+        "amountRefunded": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "businessDate": {
+          "type": "string"
+        },
+        "customerName": {
+          "type": "string"
+        },
+        "docNo": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "lines": {
+          "items": {
+            "$ref": "#/definitions/ReturnLine"
+          },
+          "type": "array"
+        },
+        "originalInvoiceId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "partyId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "reason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "status": {
+          "type": "string"
+        },
+        "taxTotal": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "taxable": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "total": {
+          "format": "int64",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "amountRefunded",
+        "businessDate",
+        "customerName",
+        "docNo",
+        "id",
+        "lines",
+        "status",
+        "taxTotal",
+        "taxable",
+        "total"
+      ],
+      "type": "object"
+    },
+    "ReturnInput": {
+      "properties": {
+        "idempotencyKey": {
+          "type": "string"
+        },
+        "lines": {
+          "items": {
+            "$ref": "#/definitions/ReturnLineInput"
+          },
+          "type": "array"
+        },
+        "originalInvoiceId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "partyId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "reason": {
+          "type": "string"
+        },
+        "refund": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/PaymentInput"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Money handed back now; without it the credit stays on the customer's account."
+        },
+        "warehouseId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "idempotencyKey",
+        "lines",
+        "reason"
+      ],
+      "type": "object"
+    },
+    "ReturnLine": {
+      "properties": {
+        "itemName": {
+          "type": "string"
+        },
+        "lineTotal": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "qty": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "restock": {
+          "type": "boolean"
+        },
+        "taxTotal": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "taxable": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "unitPrice": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "variantId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "itemName",
+        "lineTotal",
+        "qty",
+        "restock",
+        "taxTotal",
+        "taxable",
+        "unitPrice",
+        "variantId"
+      ],
+      "type": "object"
+    },
+    "ReturnLineInput": {
+      "properties": {
+        "originalItemId": {
+          "description": "Line of the original invoice (required when returning against an invoice).",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "qty": {
+          "description": "Quantity in the invoice line's unit (or base unit without an invoice), thousandths.",
+          "format": "int64",
+          "type": "integer"
+        },
+        "restock": {
+          "default": true,
+          "type": "boolean"
+        },
+        "variantId": {
+          "description": "Product returned without an invoice.",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "qty"
+      ],
+      "type": "object"
+    },
+    "RoleInput": {
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "id": {
+          "description": "None to create a role.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "maxDiscountRate": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "name": {
+          "type": "string"
+        },
+        "permissions": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "code",
+        "maxDiscountRate",
+        "name",
+        "permissions"
+      ],
+      "type": "object"
+    },
+    "RoleSummary": {
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "isSystem": {
+          "type": "boolean"
+        },
+        "maxDiscountRate": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "name": {
+          "type": "string"
+        },
+        "permissions": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "userCount": {
+          "format": "int64",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "code",
+        "id",
+        "isSystem",
+        "maxDiscountRate",
+        "name",
+        "permissions",
+        "userCount"
+      ],
+      "type": "object"
+    },
+    "Rounding": {
+      "enum": [
+        "half_up",
+        "half_even"
+      ],
+      "type": "string"
+    },
+    "SaleInput": {
+      "properties": {
+        "billDiscount": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Discount"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "businessDate": {
+          "description": "Defaults to today; another date needs `sales.backdate`.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "customerGstin": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "customerName": {
+          "description": "Walk-in customer details (ignored when a party is chosen).",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "customerPhone": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "expectedTotal": {
+          "description": "The total the screen showed; a different backend total fails with TOTALS_MISMATCH.",
+          "format": "int64",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "idempotencyKey": {
+          "type": "string"
+        },
+        "lines": {
+          "items": {
+            "$ref": "#/definitions/SaleLineInput"
+          },
+          "type": "array"
+        },
+        "notes": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "partyId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "payments": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/PaymentInput"
+          },
+          "type": "array"
+        },
+        "placeOfSupply": {
+          "description": "Two-digit state code of the place of supply; decides CGST+SGST vs IGST.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "pricesIncludeTax": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "registerSessionId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "sourceDocumentId": {
+          "description": "Quotation / sales order being converted.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "warehouseId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "idempotencyKey",
+        "lines"
+      ],
+      "type": "object"
+    },
+    "SaleLineInput": {
+      "properties": {
+        "batchId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "discount": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Discount"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "qty": {
+          "description": "Quantity in the sold unit, thousandths.",
+          "format": "int64",
+          "type": "integer"
+        },
+        "unitId": {
+          "description": "Sold unit (a pack size); default: the product's base unit.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "unitPrice": {
+          "description": "Price per sold unit; leave empty to use the catalogue price. A different price needs `sales.price_override`.",
+          "format": "int64",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "variantId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "qty",
+        "variantId"
+      ],
+      "type": "object"
+    },
+    "SalesDocDetail": {
+      "properties": {
+        "businessDate": {
+          "type": "string"
+        },
+        "convertedInvoiceId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "customerName": {
+          "type": "string"
+        },
+        "discount": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "docNo": {
+          "type": "string"
+        },
+        "docType": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "lines": {
+          "items": {
+            "$ref": "#/definitions/SalesDocLine"
+          },
+          "type": "array"
+        },
+        "notes": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "partyId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "pricesIncludeTax": {
+          "type": "boolean"
+        },
+        "roundOff": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "status": {
+          "type": "string"
+        },
+        "taxTotal": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "taxable": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "terms": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "total": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "updatedAt": {
+          "type": "string"
+        },
+        "validUntil": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "businessDate",
+        "customerName",
+        "discount",
+        "docNo",
+        "docType",
+        "id",
+        "lines",
+        "pricesIncludeTax",
+        "roundOff",
+        "status",
+        "taxTotal",
+        "taxable",
+        "total",
+        "updatedAt"
+      ],
+      "type": "object"
+    },
+    "SalesDocInput": {
+      "properties": {
+        "billDiscount": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Discount"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "customerName": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "customerPhone": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "docType": {
+          "description": "\"quotation\", \"sales_order\" or \"delivery_challan\".",
+          "type": "string"
+        },
+        "id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "lines": {
+          "items": {
+            "$ref": "#/definitions/SaleLineInput"
+          },
+          "type": "array"
+        },
+        "notes": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "partyId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "pricesIncludeTax": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "terms": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "validUntil": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "docType",
+        "lines"
+      ],
+      "type": "object"
+    },
+    "SalesDocLine": {
+      "properties": {
+        "discount": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "itemName": {
+          "type": "string"
+        },
+        "lineTotal": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "qty": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "taxTotal": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "taxable": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "unitId": {
+          "type": "string"
+        },
+        "unitPrice": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "variantId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "discount",
+        "itemName",
+        "lineTotal",
+        "qty",
+        "taxTotal",
+        "taxable",
+        "unitId",
+        "unitPrice",
+        "variantId"
+      ],
+      "type": "object"
+    },
+    "SalesDocListItem": {
+      "properties": {
+        "businessDate": {
+          "type": "string"
+        },
+        "customerName": {
+          "type": "string"
+        },
+        "docNo": {
+          "type": "string"
+        },
+        "docType": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "total": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "validUntil": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "businessDate",
+        "customerName",
+        "docNo",
+        "docType",
+        "id",
+        "status",
+        "total"
+      ],
+      "type": "object"
+    },
+    "SalesDocListQuery": {
+      "properties": {
+        "docType": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "page": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "pageSize": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "search": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "status": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "type": "object"
+    },
+    "SalesDocStatusInput": {
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "status": {
+          "description": "\"open\", \"accepted\", \"declined\" or \"cancelled\".",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "status"
+      ],
+      "type": "object"
+    },
+    "SearchItem": {
+      "description": "One sellable line for the POS: the variant, in the unit the code identified (pack barcodes resolve to the pack, with its factor and pack price).",
+      "properties": {
+        "barcode": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "cessRate": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "factorDen": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "factorNum": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "hsnSac": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "isService": {
+          "type": "boolean"
+        },
+        "mrp": {
+          "format": "int64",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "productId": {
+          "type": "string"
+        },
+        "salePrice": {
+          "description": "Price per sold unit (pack price for packs).",
+          "format": "int64",
+          "type": "integer"
+        },
+        "sku": {
+          "type": "string"
+        },
+        "stock": {
+          "description": "Base units in the store.",
+          "format": "int64",
+          "type": "integer"
+        },
+        "taxRate": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "taxRateId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "taxType": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "trackBatches": {
+          "type": "boolean"
+        },
+        "unitCode": {
+          "type": "string"
+        },
+        "unitId": {
+          "type": "string"
+        },
+        "variantId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "cessRate",
+        "factorDen",
+        "factorNum",
+        "isService",
+        "name",
+        "productId",
+        "salePrice",
+        "sku",
+        "stock",
+        "taxRate",
+        "trackBatches",
+        "unitCode",
+        "unitId",
+        "variantId"
+      ],
+      "type": "object"
+    },
+    "SearchQuery": {
+      "properties": {
+        "limit": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "term": {
+          "type": "string"
+        },
+        "warehouseId": {
+          "description": "Stock is reported for this store (default: the main store).",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "term"
+      ],
+      "type": "object"
+    },
+    "SecuritySettings": {
+      "properties": {
+        "idleTimeoutMinutes": {
+          "default": 30,
+          "format": "int64",
+          "type": "integer"
+        },
+        "lockoutMinutes": {
+          "default": 15,
+          "format": "int64",
+          "type": "integer"
+        },
+        "maxFailedLogins": {
+          "default": 5,
+          "format": "int64",
+          "type": "integer"
+        },
+        "minPasswordLength": {
+          "default": 10,
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "pinLoginEnabled": {
+          "default": true,
+          "type": "boolean"
+        },
+        "sessionHours": {
+          "default": 12,
+          "format": "int64",
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "SessionUser": {
+      "properties": {
+        "email": {
+          "type": "string"
+        },
+        "hasPin": {
+          "type": "boolean"
+        },
+        "id": {
+          "type": "string"
+        },
+        "maxDiscountRate": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "name": {
+          "type": "string"
+        },
+        "permissions": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "roleCode": {
+          "type": "string"
+        },
+        "roleName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "email",
+        "hasPin",
+        "id",
+        "maxDiscountRate",
+        "name",
+        "permissions",
+        "roleCode",
+        "roleName"
+      ],
+      "type": "object"
+    },
+    "SetPinInput": {
+      "properties": {
+        "currentPassword": {
+          "type": "string"
+        },
+        "pin": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "currentPassword",
+        "pin"
+      ],
+      "type": "object"
+    },
+    "Settings": {
+      "properties": {
+        "business": {
+          "$ref": "#/definitions/BusinessSettings"
+        },
+        "inventory": {
+          "$ref": "#/definitions/InventorySettings"
+        },
+        "invoice": {
+          "$ref": "#/definitions/InvoiceSettings"
+        },
+        "security": {
+          "$ref": "#/definitions/SecuritySettings"
+        },
+        "tax": {
+          "$ref": "#/definitions/TaxSettings"
+        }
+      },
+      "required": [
+        "business",
+        "inventory",
+        "invoice",
+        "security",
+        "tax"
+      ],
+      "type": "object"
+    },
+    "SetupInput": {
+      "properties": {
+        "address": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "businessName": {
+          "type": "string"
+        },
+        "currency": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "currencyMinorDigits": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "email": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "fyStartMonth": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "gstin": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "owner": {
+          "$ref": "#/definitions/OwnerInput"
+        },
+        "phone": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "pricesIncludeTax": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "stateCode": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "taxRegime": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/TaxRegime"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "timezone": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "businessName",
+        "owner"
+      ],
+      "type": "object"
+    },
+    "SetupStatus": {
+      "properties": {
+        "legacyDatabaseFound": {
+          "description": "A v1 database exists that can be migrated instead of starting empty.",
+          "type": "boolean"
+        },
+        "needsSetup": {
+          "type": "boolean"
+        },
+        "schemaVersion": {
+          "format": "int64",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "legacyDatabaseFound",
+        "needsSetup",
+        "schemaVersion"
+      ],
+      "type": "object"
+    },
+    "StatementLine": {
+      "properties": {
+        "balance": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "businessDate": {
+          "type": "string"
+        },
+        "credit": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "debit": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "docNo": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "entryType": {
+          "type": "string"
+        },
+        "narration": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "sourceId": {
+          "type": "string"
+        },
+        "sourceType": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "balance",
+        "businessDate",
+        "credit",
+        "debit",
+        "entryType",
+        "sourceId",
+        "sourceType"
+      ],
+      "type": "object"
+    },
+    "StatementQuery": {
+      "properties": {
+        "from": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "partyId": {
+          "type": "string"
+        },
+        "to": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "partyId"
+      ],
+      "type": "object"
+    },
+    "StockCard": {
+      "properties": {
+        "closingQty": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "lines": {
+          "items": {
+            "$ref": "#/definitions/StockCardLine"
+          },
+          "type": "array"
+        },
+        "name": {
+          "type": "string"
+        },
+        "openingQty": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "sku": {
+          "type": "string"
+        },
+        "variantId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "closingQty",
+        "lines",
+        "name",
+        "openingQty",
+        "sku",
+        "variantId"
+      ],
+      "type": "object"
+    },
+    "StockCardLine": {
+      "properties": {
+        "balance": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "businessDate": {
+          "type": "string"
+        },
+        "docNo": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "movementType": {
+          "type": "string"
+        },
+        "qty": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "sourceId": {
+          "type": "string"
+        },
+        "sourceType": {
+          "type": "string"
+        },
+        "unitCost": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "warehouseName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "balance",
+        "businessDate",
+        "movementType",
+        "qty",
+        "sourceId",
+        "sourceType",
+        "unitCost",
+        "warehouseName"
+      ],
+      "type": "object"
+    },
+    "StockCardQuery": {
+      "properties": {
+        "from": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "to": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "variantId": {
+          "type": "string"
+        },
+        "warehouseId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "variantId"
+      ],
+      "type": "object"
+    },
+    "StockDocLine": {
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "qty": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "sku": {
+          "type": "string"
+        },
+        "unitCost": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "value": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "variantId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "qty",
+        "sku",
+        "unitCost",
+        "value",
+        "variantId"
+      ],
+      "type": "object"
+    },
+    "StockDocResult": {
+      "properties": {
+        "businessDate": {
+          "type": "string"
+        },
+        "docNo": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "lines": {
+          "items": {
+            "$ref": "#/definitions/StockDocLine"
+          },
+          "type": "array"
+        },
+        "warnings": {
+          "items": {
+            "$ref": "#/definitions/StockWarning"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "businessDate",
+        "docNo",
+        "id",
+        "lines",
+        "warnings"
+      ],
+      "type": "object"
+    },
+    "StockWarning": {
+      "description": "A movement allowed under the \"warn\" policy that took stock below zero.",
+      "properties": {
+        "available": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "name": {
+          "type": "string"
+        },
+        "requested": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "variantId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "available",
+        "name",
+        "requested",
+        "variantId"
+      ],
+      "type": "object"
+    },
+    "TaxRate": {
+      "properties": {
+        "cessRate": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "id": {
+          "type": "string"
+        },
+        "isActive": {
+          "type": "boolean"
+        },
+        "name": {
+          "type": "string"
+        },
+        "rate": {
+          "description": "ppm (18% = 180000).",
+          "format": "int64",
+          "type": "integer"
+        },
+        "taxType": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "cessRate",
+        "id",
+        "isActive",
+        "name",
+        "rate",
+        "taxType"
+      ],
+      "type": "object"
+    },
+    "TaxRateInput": {
+      "properties": {
+        "cessRate": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "isActive": {
+          "type": "boolean"
+        },
+        "name": {
+          "type": "string"
+        },
+        "rate": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "taxType": {
+          "description": "\"gst\", \"vat\", \"none\" or \"other\".",
+          "type": "string"
+        }
+      },
+      "required": [
+        "cessRate",
+        "isActive",
+        "name",
+        "rate",
+        "taxType"
+      ],
+      "type": "object"
+    },
+    "TaxRegime": {
+      "enum": [
+        "gst",
+        "vat",
+        "none"
+      ],
+      "type": "string"
+    },
+    "TaxSettings": {
+      "properties": {
+        "pricesIncludeTax": {
+          "default": true,
+          "description": "Default for new sales documents: catalogue prices include tax (retail MRP style).",
+          "type": "boolean"
+        },
+        "regime": {
+          "$ref": "#/definitions/TaxRegime",
+          "default": "gst"
+        },
+        "roundTotalTo": {
+          "default": 100,
+          "description": "Round grand totals to this many minor units (100 = nearest rupee); 0 = no round-off.",
+          "format": "int64",
+          "type": "integer"
+        },
+        "rounding": {
+          "$ref": "#/definitions/Rounding",
+          "default": "half_up"
+        }
+      },
+      "type": "object"
+    },
+    "TaxSummaryRow": {
+      "properties": {
+        "cess": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "cgst": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "igst": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "otherTax": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "sgst": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "taxRate": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "taxable": {
+          "format": "int64",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "cess",
+        "cgst",
+        "igst",
+        "otherTax",
+        "sgst",
+        "taxRate",
+        "taxable"
+      ],
+      "type": "object"
+    },
+    "TransferInput": {
+      "properties": {
+        "fromWarehouseId": {
+          "type": "string"
+        },
+        "idempotencyKey": {
+          "type": "string"
+        },
+        "lines": {
+          "items": {
+            "$ref": "#/definitions/TransferLine"
+          },
+          "type": "array"
+        },
+        "notes": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "toWarehouseId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "fromWarehouseId",
+        "idempotencyKey",
+        "lines",
+        "toWarehouseId"
+      ],
+      "type": "object"
+    },
+    "TransferLine": {
+      "properties": {
+        "batchId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "qty": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "variantId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "qty",
+        "variantId"
+      ],
+      "type": "object"
+    },
+    "Unit": {
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "decimals": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "code",
+        "decimals",
+        "id",
+        "name"
+      ],
+      "type": "object"
+    },
+    "UnitConversionDetail": {
+      "properties": {
+        "barcode": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "factorDen": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "factorNum": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "fromUnitCode": {
+          "type": "string"
+        },
+        "fromUnitId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "factorDen",
+        "factorNum",
+        "fromUnitCode",
+        "fromUnitId"
+      ],
+      "type": "object"
+    },
+    "UnitConversionInput": {
+      "properties": {
+        "barcode": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "factorDen": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "factorNum": {
+          "description": "1 from-unit = factorNum / factorDen base units (1 box = 12 pcs → 12 / 1).",
+          "format": "int64",
+          "type": "integer"
+        },
+        "fromUnitId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "factorDen",
+        "factorNum",
+        "fromUnitId"
+      ],
+      "type": "object"
+    },
+    "UnitInput": {
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "decimals": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "code",
+        "decimals",
+        "name"
+      ],
+      "type": "object"
+    },
+    "UpdateSettingsInput": {
+      "properties": {
+        "section": {
+          "description": "\"business\", \"tax\", \"inventory\", \"security\" or \"invoice\".",
+          "type": "string"
+        },
+        "value": {
+          "description": "The whole section (fields left out take their defaults)."
+        }
+      },
+      "required": [
+        "section",
+        "value"
+      ],
+      "type": "object"
+    },
+    "UpdateUserInput": {
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "isActive": {
+          "type": "boolean"
+        },
+        "name": {
+          "type": "string"
+        },
+        "phone": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "roleId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "isActive",
+        "name",
+        "roleId"
+      ],
+      "type": "object"
+    },
+    "UserSummary": {
+      "properties": {
+        "createdAt": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string"
+        },
+        "hasPin": {
+          "type": "boolean"
+        },
+        "id": {
+          "type": "string"
+        },
+        "isActive": {
+          "type": "boolean"
+        },
+        "lastLoginAt": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "lockedUntil": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "mustChangePassword": {
+          "type": "boolean"
+        },
+        "name": {
+          "type": "string"
+        },
+        "phone": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "roleCode": {
+          "type": "string"
+        },
+        "roleId": {
+          "type": "string"
+        },
+        "roleName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "createdAt",
+        "email",
+        "hasPin",
+        "id",
+        "isActive",
+        "mustChangePassword",
+        "name",
+        "roleCode",
+        "roleId",
+        "roleName"
+      ],
+      "type": "object"
+    },
+    "VariantDetail": {
+      "properties": {
+        "barcode": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "costPrice": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "id": {
+          "type": "string"
+        },
+        "isActive": {
+          "type": "boolean"
+        },
+        "mrp": {
+          "format": "int64",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "reorderLevel": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "reorderQty": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "salePrice": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "sku": {
+          "type": "string"
+        },
+        "stock": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "stockByWarehouse": {
+          "items": {
+            "$ref": "#/definitions/WarehouseStock"
+          },
+          "type": "array"
+        },
+        "variantName": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "costPrice",
+        "id",
+        "isActive",
+        "reorderLevel",
+        "reorderQty",
+        "salePrice",
+        "sku",
+        "stock",
+        "stockByWarehouse"
+      ],
+      "type": "object"
+    },
+    "VariantInput": {
+      "properties": {
+        "barcode": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "costPrice": {
+          "description": "Starting cost per base unit (new variants only; afterwards purchases maintain it).",
+          "format": "int64",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "isActive": {
+          "default": true,
+          "type": "boolean"
+        },
+        "mrp": {
+          "format": "int64",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "openingStock": {
+          "description": "Opening stock in the default store (new variants only, thousandths).",
+          "format": "int64",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "reorderLevel": {
+          "default": 0,
+          "format": "int64",
+          "type": "integer"
+        },
+        "reorderQty": {
+          "default": 0,
+          "format": "int64",
+          "type": "integer"
+        },
+        "salePrice": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "sku": {
+          "type": "string"
+        },
+        "variantName": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "salePrice",
+        "sku"
+      ],
+      "type": "object"
+    },
+    "VoidBillInput": {
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "reason"
+      ],
+      "type": "object"
+    },
+    "VoidExpenseInput": {
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "reason"
+      ],
+      "type": "object"
+    },
+    "VoidInput": {
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "reason"
+      ],
+      "type": "object"
+    },
+    "VoidPaymentInput": {
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "reason"
+      ],
+      "type": "object"
+    },
+    "Warehouse": {
+      "properties": {
+        "branchId": {
+          "type": "string"
+        },
+        "code": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "isDefault": {
+          "type": "boolean"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "branchId",
+        "code",
+        "id",
+        "isDefault",
+        "name"
+      ],
+      "type": "object"
+    },
+    "WarehouseStock": {
+      "properties": {
+        "qty": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "warehouseId": {
+          "type": "string"
+        },
+        "warehouseName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "qty",
+        "warehouseId",
+        "warehouseName"
+      ],
+      "type": "object"
+    }
+  },
+  "description": "Generated from src-tauri/src/api (do not edit). Every command takes { token, input, approval? }.",
+  "properties": {
+    "approval": {
+      "$ref": "#/definitions/ApprovalInput"
+    },
+    "commands": {
+      "additionalProperties": false,
+      "properties": {
+        "auth_change_password": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/ChangePasswordInput"
+            },
+            "output": {
+              "type": "null"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "auth_login": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/LoginInput"
+            },
+            "output": {
+              "$ref": "#/definitions/AuthSession"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "auth_logout": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/NoInput"
+            },
+            "output": {
+              "type": "null"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "auth_me": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/NoInput"
+            },
+            "output": {
+              "$ref": "#/definitions/SessionUser"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "auth_pin_login": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/PinLoginInput"
+            },
+            "output": {
+              "$ref": "#/definitions/AuthSession"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "auth_set_pin": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/SetPinInput"
+            },
+            "output": {
+              "type": "null"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "brands_list": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/NoInput"
+            },
+            "output": {
+              "items": {
+                "$ref": "#/definitions/Brand"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "brands_save": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/BrandInput"
+            },
+            "output": {
+              "$ref": "#/definitions/IdOut"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "catalog_delete_master": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/DeleteMasterInput"
+            },
+            "output": {
+              "type": "null"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "categories_list": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/NoInput"
+            },
+            "output": {
+              "items": {
+                "$ref": "#/definitions/Category"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "categories_save": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/CategoryInput"
+            },
+            "output": {
+              "$ref": "#/definitions/IdOut"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "expenses_categories": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/NoInput"
+            },
+            "output": {
+              "items": {
+                "$ref": "#/definitions/ExpenseCategory"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "expenses_create": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/ExpenseInput"
+            },
+            "output": {
+              "$ref": "#/definitions/ExpenseDetail"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "expenses_list": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/ExpenseListQuery"
+            },
+            "output": {
+              "$ref": "#/definitions/Page_for_ExpenseDetail"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "expenses_save_category": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/ExpenseCategoryInput"
+            },
+            "output": {
+              "$ref": "#/definitions/ExpenseCategory"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "expenses_void": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/VoidExpenseInput"
+            },
+            "output": {
+              "$ref": "#/definitions/ExpenseDetail"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "parties_delete": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/IdInput"
+            },
+            "output": {
+              "type": "null"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "parties_get": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/IdInput"
+            },
+            "output": {
+              "$ref": "#/definitions/PartyDetail"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "parties_list": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/PartyListQuery"
+            },
+            "output": {
+              "$ref": "#/definitions/Page_for_PartyListItem"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "parties_open_documents": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/IdInput"
+            },
+            "output": {
+              "items": {
+                "$ref": "#/definitions/OpenDocument"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "parties_save": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/PartyInput"
+            },
+            "output": {
+              "$ref": "#/definitions/PartyDetail"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "parties_statement": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/StatementQuery"
+            },
+            "output": {
+              "$ref": "#/definitions/PartyStatement"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "payments_accounts": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/NoInput"
+            },
+            "output": {
+              "items": {
+                "$ref": "#/definitions/PaymentAccount"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "payments_allocate": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/AllocateInput"
+            },
+            "output": {
+              "$ref": "#/definitions/PaymentDetail"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "payments_get": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/IdInput"
+            },
+            "output": {
+              "$ref": "#/definitions/PaymentDetail"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "payments_list": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/PaymentListQuery"
+            },
+            "output": {
+              "$ref": "#/definitions/Page_for_PaymentListItem"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "payments_record": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/PaymentEntryInput"
+            },
+            "output": {
+              "$ref": "#/definitions/PaymentDetail"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "payments_void": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/VoidPaymentInput"
+            },
+            "output": {
+              "$ref": "#/definitions/PaymentDetail"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "permissions_list": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/NoInput"
+            },
+            "output": {
+              "items": {
+                "$ref": "#/definitions/PermissionInfo"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "products_delete": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/IdInput"
+            },
+            "output": {
+              "type": "null"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "products_get": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/IdInput"
+            },
+            "output": {
+              "$ref": "#/definitions/ProductDetail"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "products_list": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/ProductListQuery"
+            },
+            "output": {
+              "$ref": "#/definitions/Page_for_ProductListItem"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "products_lookup": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/SearchQuery"
+            },
+            "output": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/SearchItem"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "products_save": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/ProductInput"
+            },
+            "output": {
+              "$ref": "#/definitions/ProductDetail"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "products_search": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/SearchQuery"
+            },
+            "output": {
+              "items": {
+                "$ref": "#/definitions/SearchItem"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "purchases_cancel_order": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/IdInput"
+            },
+            "output": {
+              "$ref": "#/definitions/PurchaseDocDetail"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "purchases_create_bill": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/PurchaseBillInput"
+            },
+            "output": {
+              "$ref": "#/definitions/PurchaseDocDetail"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "purchases_create_return": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/PurchaseReturnInput"
+            },
+            "output": {
+              "$ref": "#/definitions/PurchaseDocDetail"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "purchases_get_bill": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/IdInput"
+            },
+            "output": {
+              "$ref": "#/definitions/PurchaseDocDetail"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "purchases_get_order": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/IdInput"
+            },
+            "output": {
+              "$ref": "#/definitions/PurchaseDocDetail"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "purchases_list": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/PurchaseListQuery"
+            },
+            "output": {
+              "$ref": "#/definitions/Page_for_PurchaseListItem"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "purchases_receive_goods": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/GoodsReceiptInput"
+            },
+            "output": {
+              "$ref": "#/definitions/GoodsReceiptDetail"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "purchases_save_order": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/PurchaseOrderInput"
+            },
+            "output": {
+              "$ref": "#/definitions/PurchaseDocDetail"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "purchases_void_bill": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/VoidBillInput"
+            },
+            "output": {
+              "$ref": "#/definitions/PurchaseDocDetail"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "register_close": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/CloseRegisterInput"
+            },
+            "output": {
+              "$ref": "#/definitions/RegisterSession"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "register_current": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/NoInput"
+            },
+            "output": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/RegisterSession"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "register_open": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/OpenRegisterInput"
+            },
+            "output": {
+              "$ref": "#/definitions/RegisterSession"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "roles_delete": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/IdInput"
+            },
+            "output": {
+              "type": "null"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "roles_list": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/NoInput"
+            },
+            "output": {
+              "items": {
+                "$ref": "#/definitions/RoleSummary"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "roles_save": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/RoleInput"
+            },
+            "output": {
+              "$ref": "#/definitions/RoleSummary"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "sales_create_invoice": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/SaleInput"
+            },
+            "output": {
+              "$ref": "#/definitions/InvoiceDetail"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "sales_create_return": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/ReturnInput"
+            },
+            "output": {
+              "$ref": "#/definitions/ReturnDetail"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "sales_docs_convert": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/ConvertInput"
+            },
+            "output": {
+              "$ref": "#/definitions/InvoiceDetail"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "sales_docs_get": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/IdInput"
+            },
+            "output": {
+              "$ref": "#/definitions/SalesDocDetail"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "sales_docs_list": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/SalesDocListQuery"
+            },
+            "output": {
+              "$ref": "#/definitions/Page_for_SalesDocListItem"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "sales_docs_save": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/SalesDocInput"
+            },
+            "output": {
+              "$ref": "#/definitions/SalesDocDetail"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "sales_docs_set_status": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/SalesDocStatusInput"
+            },
+            "output": {
+              "$ref": "#/definitions/SalesDocDetail"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "sales_get_invoice": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/IdInput"
+            },
+            "output": {
+              "$ref": "#/definitions/InvoiceDetail"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "sales_get_return": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/IdInput"
+            },
+            "output": {
+              "$ref": "#/definitions/ReturnDetail"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "sales_held_list": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/NoInput"
+            },
+            "output": {
+              "items": {
+                "$ref": "#/definitions/HeldBill"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "sales_hold": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/HoldInput"
+            },
+            "output": {
+              "$ref": "#/definitions/HeldBill"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "sales_list_invoices": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/InvoiceListQuery"
+            },
+            "output": {
+              "$ref": "#/definitions/Page_for_InvoiceListItem"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "sales_preview": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/PreviewInput"
+            },
+            "output": {
+              "$ref": "#/definitions/Preview"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "sales_recall": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/IdInput"
+            },
+            "output": {
+              "$ref": "#/definitions/HeldBill"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "sales_void_invoice": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/VoidInput"
+            },
+            "output": {
+              "$ref": "#/definitions/InvoiceDetail"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "settings_get": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/NoInput"
+            },
+            "output": {
+              "$ref": "#/definitions/Settings"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "settings_public": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/NoInput"
+            },
+            "output": true
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "settings_update": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/UpdateSettingsInput"
+            },
+            "output": {
+              "$ref": "#/definitions/Settings"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "setup_create_business": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/SetupInput"
+            },
+            "output": {
+              "$ref": "#/definitions/AuthSession"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "setup_status": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/NoInput"
+            },
+            "output": {
+              "$ref": "#/definitions/SetupStatus"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "stock_adjust": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/AdjustInput"
+            },
+            "output": {
+              "$ref": "#/definitions/StockDocResult"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "stock_card": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/StockCardQuery"
+            },
+            "output": {
+              "$ref": "#/definitions/StockCard"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "stock_count_enter": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/CountEntriesInput"
+            },
+            "output": {
+              "$ref": "#/definitions/CountDetail"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "stock_count_finalize": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/CountFinalizeInput"
+            },
+            "output": {
+              "$ref": "#/definitions/CountDetail"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "stock_count_get": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/IdInput"
+            },
+            "output": {
+              "$ref": "#/definitions/CountDetail"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "stock_count_start": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/CountStartInput"
+            },
+            "output": {
+              "$ref": "#/definitions/CountDetail"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "stock_transfer": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/TransferInput"
+            },
+            "output": {
+              "$ref": "#/definitions/StockDocResult"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "stock_warehouses": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/NoInput"
+            },
+            "output": {
+              "items": {
+                "$ref": "#/definitions/Warehouse"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "tax_rates_list": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/NoInput"
+            },
+            "output": {
+              "items": {
+                "$ref": "#/definitions/TaxRate"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "tax_rates_save": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/TaxRateInput"
+            },
+            "output": {
+              "$ref": "#/definitions/IdOut"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "units_list": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/NoInput"
+            },
+            "output": {
+              "items": {
+                "$ref": "#/definitions/Unit"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "units_save": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/UnitInput"
+            },
+            "output": {
+              "$ref": "#/definitions/IdOut"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "users_create": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/CreateUserInput"
+            },
+            "output": {
+              "$ref": "#/definitions/UserSummary"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "users_delete": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/IdInput"
+            },
+            "output": {
+              "type": "null"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "users_list": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/NoInput"
+            },
+            "output": {
+              "items": {
+                "$ref": "#/definitions/UserSummary"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "users_reset_password": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/ResetPasswordInput"
+            },
+            "output": {
+              "type": "null"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "users_update": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/UpdateUserInput"
+            },
+            "output": {
+              "$ref": "#/definitions/UserSummary"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        }
+      },
+      "required": [
+        "auth_change_password",
+        "auth_login",
+        "auth_logout",
+        "auth_me",
+        "auth_pin_login",
+        "auth_set_pin",
+        "brands_list",
+        "brands_save",
+        "catalog_delete_master",
+        "categories_list",
+        "categories_save",
+        "expenses_categories",
+        "expenses_create",
+        "expenses_list",
+        "expenses_save_category",
+        "expenses_void",
+        "parties_delete",
+        "parties_get",
+        "parties_list",
+        "parties_open_documents",
+        "parties_save",
+        "parties_statement",
+        "payments_accounts",
+        "payments_allocate",
+        "payments_get",
+        "payments_list",
+        "payments_record",
+        "payments_void",
+        "permissions_list",
+        "products_delete",
+        "products_get",
+        "products_list",
+        "products_lookup",
+        "products_save",
+        "products_search",
+        "purchases_cancel_order",
+        "purchases_create_bill",
+        "purchases_create_return",
+        "purchases_get_bill",
+        "purchases_get_order",
+        "purchases_list",
+        "purchases_receive_goods",
+        "purchases_save_order",
+        "purchases_void_bill",
+        "register_close",
+        "register_current",
+        "register_open",
+        "roles_delete",
+        "roles_list",
+        "roles_save",
+        "sales_create_invoice",
+        "sales_create_return",
+        "sales_docs_convert",
+        "sales_docs_get",
+        "sales_docs_list",
+        "sales_docs_save",
+        "sales_docs_set_status",
+        "sales_get_invoice",
+        "sales_get_return",
+        "sales_held_list",
+        "sales_hold",
+        "sales_list_invoices",
+        "sales_preview",
+        "sales_recall",
+        "sales_void_invoice",
+        "settings_get",
+        "settings_public",
+        "settings_update",
+        "setup_create_business",
+        "setup_status",
+        "stock_adjust",
+        "stock_card",
+        "stock_count_enter",
+        "stock_count_finalize",
+        "stock_count_get",
+        "stock_count_start",
+        "stock_transfer",
+        "stock_warehouses",
+        "tax_rates_list",
+        "tax_rates_save",
+        "units_list",
+        "units_save",
+        "users_create",
+        "users_delete",
+        "users_list",
+        "users_reset_password",
+        "users_update"
+      ],
+      "type": "object"
+    },
+    "error": {
+      "$ref": "#/definitions/AppError"
+    },
+    "publicCommands": {
+      "items": {
+        "enum": [
+          "auth_login",
+          "auth_pin_login",
+          "setup_create_business",
+          "setup_status"
+        ],
+        "type": "string"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "approval",
+    "commands",
+    "error",
+    "publicCommands"
+  ],
+  "title": "ApiContract",
+  "type": "object"
+}

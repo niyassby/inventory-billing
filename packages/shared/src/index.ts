@@ -7,3 +7,4 @@ export * from "./rounding";
 export * from "./schemas";
 export * from "./tax";
 export type * as Legacy from "./types/legacy";
+export * as Api from "./generated/api";

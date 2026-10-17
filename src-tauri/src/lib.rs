@@ -9,7 +9,8 @@ mod database;
 mod models;
 mod repositories;
 
-// v2 foundations (Phase 2). Public so the maintenance binaries in src/bin can use them.
+// v2 backend (Phases 2–3). Public so the maintenance binaries in src/bin can use them.
+pub mod api;
 pub mod app;
 pub mod db;
 pub mod domain;
@@ -18,6 +19,8 @@ pub mod legacy_migration;
 pub mod logging;
 pub mod services;
 
+use std::sync::Arc;
+
 use tauri::Manager;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -25,11 +28,30 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
+            let data_dir = app
+                .path()
+                .app_local_data_dir()
+                .unwrap_or_else(|_| std::path::PathBuf::from("."));
+            let log_dir = app
+                .path()
+                .app_log_dir()
+                .unwrap_or_else(|_| data_dir.join("logs"));
+            logging::init(&log_dir);
+
+            // v1 database: still serves the current screens until they move to v2 (Phase 5).
             let conn = database::init_db(app.handle());
             app.manage(database::DbState(std::sync::Mutex::new(conn)));
+
+            // v2 database: the new backend (docs/DATABASE.md).
+            let state = app::AppState::open(
+                &data_dir.join("inventory_v2.db"),
+                Arc::new(app::SystemClock),
+            )?;
+            tracing::info!("v2 database ready at {}", state.db_path.display());
+            app.manage(state);
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![
+        .invoke_handler(route(tauri::generate_handler![
             commands::login,
             commands::logout,
             commands::get_profile,
@@ -108,7 +130,21 @@ pub fn run() {
             commands::list_units_cmd,
             commands::delete_unit_cmd,
             commands::get_product_transactions_cmd,
-        ])
+        ]))
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+/// One invoke handler for both backends: v2 command names go to `api`, everything else to v1.
+fn route<R: tauri::Runtime>(
+    legacy: impl Fn(tauri::ipc::Invoke<R>) -> bool + Send + Sync + 'static,
+) -> impl Fn(tauri::ipc::Invoke<R>) -> bool + Send + Sync + 'static {
+    let v2 = api::handler::<R>();
+    move |invoke| {
+        if api::NAMES.contains(&invoke.message.command()) {
+            v2(invoke)
+        } else {
+            legacy(invoke)
+        }
+    }
 }

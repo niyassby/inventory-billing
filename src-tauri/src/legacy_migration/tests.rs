@@ -603,6 +603,21 @@ fn dry_run_writes_only_the_report() {
 }
 
 #[test]
+fn replaces_the_empty_v2_database_the_app_created() {
+    let f = fixture();
+    {
+        let mut conn = crate::db::open(&f.target).unwrap();
+        crate::db::migrate::run(&mut conn).unwrap();
+    }
+    migrate_legacy(&f.options(false)).unwrap();
+    let v2 = crate::db::open(&f.target).unwrap();
+    assert_eq!(scalar::<i64>(&v2, "SELECT count(*) FROM sales_invoices"), 4);
+    // A second run now refuses: the database holds real data.
+    let err = migrate_legacy(&f.options(false)).err().unwrap();
+    assert!(matches!(err, MigrateError::TargetExists(_)), "{err}");
+}
+
+#[test]
 fn refuses_to_overwrite_an_existing_v2_database() {
     let f = fixture();
     std::fs::write(&f.target, b"existing").unwrap();

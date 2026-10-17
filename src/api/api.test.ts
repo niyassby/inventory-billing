@@ -4,7 +4,7 @@ vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
 
 import { invoke } from "@tauri-apps/api/core";
 import type { Transport } from "./client";
-import { createApiClient, tauriTransport } from "./client";
+import { createApiClient, createV2Client, tauriTransport } from "./client";
 import { ApiError, toApiError } from "./errors";
 
 describe("toApiError", () => {
@@ -86,5 +86,37 @@ describe("createApiClient", () => {
     vi.mocked(invoke).mockResolvedValue("ok");
     await expect(tauriTransport.call("get_profile", { token: "t" })).resolves.toBe("ok");
     expect(invoke).toHaveBeenCalledWith("get_profile", { token: "t" });
+  });
+});
+
+describe("createV2Client", () => {
+  it("sends token, input and approval in one envelope", async () => {
+    const call = vi.fn().mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 50 });
+    const client = createV2Client({ call }, () => "tok");
+    await client.call("products_list", { page: 1 });
+    expect(call).toHaveBeenCalledWith("products_list", {
+      token: "tok",
+      input: { page: 1 },
+      approval: null,
+    });
+  });
+
+  it("sends an empty token when signed out and passes approvals through", async () => {
+    const call = vi.fn().mockResolvedValue(null);
+    const client = createV2Client({ call }, () => null);
+    const approval = { email: "owner@shop.in", pin: "1234" };
+    await client.call("auth_logout", {}, approval);
+    expect(call).toHaveBeenCalledWith("auth_logout", { token: "", input: {}, approval });
+  });
+
+  it("turns structured backend errors into ApiErrors", async () => {
+    const call = vi
+      .fn()
+      .mockRejectedValue({ code: "APPROVAL_REQUIRED", message: "Needs a manager" });
+    const client = createV2Client({ call }, () => "tok");
+    await expect(client.call("auth_me", {})).rejects.toMatchObject({
+      name: "ApiError",
+      code: "APPROVAL_REQUIRED",
+    });
   });
 });

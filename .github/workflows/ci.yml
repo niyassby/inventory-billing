@@ -20,6 +20,8 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      # The TS API types must match the committed Rust contract (the Rust job checks the schema).
+      - run: npm run check:api
       - run: npm run typecheck
       - run: npm run lint
       - run: npm run format:check

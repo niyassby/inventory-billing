@@ -70,7 +70,12 @@ pub fn migrate_legacy(options: &MigrateOptions) -> Result<MigrationOutcome, Migr
         return Err(MigrateError::LegacyNotFound(options.legacy_path.clone()));
     }
     if !options.dry_run && options.target_path.exists() {
-        return Err(MigrateError::TargetExists(options.target_path.clone()));
+        // The app creates an empty v2 database on start; that (and only that) may be replaced.
+        if is_unused_v2(&options.target_path)? {
+            remove_database_files(&options.target_path);
+        } else {
+            return Err(MigrateError::TargetExists(options.target_path.clone()));
+        }
     }
     fs::create_dir_all(&options.backup_dir)?;
     let stamp = chrono::Utc::now().format("%Y%m%d-%H%M%S").to_string();
@@ -159,6 +164,31 @@ fn build_v2(
     // Fold the WAL back into the main file so the result is a single, self-contained file.
     conn.execute_batch("PRAGMA wal_checkpoint(TRUNCATE);")?;
     Ok(())
+}
+
+/// True for a v2 database that was created but never used: migrated schema, no users, no branches,
+/// no documents. Anything else is real data and must not be overwritten.
+fn is_unused_v2(path: &Path) -> Result<bool, MigrateError> {
+    // Anything that cannot be read as SQLite (or lacks the tables) is treated as data to keep.
+    Ok(unused_v2_check(path).unwrap_or(false))
+}
+
+fn unused_v2_check(path: &Path) -> rusqlite::Result<bool> {
+    let conn = Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
+    let has_schema: i64 = conn.query_row(
+        "SELECT count(*) FROM sqlite_master WHERE type = 'table' AND name IN ('schema_migrations', 'users', 'branches', 'products', 'sales_invoices')",
+        [],
+        |r| r.get(0),
+    )?;
+    if has_schema < 5 {
+        return Ok(false);
+    }
+    let rows: i64 = conn.query_row(
+        "SELECT (SELECT count(*) FROM users) + (SELECT count(*) FROM branches) + (SELECT count(*) FROM products) + (SELECT count(*) FROM sales_invoices)",
+        [],
+        |r| r.get(0),
+    )?;
+    Ok(rows == 0)
 }
 
 fn backup(source: &Path, destination: &Path) -> Result<(), MigrateError> {

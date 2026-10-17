@@ -19,9 +19,11 @@
     "rust:fmt": "cargo fmt --manifest-path src-tauri/Cargo.toml --all -- --check",
     "rust:lint": "cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings",
     "rust:test": "cargo test --manifest-path src-tauri/Cargo.toml",
-    "check": "npm run typecheck && npm run lint && npm run format:check && npm run test:coverage",
+    "check": "npm run check:api && npm run typecheck && npm run lint && npm run format:check && npm run test:coverage",
     "prepare": "husky",
-    "gen:vectors": "tsx packages/shared/scripts/generate-pricing-vectors.ts"
+    "gen:vectors": "tsx packages/shared/scripts/generate-pricing-vectors.ts",
+    "gen:api": "tsx packages/shared/scripts/generate-api-types.ts",
+    "check:api": "tsx packages/shared/scripts/generate-api-types.ts --check"
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",
@@ -70,6 +72,7 @@
     "eslint-plugin-react-refresh": "^0.4.26",
     "globals": "^16.5.0",
     "husky": "^9.1.7",
+    "json-schema-to-typescript": "^15.0.4",
     "lint-staged": "^16.4.0",
     "prettier": "^3.9.10",
     "prettier-plugin-tailwindcss": "^0.6.14",

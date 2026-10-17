@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { Legacy } from "@inventory/shared";
+import type { Api, Legacy } from "@inventory/shared";
 import { toApiError } from "./errors";
 
 type Commands = Legacy.LegacyCommands;
@@ -42,3 +42,40 @@ export function createApiClient(transport: Transport): ApiClient {
 }
 
 export const api = createApiClient(tauriTransport);
+
+// ---------------------------------------------------------------------------------------------
+// v2: the typed backend (src-tauri/src/api). Types are generated from the Rust contract.
+
+type V2Name = Api.CommandName;
+
+/** Where the v2 client finds the current session token (empty when signed out). */
+export type TokenSource = () => string | null;
+
+export interface V2Client {
+  call<K extends V2Name>(
+    command: K,
+    input: Api.CommandInput<K>,
+    approval?: Api.Approval,
+  ): Promise<Api.CommandOutput<K>>;
+}
+
+/**
+ * Typed v2 client. Every command receives `{ token, input, approval }`; public commands (setup,
+ * sign-in) ignore the token. Failures arrive as `{ code, message, details }` and become ApiErrors.
+ */
+export function createV2Client(transport: Transport, token: TokenSource): V2Client {
+  return {
+    async call<K extends V2Name>(
+      command: K,
+      input: Api.CommandInput<K>,
+      approval?: Api.Approval,
+    ): Promise<Api.CommandOutput<K>> {
+      try {
+        const args = { token: token() ?? "", input, approval: approval ?? null };
+        return await transport.call(command, args);
+      } catch (error) {
+        throw toApiError(error);
+      }
+    },
+  };
+}
