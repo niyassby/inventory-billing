@@ -16,6 +16,7 @@ pub mod domain;
 pub mod error;
 pub mod legacy_migration;
 pub mod logging;
+pub mod services;
 
 use tauri::Manager;
 

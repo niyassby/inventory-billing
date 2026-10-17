@@ -48,6 +48,16 @@ pub const MIGRATIONS: &[Migration] = &[
         name: "seed_system",
         sql: include_str!("migrations/0006_seed_system.sql"),
     },
+    Migration {
+        version: 7,
+        name: "credit_override_permission",
+        sql: include_str!("migrations/0007_credit_override_permission.sql"),
+    },
+    Migration {
+        version: 8,
+        name: "grni_account",
+        sql: include_str!("migrations/0008_grni_account.sql"),
+    },
 ];
 
 pub fn latest_version() -> i64 {

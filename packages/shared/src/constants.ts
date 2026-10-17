@@ -30,6 +30,7 @@ export const PERMISSIONS = [
   "sales.discount",
   "sales.discount_override",
   "sales.price_override",
+  "sales.credit_override",
   "sales.void",
   "sales.return",
   "sales.backdate",
