@@ -9,6 +9,10 @@ mod database;
 mod models;
 mod repositories;
 
+// v2 foundations (Phase 2). Public so the maintenance binaries in src/bin can use them.
+pub mod db;
+pub mod domain;
+
 use tauri::Manager;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
