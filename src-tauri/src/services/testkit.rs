@@ -330,6 +330,25 @@ impl Kit {
             )
             .unwrap();
         assert_eq!(inventory, stock_value, "inventory account vs stock value");
+        // Payables control account equals what we owe suppliers.
+        let ap: i64 = conn
+            .query_row(
+                "SELECT coalesce(sum(credit - debit), 0) FROM journal_lines WHERE account_id = ?1",
+                [super::accounts::PAYABLE],
+                |r| r.get(0),
+            )
+            .unwrap();
+        let suppliers: i64 = conn
+            .query_row(
+                "SELECT coalesce(sum(-balance), 0) FROM parties WHERE party_type = 'supplier'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(
+            ap, suppliers,
+            "payables control account vs supplier balances"
+        );
     }
 }
 

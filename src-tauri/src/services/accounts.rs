@@ -18,6 +18,7 @@ pub const SALES_RETURNS: &str = "01920000-0000-7000-8001-000000004100";
 pub const ROUND_OFF: &str = "01920000-0000-7000-8001-000000004900";
 pub const COGS: &str = "01920000-0000-7000-8001-000000005000";
 pub const STOCK_ADJUSTMENTS: &str = "01920000-0000-7000-8001-000000005400";
+pub const GENERAL_EXPENSES: &str = "01920000-0000-7000-8001-000000005900";
 
 /// Account money moves through for a payment: the given cash/bank account, or the default for
 /// the mode (cash → Cash in Hand, everything else → Bank Account).
