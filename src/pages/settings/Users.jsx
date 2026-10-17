@@ -5,7 +5,13 @@ import { useStore } from "@/hooks/use-store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
@@ -15,7 +21,7 @@ import {
   UserIcon,
   Database02Icon,
   Configuration02Icon,
-  BookOpen01Icon
+  BookOpen01Icon,
 } from "@hugeicons/core-free-icons";
 
 export default function Users() {
@@ -61,7 +67,7 @@ export default function Users() {
           id: editingUser.id,
           name: userForm.name,
           email: userForm.email,
-          role: userForm.role
+          role: userForm.role,
         });
       } else {
         await invoke("create_user_cmd", {
@@ -69,7 +75,7 @@ export default function Users() {
           name: userForm.name,
           email: userForm.email,
           passwordHash: userForm.password,
-          role: userForm.role
+          role: userForm.role,
         });
       }
       setIsUserModalOpen(false);
@@ -105,10 +111,12 @@ export default function Users() {
 
   return (
     <div className="space-y-6 pb-8 font-sans">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-border/40 pb-4">
+      <div className="flex flex-col items-start justify-between gap-4 border-b border-border/40 pb-4 md:flex-row md:items-center">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">System Settings</h1>
-          <p className="text-muted-foreground">Configure profile details, preferences, accounts control, and database maintenance.</p>
+          <p className="text-muted-foreground">
+            Configure profile details, preferences, accounts control, and database maintenance.
+          </p>
         </div>
         <div className="flex flex-wrap gap-2 print:hidden">
           <Button
@@ -144,17 +152,18 @@ export default function Users() {
 
       <div className="space-y-4">
         {!isAdmin ? (
-          <Card className="border-rose-500/30 bg-rose-500/5 max-w-lg">
+          <Card className="max-w-lg border-rose-500/30 bg-rose-500/5">
             <CardHeader>
               <CardTitle className="text-rose-600">Restricted Tab Access</CardTitle>
               <CardDescription>
-                Your account does not possess Super Administrator credentials. Please contact your manager to modify system accounts.
+                Your account does not possess Super Administrator credentials. Please contact your
+                manager to modify system accounts.
               </CardDescription>
             </CardHeader>
           </Card>
         ) : (
           <>
-            <div className="flex justify-between items-center">
+            <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold">System User Accounts</h3>
               <Button onClick={openAddUser} className="flex items-center gap-1.5">
                 <HugeiconsIcon icon={Add01Icon} size={16} /> Create User Account
@@ -169,13 +178,13 @@ export default function Users() {
               <Card className="border-border/40 bg-card/65 backdrop-blur-sm">
                 <CardContent className="p-0">
                   <div className="overflow-x-auto">
-                    <table className="w-full text-sm text-left border-collapse">
+                    <table className="w-full border-collapse text-left text-sm">
                       <thead>
-                        <tr className="border-b border-border/40 text-muted-foreground text-xs uppercase bg-muted/20">
+                        <tr className="border-b border-border/40 bg-muted/20 text-xs text-muted-foreground uppercase">
                           <th className="p-4 font-medium">User Name</th>
                           <th className="p-4 font-medium">Email Address</th>
                           <th className="p-4 font-medium">System Role</th>
-                          <th className="p-4 font-medium text-right">Actions</th>
+                          <th className="p-4 text-right font-medium">Actions</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-border/20">
@@ -184,16 +193,26 @@ export default function Users() {
                             <td className="p-4 font-semibold">{usr.name}</td>
                             <td className="p-4 font-mono text-xs">{usr.email}</td>
                             <td className="p-4">
-                              <span className="px-2 py-0.5 text-[10px] font-semibold bg-primary/10 text-primary border border-primary/20 rounded-full uppercase">
+                              <span className="rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary uppercase">
                                 {usr.role}
                               </span>
                             </td>
                             <td className="p-4 text-right">
                               <div className="flex justify-end gap-1.5">
-                                <Button variant="ghost" size="icon" className="h-8 w-8 text-primary" onClick={() => openEditUser(usr)}>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-primary"
+                                  onClick={() => openEditUser(usr)}
+                                >
                                   <HugeiconsIcon icon={Edit02Icon} size={14} />
                                 </Button>
-                                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleUserDelete(usr.id)}>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-destructive"
+                                  onClick={() => handleUserDelete(usr.id)}
+                                >
                                   <HugeiconsIcon icon={Delete02Icon} size={14} />
                                 </Button>
                               </div>
@@ -212,7 +231,7 @@ export default function Users() {
 
       {/* Create / Edit User Account Modal Dialog */}
       <Dialog open={isUserModalOpen} onOpenChange={setIsUserModalOpen}>
-        <DialogContent className="sm:max-w-md font-sans">
+        <DialogContent className="font-sans sm:max-w-md">
           <DialogHeader>
             <DialogTitle>{editingUser ? "Update User" : "Create User Account"}</DialogTitle>
           </DialogHeader>
@@ -252,7 +271,7 @@ export default function Users() {
               <Label htmlFor="u_role">Access Role *</Label>
               <select
                 id="u_role"
-                className="w-full p-2 border rounded-md text-sm bg-card border-border/40 text-foreground"
+                className="w-full rounded-md border border-border/40 bg-card p-2 text-sm text-foreground"
                 value={userForm.role}
                 onChange={(e) => setUserForm({ ...userForm, role: e.target.value })}
                 required
@@ -264,7 +283,9 @@ export default function Users() {
               </select>
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsUserModalOpen(false)}>Cancel</Button>
+              <Button type="button" variant="outline" onClick={() => setIsUserModalOpen(false)}>
+                Cancel
+              </Button>
               <Button type="submit">Post Account Details</Button>
             </DialogFooter>
           </form>

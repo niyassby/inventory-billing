@@ -5,7 +5,14 @@ import { useStore } from "@/hooks/use-store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -14,7 +21,7 @@ import {
   BookOpen02Icon,
   ShuffleIcon,
   DollarSignIcon,
-  BadgePercentIcon
+  BadgePercentIcon,
 } from "@hugeicons/core-free-icons";
 
 export default function Journals() {
@@ -36,7 +43,7 @@ export default function Journals() {
   const [journalRef, setJournalRef] = useState("");
   const [journalLines, setJournalLines] = useState([
     { account_id: "", debit: 0, credit: 0 },
-    { account_id: "", debit: 0, credit: 0 }
+    { account_id: "", debit: 0, credit: 0 },
   ]);
 
   // Fetch Data
@@ -81,7 +88,10 @@ export default function Journals() {
   // Journal Entry Submit
   const handleJournalSubmit = async (e) => {
     e.preventDefault();
-    if (!isBalanced) return alert(`Journal entry is not balanced! Debits: ${totalDebits}, Credits: ${totalCredits}`);
+    if (!isBalanced)
+      return alert(
+        `Journal entry is not balanced! Debits: ${totalDebits}, Credits: ${totalCredits}`,
+      );
 
     try {
       await invoke("create_journal_entry_cmd", {
@@ -89,16 +99,19 @@ export default function Journals() {
         entryDate: new Date().toISOString().split("T")[0],
         description: journalDesc,
         reference: journalRef || null,
-        lines: journalLines.map(l => ({
+        lines: journalLines.map((l) => ({
           account_id: l.account_id,
           debit: parseFloat(l.debit) || 0,
-          credit: parseFloat(l.credit) || 0
-        }))
+          credit: parseFloat(l.credit) || 0,
+        })),
       });
       setIsJournalModalOpen(false);
       setJournalDesc("");
       setJournalRef("");
-      setJournalLines([{ account_id: "", debit: 0, credit: 0 }, { account_id: "", debit: 0, credit: 0 }]);
+      setJournalLines([
+        { account_id: "", debit: 0, credit: 0 },
+        { account_id: "", debit: 0, credit: 0 },
+      ]);
       fetchData();
     } catch (e) {
       alert("Error submitting journal entry: " + e);
@@ -107,10 +120,13 @@ export default function Journals() {
 
   return (
     <div className="space-y-6 pb-8 font-sans">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-border/40 pb-4">
+      <div className="flex flex-col items-start justify-between gap-4 border-b border-border/40 pb-4 md:flex-row md:items-center">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Ledger & Accounting</h1>
-          <p className="text-muted-foreground">Manage chart of accounts, draft balancing journal entries, log expenses, and configure tax rules.</p>
+          <p className="text-muted-foreground">
+            Manage chart of accounts, draft balancing journal entries, log expenses, and configure
+            tax rules.
+          </p>
         </div>
         <div className="flex flex-wrap gap-2 print:hidden">
           <Button
@@ -150,10 +166,13 @@ export default function Journals() {
         </div>
       ) : (
         <div className="space-y-4">
-          <div className="flex justify-between items-center">
+          <div className="flex items-center justify-between">
             <h3 className="text-lg font-semibold">Double Entry Journal Book</h3>
             {!isReadOnly && (
-              <Button onClick={() => setIsJournalModalOpen(true)} className="flex items-center gap-1.5">
+              <Button
+                onClick={() => setIsJournalModalOpen(true)}
+                className="flex items-center gap-1.5"
+              >
                 <HugeiconsIcon icon={Add01Icon} size={16} /> New Journal Entry
               </Button>
             )}
@@ -162,13 +181,13 @@ export default function Journals() {
           <Card className="border-border/40 bg-card/65 backdrop-blur-sm">
             <CardContent className="p-0">
               <div className="overflow-x-auto">
-                <table className="w-full text-sm text-left border-collapse">
+                <table className="w-full border-collapse text-left text-sm">
                   <thead>
-                    <tr className="border-b border-border/40 text-muted-foreground text-xs uppercase bg-muted/20">
+                    <tr className="border-b border-border/40 bg-muted/20 text-xs text-muted-foreground uppercase">
                       <th className="p-4 font-medium">Date</th>
                       <th className="p-4 font-medium">Description</th>
                       <th className="p-4 font-medium">Reference</th>
-                      <th className="p-4 font-medium text-right">Journal Lines</th>
+                      <th className="p-4 text-right font-medium">Journal Lines</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border/20">
@@ -180,16 +199,32 @@ export default function Journals() {
                         : [];
                       return (
                         <tr key={j.id} className="hover:bg-muted/10">
-                          <td className="p-4 font-mono text-xs text-muted-foreground">{j.entry_date}</td>
+                          <td className="p-4 font-mono text-xs text-muted-foreground">
+                            {j.entry_date}
+                          </td>
                           <td className="p-4 font-medium">{j.description}</td>
-                          <td className="p-4 font-mono text-xs text-muted-foreground">{j.reference || "-"}</td>
+                          <td className="p-4 font-mono text-xs text-muted-foreground">
+                            {j.reference || "-"}
+                          </td>
                           <td className="p-4 text-right text-xs">
                             <div className="space-y-1">
                               {lines?.map((l, idx) => (
                                 <div key={idx} className="flex justify-end gap-3 font-mono">
-                                  <span className="font-semibold text-[10px] uppercase text-muted-foreground">{l.account_name}:</span>
-                                  {l.debit > 0 && <span className="text-emerald-600 font-bold">DR {currencySymbol}{l.debit.toFixed(2)}</span>}
-                                  {l.credit > 0 && <span className="text-rose-600 font-bold">CR {currencySymbol}{l.credit.toFixed(2)}</span>}
+                                  <span className="text-[10px] font-semibold text-muted-foreground uppercase">
+                                    {l.account_name}:
+                                  </span>
+                                  {l.debit > 0 && (
+                                    <span className="font-bold text-emerald-600">
+                                      DR {currencySymbol}
+                                      {l.debit.toFixed(2)}
+                                    </span>
+                                  )}
+                                  {l.credit > 0 && (
+                                    <span className="font-bold text-rose-600">
+                                      CR {currencySymbol}
+                                      {l.credit.toFixed(2)}
+                                    </span>
+                                  )}
                                 </div>
                               ))}
                             </div>
@@ -199,7 +234,7 @@ export default function Journals() {
                     })}
                     {journals.length === 0 && (
                       <tr>
-                        <td colSpan={4} className="py-8 text-center text-muted-foreground text-xs">
+                        <td colSpan={4} className="py-8 text-center text-xs text-muted-foreground">
                           No journal entries logged.
                         </td>
                       </tr>
@@ -214,10 +249,12 @@ export default function Journals() {
 
       {/* New Journal Entry Modal */}
       <Dialog open={isJournalModalOpen} onOpenChange={setIsJournalModalOpen}>
-        <DialogContent className="sm:max-w-xl font-sans">
+        <DialogContent className="font-sans sm:max-w-xl">
           <DialogHeader>
             <DialogTitle>New Double Entry Journal</DialogTitle>
-            <DialogDescription>Debits must balance Credits before entry is validated.</DialogDescription>
+            <DialogDescription>
+              Debits must balance Credits before entry is validated.
+            </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleJournalSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
@@ -242,26 +279,33 @@ export default function Journals() {
 
             {/* Dynamic ledger lines */}
             <div className="space-y-2">
-              <div className="flex justify-between items-center">
+              <div className="flex items-center justify-between">
                 <Label className="text-xs font-semibold">Ledger Entry Lines</Label>
                 <Button type="button" size="sm" variant="outline" onClick={addJournalLine}>
                   + Add Line
                 </Button>
               </div>
 
-              <ScrollArea className="h-48 border rounded-lg p-2 bg-card">
+              <ScrollArea className="h-48 rounded-lg border bg-card p-2">
                 {journalLines.map((line, index) => (
-                  <div key={index} className="grid grid-cols-12 gap-2 items-center mb-3 pb-3 border-b border-border/20 last:border-0 last:pb-0">
+                  <div
+                    key={index}
+                    className="mb-3 grid grid-cols-12 items-center gap-2 border-b border-border/20 pb-3 last:border-0 last:pb-0"
+                  >
                     <div className="col-span-6">
                       <select
-                        className="w-full p-2 border rounded-md text-xs bg-card border-border/40 text-foreground"
+                        className="w-full rounded-md border border-border/40 bg-card p-2 text-xs text-foreground"
                         value={line.account_id}
                         onChange={(e) => updateJournalLine(index, "account_id", e.target.value)}
                         required
                       >
-                        <option value="" disabled>Choose Account</option>
-                        {accounts.map(a => (
-                          <option key={a.id} value={a.id}>{a.code} - {a.name}</option>
+                        <option value="" disabled>
+                          Choose Account
+                        </option>
+                        {accounts.map((a) => (
+                          <option key={a.id} value={a.id}>
+                            {a.code} - {a.name}
+                          </option>
                         ))}
                       </select>
                     </div>
@@ -270,7 +314,7 @@ export default function Journals() {
                         placeholder="Debit"
                         type="number"
                         step="0.01"
-                        className="h-8 text-xs bg-card border-border/40 font-mono"
+                        className="h-8 border-border/40 bg-card font-mono text-xs"
                         value={line.debit}
                         onChange={(e) => updateJournalLine(index, "debit", e.target.value)}
                       />
@@ -280,14 +324,18 @@ export default function Journals() {
                         placeholder="Credit"
                         type="number"
                         step="0.01"
-                        className="h-8 text-xs bg-card border-border/40 font-mono"
+                        className="h-8 border-border/40 bg-card font-mono text-xs"
                         value={line.credit}
                         onChange={(e) => updateJournalLine(index, "credit", e.target.value)}
                       />
                     </div>
                     <div className="col-span-1 text-center">
                       {journalLines.length > 2 && (
-                        <button type="button" className="text-destructive font-bold hover:underline" onClick={() => removeJournalLine(index)}>
+                        <button
+                          type="button"
+                          className="font-bold text-destructive hover:underline"
+                          onClick={() => removeJournalLine(index)}
+                        >
                           ×
                         </button>
                       )}
@@ -298,17 +346,35 @@ export default function Journals() {
             </div>
 
             {/* Balancer Summary */}
-            <div className="flex justify-between items-center text-xs p-3 rounded bg-muted/20 border">
-              <div>Total Debits: <span className="font-bold font-mono">{currencySymbol}{totalDebits.toFixed(2)}</span></div>
-              <div>Total Credits: <span className="font-bold font-mono text-rose-600">{currencySymbol}{totalCredits.toFixed(2)}</span></div>
-              <div className={`font-bold px-2 py-0.5 rounded ${isBalanced ? 'bg-emerald-500/10 text-emerald-600' : 'bg-rose-500/10 text-rose-600'}`}>
+            <div className="flex items-center justify-between rounded border bg-muted/20 p-3 text-xs">
+              <div>
+                Total Debits:{" "}
+                <span className="font-mono font-bold">
+                  {currencySymbol}
+                  {totalDebits.toFixed(2)}
+                </span>
+              </div>
+              <div>
+                Total Credits:{" "}
+                <span className="font-mono font-bold text-rose-600">
+                  {currencySymbol}
+                  {totalCredits.toFixed(2)}
+                </span>
+              </div>
+              <div
+                className={`rounded px-2 py-0.5 font-bold ${isBalanced ? "bg-emerald-500/10 text-emerald-600" : "bg-rose-500/10 text-rose-600"}`}
+              >
                 {isBalanced ? "Balanced" : "Unbalanced"}
               </div>
             </div>
 
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsJournalModalOpen(false)}>Cancel</Button>
-              <Button type="submit" disabled={!isBalanced}>Post Entry</Button>
+              <Button type="button" variant="outline" onClick={() => setIsJournalModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={!isBalanced}>
+                Post Entry
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>

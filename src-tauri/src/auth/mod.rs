@@ -27,7 +27,9 @@ pub fn verify_password(password_hash: &str, password: &str) -> bool {
         Err(_) => return false,
     };
     let argon2 = get_argon2_hasher();
-    argon2.verify_password(password.as_bytes(), &parsed_hash).is_ok()
+    argon2
+        .verify_password(password.as_bytes(), &parsed_hash)
+        .is_ok()
 }
 
 pub fn generate_session_token() -> String {

@@ -1,48 +1,48 @@
-import React from 'react'
-import { Navigate, Outlet, Route, Routes } from 'react-router-dom'
-import Layout from './app/layout'
-import Auth from './app/auth'
+import React from "react";
+import { Navigate, Outlet, Route, Routes } from "react-router-dom";
+import Layout from "./app/layout";
+import Auth from "./app/auth";
 
 // Pages
-import Overview from './pages/dashboard/Overview'
+import Overview from "./pages/dashboard/Overview";
 
-import Products from './pages/inventory/Products'
-import AddEditProduct from './pages/inventory/AddEditProduct'
-import Categories from './pages/inventory/Categories'
-import Adjustments from './pages/inventory/Adjustments'
-import Barcodes from './pages/inventory/Barcodes'
+import Products from "./pages/inventory/Products";
+import AddEditProduct from "./pages/inventory/AddEditProduct";
+import Categories from "./pages/inventory/Categories";
+import Adjustments from "./pages/inventory/Adjustments";
+import Barcodes from "./pages/inventory/Barcodes";
 
-import Invoices from './pages/sales/Invoices'
-import Quotations from './pages/sales/Quotations'
-import SalesReturns from './pages/sales/Returns'
-import POS from './pages/sales/POS'
+import Invoices from "./pages/sales/Invoices";
+import Quotations from "./pages/sales/Quotations";
+import SalesReturns from "./pages/sales/Returns";
+import POS from "./pages/sales/POS";
 
-import Orders from './pages/purchases/Orders'
-import Bills from './pages/purchases/Bills'
-import PurchaseReturns from './pages/purchases/Returns'
+import Orders from "./pages/purchases/Orders";
+import Bills from "./pages/purchases/Bills";
+import PurchaseReturns from "./pages/purchases/Returns";
 
-import Customers from './pages/contacts/Customers'
-import Leads from './pages/contacts/Leads'
-import Suppliers from './pages/contacts/Suppliers'
+import Customers from "./pages/contacts/Customers";
+import Leads from "./pages/contacts/Leads";
+import Suppliers from "./pages/contacts/Suppliers";
 
-import ChartOfAccounts from './pages/accounting/ChartOfAccounts'
-import Journals from './pages/accounting/Journals'
-import Expenses from './pages/accounting/Expenses'
-import PaymentsReceived from './pages/accounting/PaymentsReceived'
-import Taxes from './pages/accounting/Taxes'
+import ChartOfAccounts from "./pages/accounting/ChartOfAccounts";
+import Journals from "./pages/accounting/Journals";
+import Expenses from "./pages/accounting/Expenses";
+import PaymentsReceived from "./pages/accounting/PaymentsReceived";
+import Taxes from "./pages/accounting/Taxes";
 
-import ProfitAndLoss from './pages/reports/ProfitAndLoss'
-import SalesSummary from './pages/reports/SalesSummary'
-import StockValuation from './pages/reports/StockValuation'
-import TaxSummary from './pages/reports/TaxSummary'
+import ProfitAndLoss from "./pages/reports/ProfitAndLoss";
+import SalesSummary from "./pages/reports/SalesSummary";
+import StockValuation from "./pages/reports/StockValuation";
+import TaxSummary from "./pages/reports/TaxSummary";
 
-import Company from './pages/settings/Company'
-import Users from './pages/settings/Users'
-import Preferences from './pages/settings/Preferences'
-import Templates from './pages/settings/Templates'
-import Maintenance from './pages/settings/Maintenance'
-import InventoryLayout from './pages/inventory/InventoryLayout'
-import SalesLayout from './pages/sales/SalesLayout'
+import Company from "./pages/settings/Company";
+import Users from "./pages/settings/Users";
+import Preferences from "./pages/settings/Preferences";
+import Templates from "./pages/settings/Templates";
+import Maintenance from "./pages/settings/Maintenance";
+import InventoryLayout from "./pages/inventory/InventoryLayout";
+import SalesLayout from "./pages/sales/SalesLayout";
 
 function App() {
   return (
@@ -54,12 +54,12 @@ function App() {
       <Route path="/sales/pos" element={<POS />} />
 
       {/* Main Layout App Routes */}
-      <Route path="/" element={<Layout/>}>
+      <Route path="/" element={<Layout />}>
         <Route index element={<Navigate to="/dashboard" replace />} />
         <Route path="dashboard" element={<Overview />} />
-        
+
         {/* Inventory */}
-        <Route path="inventory" element={<Outlet />} >
+        <Route path="inventory" element={<Outlet />}>
           <Route index element={<Products />} />
           <Route path="products" element={<Products />} />
           <Route path="products/new" element={<AddEditProduct />} />
@@ -70,7 +70,7 @@ function App() {
         </Route>
 
         {/* Sales */}
-        <Route path="sales" element={<SalesLayout />} >
+        <Route path="sales" element={<SalesLayout />}>
           <Route index element={<Invoices />} />
           <Route path="invoices" element={<Invoices />} />
           <Route path="quotations" element={<Quotations />} />
@@ -90,7 +90,10 @@ function App() {
         <Route path="contacts/suppliers" element={<Suppliers />} />
 
         {/* Accounting */}
-        <Route path="accounting" element={<Navigate to="/accounting/chart-of-accounts" replace />} />
+        <Route
+          path="accounting"
+          element={<Navigate to="/accounting/chart-of-accounts" replace />}
+        />
         <Route path="accounting/chart-of-accounts" element={<ChartOfAccounts />} />
         <Route path="accounting/journals" element={<Journals />} />
         <Route path="accounting/expenses" element={<Expenses />} />
@@ -116,7 +119,7 @@ function App() {
       {/* Fallback */}
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
-  )
+  );
 }
 
 export default App;

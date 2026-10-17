@@ -5,7 +5,13 @@ import { useStore } from "@/hooks/use-store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
@@ -13,7 +19,7 @@ import {
   BookOpen02Icon,
   ShuffleIcon,
   DollarSignIcon,
-  BadgePercentIcon
+  BadgePercentIcon,
 } from "@hugeicons/core-free-icons";
 
 export default function ChartOfAccounts() {
@@ -30,7 +36,12 @@ export default function ChartOfAccounts() {
 
   // Modals States
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
-  const [accountForm, setAccountForm] = useState({ code: "", name: "", type: "ASSET", parent_id: "" });
+  const [accountForm, setAccountForm] = useState({
+    code: "",
+    name: "",
+    type: "ASSET",
+    parent_id: "",
+  });
 
   // Fetch Data
   const fetchData = async () => {
@@ -58,7 +69,7 @@ export default function ChartOfAccounts() {
         code: accountForm.code,
         name: accountForm.name,
         accountType: accountForm.type,
-        parentId: accountForm.parent_id || null
+        parentId: accountForm.parent_id || null,
       });
       setIsAccountModalOpen(false);
       setAccountForm({ code: "", name: "", type: "ASSET", parent_id: "" });
@@ -70,10 +81,13 @@ export default function ChartOfAccounts() {
 
   return (
     <div className="space-y-6 pb-8 font-sans">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-border/40 pb-4">
+      <div className="flex flex-col items-start justify-between gap-4 border-b border-border/40 pb-4 md:flex-row md:items-center">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Ledger & Accounting</h1>
-          <p className="text-muted-foreground">Manage chart of accounts, draft balancing journal entries, log expenses, and configure tax rules.</p>
+          <p className="text-muted-foreground">
+            Manage chart of accounts, draft balancing journal entries, log expenses, and configure
+            tax rules.
+          </p>
         </div>
         <div className="flex flex-wrap gap-2 print:hidden">
           <Button
@@ -113,10 +127,13 @@ export default function ChartOfAccounts() {
         </div>
       ) : (
         <div className="space-y-4">
-          <div className="flex justify-between items-center">
+          <div className="flex items-center justify-between">
             <h3 className="text-lg font-semibold">General Ledger Accounts</h3>
             {!isReadOnly && (
-              <Button onClick={() => setIsAccountModalOpen(true)} className="flex items-center gap-1.5">
+              <Button
+                onClick={() => setIsAccountModalOpen(true)}
+                className="flex items-center gap-1.5"
+              >
                 <HugeiconsIcon icon={Add01Icon} size={16} /> Create Account
               </Button>
             )}
@@ -125,24 +142,30 @@ export default function ChartOfAccounts() {
           <Card className="border-border/40 bg-card/65 backdrop-blur-sm">
             <CardContent className="p-0">
               <div className="overflow-x-auto">
-                <table className="w-full text-sm text-left border-collapse">
+                <table className="w-full border-collapse text-left text-sm">
                   <thead>
-                    <tr className="border-b border-border/40 text-muted-foreground text-xs uppercase bg-muted/20">
+                    <tr className="border-b border-border/40 bg-muted/20 text-xs text-muted-foreground uppercase">
                       <th className="p-4 font-medium">Code</th>
                       <th className="p-4 font-medium">Account Name</th>
                       <th className="p-4 font-medium">Account Type</th>
-                      <th className="p-4 font-medium text-right">Balance</th>
+                      <th className="p-4 text-right font-medium">Balance</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border/20">
                     {accounts.map((acc) => (
                       <tr key={acc.id} className="hover:bg-muted/10">
-                        <td className="p-4 font-semibold font-mono text-xs">{acc.code}</td>
+                        <td className="p-4 font-mono text-xs font-semibold">{acc.code}</td>
                         <td className="p-4 font-medium">{acc.name}</td>
                         <td className="p-4 text-xs font-semibold capitalize">{acc.account_type}</td>
-                        <td className={`p-4 text-right font-mono font-bold ${acc.account_type === "REVENUE" || acc.account_type === "ASSET" ? 'text-emerald-600' : 'text-foreground'
-                          }`}>
-                          {currencySymbol}{acc.balance?.toFixed(2)}
+                        <td
+                          className={`p-4 text-right font-mono font-bold ${
+                            acc.account_type === "REVENUE" || acc.account_type === "ASSET"
+                              ? "text-emerald-600"
+                              : "text-foreground"
+                          }`}
+                        >
+                          {currencySymbol}
+                          {acc.balance?.toFixed(2)}
                         </td>
                       </tr>
                     ))}
@@ -156,7 +179,7 @@ export default function ChartOfAccounts() {
 
       {/* Create Account Modal */}
       <Dialog open={isAccountModalOpen} onOpenChange={setIsAccountModalOpen}>
-        <DialogContent className="sm:max-w-md font-sans">
+        <DialogContent className="font-sans sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Create Account Code</DialogTitle>
           </DialogHeader>
@@ -187,7 +210,7 @@ export default function ChartOfAccounts() {
               <Label htmlFor="acc_type">Account Type *</Label>
               <select
                 id="acc_type"
-                className="w-full p-2 border rounded-md text-sm bg-card border-border/40 text-foreground"
+                className="w-full rounded-md border border-border/40 bg-card p-2 text-sm text-foreground"
                 value={accountForm.type}
                 onChange={(e) => setAccountForm({ ...accountForm, type: e.target.value })}
                 required
@@ -200,7 +223,9 @@ export default function ChartOfAccounts() {
               </select>
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsAccountModalOpen(false)}>Cancel</Button>
+              <Button type="button" variant="outline" onClick={() => setIsAccountModalOpen(false)}>
+                Cancel
+              </Button>
               <Button type="submit">Create Account</Button>
             </DialogFooter>
           </form>

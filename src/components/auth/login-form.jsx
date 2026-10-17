@@ -1,24 +1,17 @@
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
-import {
-  Field,
-  FieldGroup,
-  FieldLabel,
-} from "@/components/ui/field"
-import { Input } from "@/components/ui/input"
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 import { useState } from "react";
 import { useStore } from "@/hooks/use-store";
 import { useNavigate } from "react-router-dom";
 
-export function LoginForm({
-  className,
-  ...props
-}) {
+export function LoginForm({ className, ...props }) {
   const [formData, setFormData] = useState({
     email: "admin@example.com",
     password: "password123",
-  })
-  const [errorMsg, setErrorMsg] = useState("")
+  });
+  const [errorMsg, setErrorMsg] = useState("");
   const login = useStore((state) => state.login);
   const navigate = useNavigate();
 
@@ -31,7 +24,7 @@ export function LoginForm({
     } else {
       setErrorMsg(res.error || "Invalid credentials. Please try again.");
     }
-  }
+  };
 
   return (
     <form onSubmit={onsubmit} className={cn("flex flex-col gap-6", className)} {...props}>
@@ -42,47 +35,53 @@ export function LoginForm({
             Enter your credentials to access your offline dashboard
           </p>
         </div>
-        
+
         {errorMsg && (
-          <div className="p-3 text-sm text-destructive bg-destructive/15 rounded-md border border-destructive/25 text-center">
+          <div className="rounded-md border border-destructive/25 bg-destructive/15 p-3 text-center text-sm text-destructive">
             {errorMsg}
           </div>
         )}
 
         <Field>
           <FieldLabel htmlFor="email">Email Address</FieldLabel>
-          <Input 
+          <Input
             value={formData.email}
-            onChange={(e) => setFormData({ ...formData, email: e.target.value })} 
-            id="email" 
-            type="email" 
-            placeholder="admin@example.com" 
-            required 
+            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+            id="email"
+            type="email"
+            placeholder="admin@example.com"
+            required
           />
         </Field>
-        
+
         <Field>
           <div className="flex items-center justify-between">
             <FieldLabel htmlFor="password">Password</FieldLabel>
           </div>
-          <Input 
+          <Input
             value={formData.password}
-            onChange={(e) => setFormData({ ...formData, password: e.target.value })} 
-            id="password" 
-            type="password" 
+            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+            id="password"
+            type="password"
             placeholder="••••••••"
-            required 
+            required
           />
         </Field>
 
         <Field>
-          <Button type="submit" className="w-full">Sign In</Button>
+          <Button type="submit" className="w-full">
+            Sign In
+          </Button>
         </Field>
 
-        <div className="text-xs text-center text-muted-foreground mt-2 border-t pt-4 border-border/40">
-          <p className="font-semibold text-foreground mb-1">Demo Credentials:</p>
-          <p>Email: <span className="font-mono text-foreground">admin@example.com</span></p>
-          <p>Password: <span className="font-mono text-foreground">password123</span></p>
+        <div className="mt-2 border-t border-border/40 pt-4 text-center text-xs text-muted-foreground">
+          <p className="mb-1 font-semibold text-foreground">Demo Credentials:</p>
+          <p>
+            Email: <span className="font-mono text-foreground">admin@example.com</span>
+          </p>
+          <p>
+            Password: <span className="font-mono text-foreground">password123</span>
+          </p>
         </div>
       </FieldGroup>
     </form>

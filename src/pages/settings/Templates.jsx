@@ -9,7 +9,7 @@ import {
   UserIcon,
   Database02Icon,
   Configuration02Icon,
-  BookOpen01Icon
+  BookOpen01Icon,
 } from "@hugeicons/core-free-icons";
 
 export default function Templates() {
@@ -17,7 +17,7 @@ export default function Templates() {
 
   const [template, setTemplate] = useState({
     header: "Welcome to our Store!",
-    footer: "Thank you for your business. Please come again!"
+    footer: "Thank you for your business. Please come again!",
   });
 
   const handleSave = (e) => {
@@ -29,10 +29,12 @@ export default function Templates() {
 
   return (
     <div className="space-y-6 pb-8 font-sans">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-border/40 pb-4">
+      <div className="flex flex-col items-start justify-between gap-4 border-b border-border/40 pb-4 md:flex-row md:items-center">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">System Settings</h1>
-          <p className="text-muted-foreground">Configure profile details, preferences, accounts control, and database maintenance.</p>
+          <p className="text-muted-foreground">
+            Configure profile details, preferences, accounts control, and database maintenance.
+          </p>
         </div>
         <div className="flex flex-wrap gap-2 print:hidden">
           <Button
@@ -66,10 +68,12 @@ export default function Templates() {
         </div>
       </div>
 
-      <Card className="border-border/40 bg-card/65 backdrop-blur-sm max-w-lg">
+      <Card className="max-w-lg border-border/40 bg-card/65 backdrop-blur-sm">
         <CardHeader>
           <CardTitle>Receipt & Invoice Templates</CardTitle>
-          <CardDescription>Custom messages to print at the top/bottom of transaction sheets.</CardDescription>
+          <CardDescription>
+            Custom messages to print at the top/bottom of transaction sheets.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSave} className="space-y-4">

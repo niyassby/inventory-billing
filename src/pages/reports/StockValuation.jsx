@@ -10,7 +10,7 @@ import {
   CalculatorIcon,
   ShoppingBagIcon,
   ArchiveIcon,
-  BadgePercentIcon
+  BadgePercentIcon,
 } from "@hugeicons/core-free-icons";
 
 export default function StockValuation() {
@@ -20,7 +20,7 @@ export default function StockValuation() {
 
   // Data States
   const [stats, setStats] = useState({
-    stock_value: 0
+    stock_value: 0,
   });
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -47,10 +47,12 @@ export default function StockValuation() {
 
   return (
     <div className="space-y-6 pb-8 font-sans">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-border/40 pb-4">
+      <div className="flex flex-col items-start justify-between gap-4 border-b border-border/40 pb-4 md:flex-row md:items-center">
         <div className="print:hidden">
           <h1 className="text-3xl font-bold tracking-tight">Reports Ledger</h1>
-          <p className="text-muted-foreground">Generate commercial financial statements, check taxes, and value inventory assets.</p>
+          <p className="text-muted-foreground">
+            Generate commercial financial statements, check taxes, and value inventory assets.
+          </p>
         </div>
         <div className="flex flex-wrap gap-2 print:hidden">
           <Button
@@ -90,18 +92,26 @@ export default function StockValuation() {
         </div>
       ) : (
         <div className="space-y-4">
-          <div className="flex justify-between items-center print:hidden">
+          <div className="flex items-center justify-between print:hidden">
             <h3 className="text-lg font-semibold capitalize">Stock Valuation Statement</h3>
-            <Button variant="outline" className="flex items-center gap-1 border-border/40" onClick={() => window.print()}>
+            <Button
+              variant="outline"
+              className="flex items-center gap-1 border-border/40"
+              onClick={() => window.print()}
+            >
               <HugeiconsIcon icon={PrinterIcon} size={14} /> Print Statement
             </Button>
           </div>
 
           {/* PRINT HEADER */}
-          <div className="hidden print:block text-center border-b pb-6 mb-6">
-            <h1 className="text-2xl font-bold uppercase tracking-wider">Business Audit Report Sheet</h1>
-            <p className="text-xs text-muted-foreground mt-1">Generated: {new Date().toLocaleString()}</p>
-            <h3 className="text-sm font-semibold capitalize mt-4 bg-muted p-2 rounded">
+          <div className="mb-6 hidden border-b pb-6 text-center print:block">
+            <h1 className="text-2xl font-bold tracking-wider uppercase">
+              Business Audit Report Sheet
+            </h1>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Generated: {new Date().toLocaleString()}
+            </p>
+            <h3 className="mt-4 rounded bg-muted p-2 text-sm font-semibold capitalize">
               Report Section: STOCK VALUATION STATEMENT
             </h3>
           </div>
@@ -109,17 +119,19 @@ export default function StockValuation() {
           <Card className="border-border/40 bg-card/65 backdrop-blur-sm print:border-none print:shadow-none">
             <CardHeader className="print:px-0">
               <CardTitle>Inventory Asset Valuations</CardTitle>
-              <CardDescription>Product-by-product assessment of stock valuation based on cost basis.</CardDescription>
+              <CardDescription>
+                Product-by-product assessment of stock valuation based on cost basis.
+              </CardDescription>
             </CardHeader>
             <CardContent className="p-0 print:px-0">
-              <table className="w-full text-sm text-left border-collapse">
+              <table className="w-full border-collapse text-left text-sm">
                 <thead>
-                  <tr className="border-b border-border/40 text-muted-foreground text-xs uppercase bg-muted/20">
+                  <tr className="border-b border-border/40 bg-muted/20 text-xs text-muted-foreground uppercase">
                     <th className="p-4 font-medium">SKU</th>
                     <th className="p-4 font-medium">Product Name</th>
-                    <th className="p-4 font-medium text-center">Stock On Hand</th>
-                    <th className="p-4 font-medium text-right">Unit Cost</th>
-                    <th className="p-4 font-medium text-right">Asset Value</th>
+                    <th className="p-4 text-center font-medium">Stock On Hand</th>
+                    <th className="p-4 text-right font-medium">Unit Cost</th>
+                    <th className="p-4 text-right font-medium">Asset Value</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/20">
@@ -127,20 +139,34 @@ export default function StockValuation() {
                     const assetValue = p.stock * p.cost;
                     return (
                       <tr key={p.id} className="hover:bg-muted/10">
-                        <td className="p-4 font-semibold font-mono text-xs">{p.sku}</td>
+                        <td className="p-4 font-mono text-xs font-semibold">{p.sku}</td>
                         <td className="p-4 font-medium">{p.name}</td>
-                        <td className="p-4 text-center font-bold font-mono">{p.stock}</td>
-                        <td className="p-4 text-right font-mono">{currencySymbol}{p.cost.toFixed(2)}</td>
-                        <td className="p-4 text-right font-mono font-bold text-emerald-600">{currencySymbol}{assetValue.toFixed(2)}</td>
+                        <td className="p-4 text-center font-mono font-bold">{p.stock}</td>
+                        <td className="p-4 text-right font-mono">
+                          {currencySymbol}
+                          {p.cost.toFixed(2)}
+                        </td>
+                        <td className="p-4 text-right font-mono font-bold text-emerald-600">
+                          {currencySymbol}
+                          {assetValue.toFixed(2)}
+                        </td>
                       </tr>
                     );
                   })}
-                  <tr className="bg-muted/10 font-bold border-t-2">
-                    <td colSpan={2} className="p-4">Aggregate Valuation Summary</td>
-                    <td className="p-4 text-center font-mono">{products.reduce((acc, p) => acc + p.stock, 0)} Units</td>
+                  <tr className="border-t-2 bg-muted/10 font-bold">
+                    <td colSpan={2} className="p-4">
+                      Aggregate Valuation Summary
+                    </td>
+                    <td className="p-4 text-center font-mono">
+                      {products.reduce((acc, p) => acc + p.stock, 0)} Units
+                    </td>
                     <td></td>
-                    <td className="p-4 text-right font-mono text-emerald-600 text-base">
-                      {currencySymbol}{stats.stock_value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    <td className="p-4 text-right font-mono text-base text-emerald-600">
+                      {currencySymbol}
+                      {stats.stock_value.toLocaleString(undefined, {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
                     </td>
                   </tr>
                 </tbody>

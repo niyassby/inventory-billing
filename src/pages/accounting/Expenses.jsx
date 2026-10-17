@@ -5,7 +5,13 @@ import { useStore } from "@/hooks/use-store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
@@ -17,7 +23,7 @@ import {
   BadgePercentIcon,
   Search01Icon,
   ArrowLeft01Icon,
-  ArrowRight01Icon
+  ArrowRight01Icon,
 } from "@hugeicons/core-free-icons";
 
 export default function Expenses() {
@@ -46,7 +52,13 @@ export default function Expenses() {
 
   // Modals States
   const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
-  const [expenseForm, setExpenseForm] = useState({ title: "", category: "Rent", amount: 0, date: new Date().toISOString().split("T")[0], description: "" });
+  const [expenseForm, setExpenseForm] = useState({
+    title: "",
+    category: "Rent",
+    amount: 0,
+    date: new Date().toISOString().split("T")[0],
+    description: "",
+  });
 
   // Fetch Data
   const fetchData = async () => {
@@ -90,10 +102,16 @@ export default function Expenses() {
         category: expenseForm.category,
         amount: parseFloat(expenseForm.amount),
         date: expenseForm.date,
-        description: expenseForm.description || null
+        description: expenseForm.description || null,
       });
       setIsExpenseModalOpen(false);
-      setExpenseForm({ title: "", category: "Rent", amount: 0, date: new Date().toISOString().split("T")[0], description: "" });
+      setExpenseForm({
+        title: "",
+        category: "Rent",
+        amount: 0,
+        date: new Date().toISOString().split("T")[0],
+        description: "",
+      });
       fetchData();
     } catch (e) {
       alert("Error creating expense: " + e);
@@ -121,10 +139,13 @@ export default function Expenses() {
 
   return (
     <div className="space-y-6 pb-8 font-sans">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-border/40 pb-4">
+      <div className="flex flex-col items-start justify-between gap-4 border-b border-border/40 pb-4 md:flex-row md:items-center">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Ledger & Accounting</h1>
-          <p className="text-muted-foreground">Manage chart of accounts, draft balancing journal entries, log expenses, and configure tax rules.</p>
+          <p className="text-muted-foreground">
+            Manage chart of accounts, draft balancing journal entries, log expenses, and configure
+            tax rules.
+          </p>
         </div>
         <div className="flex flex-wrap gap-2 print:hidden">
           <Button
@@ -159,21 +180,26 @@ export default function Expenses() {
       </div>
 
       <div className="space-y-4">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-          <div className="flex flex-1 gap-2 w-full sm:w-auto">
-            <div className="relative flex-1 max-w-sm">
-              <HugeiconsIcon icon={Search01Icon} size={18} strokeWidth={2} className="absolute left-3 top-2.5 text-muted-foreground" />
+        <div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
+          <div className="flex w-full flex-1 gap-2 sm:w-auto">
+            <div className="relative max-w-sm flex-1">
+              <HugeiconsIcon
+                icon={Search01Icon}
+                size={18}
+                strokeWidth={2}
+                className="absolute top-2.5 left-3 text-muted-foreground"
+              />
               <Input
                 placeholder="Search by expense title or description..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 bg-card border-border/40"
+                className="border-border/40 bg-card pl-9"
               />
             </div>
             <select
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
-              className="p-2 border rounded-md text-xs bg-card border-border/40 text-foreground max-w-xs focus:outline-none"
+              className="max-w-xs rounded-md border border-border/40 bg-card p-2 text-xs text-foreground focus:outline-none"
             >
               <option value="">All Categories</option>
               <option value="Rent">Rent</option>
@@ -184,7 +210,10 @@ export default function Expenses() {
             </select>
           </div>
           {!isReadOnly && (
-            <Button onClick={() => setIsExpenseModalOpen(true)} className="flex items-center gap-1.5 shrink-0">
+            <Button
+              onClick={() => setIsExpenseModalOpen(true)}
+              className="flex shrink-0 items-center gap-1.5"
+            >
               <HugeiconsIcon icon={Add01Icon} size={16} /> Log Expense
             </Button>
           )}
@@ -198,23 +227,35 @@ export default function Expenses() {
           <Card className="border-border/40 bg-card/65 backdrop-blur-sm">
             <CardContent className="p-0">
               <div className="overflow-x-auto">
-                <table className="w-full text-sm text-left border-collapse">
+                <table className="w-full border-collapse text-left text-sm">
                   <thead>
-                    <tr className="border-b border-border/40 text-muted-foreground text-xs uppercase bg-muted/20">
-                      <th className="p-4 font-medium cursor-pointer select-none" onClick={() => toggleSort("date")}>
+                    <tr className="border-b border-border/40 bg-muted/20 text-xs text-muted-foreground uppercase">
+                      <th
+                        className="cursor-pointer p-4 font-medium select-none"
+                        onClick={() => toggleSort("date")}
+                      >
                         Date {sortBy === "date" ? (sortOrder === "ASC" ? "▲" : "▼") : ""}
                       </th>
-                      <th className="p-4 font-medium cursor-pointer select-none" onClick={() => toggleSort("title")}>
+                      <th
+                        className="cursor-pointer p-4 font-medium select-none"
+                        onClick={() => toggleSort("title")}
+                      >
                         Expense Title {sortBy === "title" ? (sortOrder === "ASC" ? "▲" : "▼") : ""}
                       </th>
-                      <th className="p-4 font-medium cursor-pointer select-none" onClick={() => toggleSort("category")}>
+                      <th
+                        className="cursor-pointer p-4 font-medium select-none"
+                        onClick={() => toggleSort("category")}
+                      >
                         Category {sortBy === "category" ? (sortOrder === "ASC" ? "▲" : "▼") : ""}
                       </th>
-                      <th className="p-4 font-medium text-right cursor-pointer select-none" onClick={() => toggleSort("amount")}>
+                      <th
+                        className="cursor-pointer p-4 text-right font-medium select-none"
+                        onClick={() => toggleSort("amount")}
+                      >
                         Amount {sortBy === "amount" ? (sortOrder === "ASC" ? "▲" : "▼") : ""}
                       </th>
                       <th className="p-4 font-medium">Description</th>
-                      {!cannotDelete && <th className="p-4 font-medium text-right">Actions</th>}
+                      {!cannotDelete && <th className="p-4 text-right font-medium">Actions</th>}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border/20">
@@ -223,11 +264,21 @@ export default function Expenses() {
                         <td className="p-4 font-mono text-xs text-muted-foreground">{e.date}</td>
                         <td className="p-4 font-semibold">{e.title}</td>
                         <td className="p-4 text-xs font-semibold uppercase">{e.category}</td>
-                        <td className="p-4 text-right font-mono font-bold text-rose-600">{currencySymbol}{e.amount.toFixed(2)}</td>
-                        <td className="p-4 text-xs text-muted-foreground">{e.description || "-"}</td>
+                        <td className="p-4 text-right font-mono font-bold text-rose-600">
+                          {currencySymbol}
+                          {e.amount.toFixed(2)}
+                        </td>
+                        <td className="p-4 text-xs text-muted-foreground">
+                          {e.description || "-"}
+                        </td>
                         {!cannotDelete && (
                           <td className="p-4 text-right">
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleExpenseDelete(e.id)}>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-destructive"
+                              onClick={() => handleExpenseDelete(e.id)}
+                            >
                               <HugeiconsIcon icon={Delete02Icon} size={14} />
                             </Button>
                           </td>
@@ -236,7 +287,10 @@ export default function Expenses() {
                     ))}
                     {expenses.length === 0 && (
                       <tr>
-                        <td colSpan={cannotDelete ? 5 : 6} className="py-8 text-center text-muted-foreground text-xs">
+                        <td
+                          colSpan={cannotDelete ? 5 : 6}
+                          className="py-8 text-center text-xs text-muted-foreground"
+                        >
                           No operational expenses logged.
                         </td>
                       </tr>
@@ -246,7 +300,7 @@ export default function Expenses() {
               </div>
 
               {/* Pagination controls */}
-              <div className="p-4 border-t border-border/40 flex flex-col sm:flex-row justify-between items-center gap-4 text-xs text-muted-foreground print:hidden">
+              <div className="flex flex-col items-center justify-between gap-4 border-t border-border/40 p-4 text-xs text-muted-foreground sm:flex-row print:hidden">
                 <div className="flex items-center gap-2">
                   <span>Rows per page:</span>
                   <select
@@ -255,7 +309,7 @@ export default function Expenses() {
                       setLimit(parseInt(e.target.value));
                       setPage(1);
                     }}
-                    className="p-1 border rounded bg-card border-border/40 text-foreground text-xs focus:outline-none"
+                    className="rounded border border-border/40 bg-card p-1 text-xs text-foreground focus:outline-none"
                   >
                     <option value={5}>5</option>
                     <option value={10}>10</option>
@@ -272,7 +326,9 @@ export default function Expenses() {
                   >
                     <HugeiconsIcon icon={ArrowLeft01Icon} size={14} />
                   </Button>
-                  <span className="px-2 font-medium">Page {page} of {Math.ceil(totalCount / limit) || 1}</span>
+                  <span className="px-2 font-medium">
+                    Page {page} of {Math.ceil(totalCount / limit) || 1}
+                  </span>
                   <Button
                     variant="outline"
                     size="icon"
@@ -290,7 +346,7 @@ export default function Expenses() {
 
       {/* Log Expense Modal */}
       <Dialog open={isExpenseModalOpen} onOpenChange={setIsExpenseModalOpen}>
-        <DialogContent className="sm:max-w-md font-sans">
+        <DialogContent className="font-sans sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Log Store Expense</DialogTitle>
           </DialogHeader>
@@ -310,7 +366,7 @@ export default function Expenses() {
                 <Label htmlFor="exp_cat">Category *</Label>
                 <select
                   id="exp_cat"
-                  className="w-full p-2 border rounded-md text-sm bg-card border-border/40 text-foreground"
+                  className="w-full rounded-md border border-border/40 bg-card p-2 text-sm text-foreground"
                   value={expenseForm.category}
                   onChange={(e) => setExpenseForm({ ...expenseForm, category: e.target.value })}
                   required
@@ -356,7 +412,9 @@ export default function Expenses() {
               </div>
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsExpenseModalOpen(false)}>Cancel</Button>
+              <Button type="button" variant="outline" onClick={() => setIsExpenseModalOpen(false)}>
+                Cancel
+              </Button>
               <Button type="submit">Log Expense</Button>
             </DialogFooter>
           </form>

@@ -10,7 +10,7 @@ import {
   CalculatorIcon,
   ShoppingBagIcon,
   ArchiveIcon,
-  BadgePercentIcon
+  BadgePercentIcon,
 } from "@hugeicons/core-free-icons";
 
 export default function TaxSummary() {
@@ -41,10 +41,12 @@ export default function TaxSummary() {
 
   return (
     <div className="space-y-6 pb-8 font-sans">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-border/40 pb-4">
+      <div className="flex flex-col items-start justify-between gap-4 border-b border-border/40 pb-4 md:flex-row md:items-center">
         <div className="print:hidden">
           <h1 className="text-3xl font-bold tracking-tight">Reports Ledger</h1>
-          <p className="text-muted-foreground">Generate commercial financial statements, check taxes, and value inventory assets.</p>
+          <p className="text-muted-foreground">
+            Generate commercial financial statements, check taxes, and value inventory assets.
+          </p>
         </div>
         <div className="flex flex-wrap gap-2 print:hidden">
           <Button
@@ -84,18 +86,26 @@ export default function TaxSummary() {
         </div>
       ) : (
         <div className="space-y-4">
-          <div className="flex justify-between items-center print:hidden">
+          <div className="flex items-center justify-between print:hidden">
             <h3 className="text-lg font-semibold capitalize">Tax Summary Statement</h3>
-            <Button variant="outline" className="flex items-center gap-1 border-border/40" onClick={() => window.print()}>
+            <Button
+              variant="outline"
+              className="flex items-center gap-1 border-border/40"
+              onClick={() => window.print()}
+            >
               <HugeiconsIcon icon={PrinterIcon} size={14} /> Print Statement
             </Button>
           </div>
 
           {/* PRINT HEADER */}
-          <div className="hidden print:block text-center border-b pb-6 mb-6">
-            <h1 className="text-2xl font-bold uppercase tracking-wider">Business Audit Report Sheet</h1>
-            <p className="text-xs text-muted-foreground mt-1">Generated: {new Date().toLocaleString()}</p>
-            <h3 className="text-sm font-semibold capitalize mt-4 bg-muted p-2 rounded">
+          <div className="mb-6 hidden border-b pb-6 text-center print:block">
+            <h1 className="text-2xl font-bold tracking-wider uppercase">
+              Business Audit Report Sheet
+            </h1>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Generated: {new Date().toLocaleString()}
+            </p>
+            <h3 className="mt-4 rounded bg-muted p-2 text-sm font-semibold capitalize">
               Report Section: TAX SUMMARY STATEMENT
             </h3>
           </div>
@@ -103,14 +113,16 @@ export default function TaxSummary() {
           <Card className="border-border/40 bg-card/65 backdrop-blur-sm print:border-none print:shadow-none">
             <CardHeader className="print:px-0">
               <CardTitle>Sales Taxes Collected Statement</CardTitle>
-              <CardDescription>Assessed output tax amounts parsed from active billing tickets.</CardDescription>
+              <CardDescription>
+                Assessed output tax amounts parsed from active billing tickets.
+              </CardDescription>
             </CardHeader>
             <CardContent className="p-0 print:px-0">
-              <table className="w-full text-sm text-left border-collapse">
+              <table className="w-full border-collapse text-left text-sm">
                 <thead>
-                  <tr className="border-b border-border/40 text-muted-foreground text-xs uppercase bg-muted/20">
+                  <tr className="border-b border-border/40 bg-muted/20 text-xs text-muted-foreground uppercase">
                     <th className="p-4 font-medium">Output Period</th>
-                    <th className="p-4 font-medium text-right">Tax Collected</th>
+                    <th className="p-4 text-right font-medium">Tax Collected</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/20">
@@ -118,13 +130,14 @@ export default function TaxSummary() {
                     <tr key={idx} className="hover:bg-muted/10">
                       <td className="p-4 font-semibold">{pt.label} (Aggregate Output)</td>
                       <td className="p-4 text-right font-mono font-bold text-primary">
-                        {currencySymbol}{pt.value.toFixed(2)}
+                        {currencySymbol}
+                        {pt.value.toFixed(2)}
                       </td>
                     </tr>
                   ))}
                   {taxSummary.length === 0 && (
                     <tr>
-                      <td colSpan={2} className="py-8 text-center text-muted-foreground text-xs">
+                      <td colSpan={2} className="py-8 text-center text-xs text-muted-foreground">
                         No sales tax reports captured yet.
                       </td>
                     </tr>

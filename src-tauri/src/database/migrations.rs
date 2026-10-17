@@ -1,9 +1,9 @@
-use rusqlite::{Connection, Result};
 use argon2::{
     password_hash::{PasswordHasher, SaltString},
     Argon2,
 };
 use rand::rngs::OsRng;
+use rusqlite::{Connection, Result};
 
 pub fn run_migrations(conn: &Connection) -> Result<()> {
     // Enable foreign keys
@@ -356,17 +356,25 @@ pub fn run_migrations(conn: &Connection) -> Result<()> {
     )?;
 
     // Create indexes for optimization
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_products_sku ON products(sku);", [])?;
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_products_barcode ON products(barcode);", [])?;
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_invoices_number ON invoices(invoice_number);", [])?;
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_sessions_token ON sessions(token_hash);", [])?;
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_products_sku ON products(sku);",
+        [],
+    )?;
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_products_barcode ON products(barcode);",
+        [],
+    )?;
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_invoices_number ON invoices(invoice_number);",
+        [],
+    )?;
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_sessions_token ON sessions(token_hash);",
+        [],
+    )?;
 
     // Seed default roles / default admin user if none exists
-    let user_count: i64 = conn.query_row(
-        "SELECT COUNT(*) FROM users",
-        [],
-        |row| row.get(0),
-    )?;
+    let user_count: i64 = conn.query_row("SELECT COUNT(*) FROM users", [], |row| row.get(0))?;
 
     if user_count == 0 {
         let admin_id = uuid::Uuid::new_v4().to_string();
@@ -450,15 +458,14 @@ pub fn run_migrations(conn: &Connection) -> Result<()> {
         conn.execute("ALTER TABLE products ADD COLUMN unit_id TEXT;", [])?;
     }
     if !table_info.contains(&"offer_price".to_string()) {
-        conn.execute("ALTER TABLE products ADD COLUMN offer_price REAL DEFAULT 0.0;", [])?;
+        conn.execute(
+            "ALTER TABLE products ADD COLUMN offer_price REAL DEFAULT 0.0;",
+            [],
+        )?;
     }
 
     // Seed default units if none exist
-    let unit_count: i64 = conn.query_row(
-        "SELECT COUNT(*) FROM units",
-        [],
-        |row| row.get(0),
-    )?;
+    let unit_count: i64 = conn.query_row("SELECT COUNT(*) FROM units", [], |row| row.get(0))?;
 
     if unit_count == 0 {
         let default_units = vec![

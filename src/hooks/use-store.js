@@ -75,7 +75,8 @@ export const useStore = create((set, get) => ({
   addToCart: (product) => {
     const { posCart } = get();
     const existing = posCart.find((item) => item.id === product.id);
-    const priceToUse = (product.offer_price && product.offer_price > 0) ? product.offer_price : product.price;
+    const priceToUse =
+      product.offer_price && product.offer_price > 0 ? product.offer_price : product.price;
 
     if (existing) {
       if (existing.quantity >= product.stock) {
@@ -85,7 +86,7 @@ export const useStore = create((set, get) => ({
         posCart: posCart.map((item) =>
           item.id === product.id
             ? { ...item, quantity: item.quantity + 1, total: (item.quantity + 1) * priceToUse }
-            : item
+            : item,
         ),
       });
     } else {
@@ -122,9 +123,7 @@ export const useStore = create((set, get) => ({
     }
     set({
       posCart: posCart.map((item) =>
-        item.id === productId
-          ? { ...item, quantity, total: quantity * item.price }
-          : item
+        item.id === productId ? { ...item, quantity, total: quantity * item.price } : item,
       ),
     });
     return { success: true };
@@ -223,7 +222,7 @@ export const useStore = create((set, get) => ({
 
   // Notification / Alerts State
   notifications: [],
-  
+
   addNotification: (title, message, type = "info") => {
     const newNotif = {
       id: Math.random().toString(36).substr(2, 9),
@@ -245,15 +244,15 @@ export const useStore = create((set, get) => ({
     try {
       const products = await invoke("list_products_cmd", { token });
       const lowStockItems = products.filter((p) => p.stock <= p.reorder_level);
-      
+
       // Clear previous warning notifications
-      set({ notifications: get().notifications.filter(n => n.type !== "warning") });
+      set({ notifications: get().notifications.filter((n) => n.type !== "warning") });
 
       lowStockItems.forEach((p) => {
         get().addNotification(
           "Low Stock Alert",
           `Product '${p.name}' (${p.sku}) is low on stock. Current: ${p.stock}, Reorder level: ${p.reorder_level}`,
-          "warning"
+          "warning",
         );
       });
     } catch (e) {

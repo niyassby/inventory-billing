@@ -20,11 +20,11 @@ pub fn init_db(app_handle: &AppHandle) -> Connection {
     }
 
     db_path.push("inventory_app.db");
-    
+
     println!("Database path: {:?}", db_path);
 
     let conn = Connection::open(db_path).expect("Failed to open SQLite database");
-    
+
     // Run migrations
     migrations::run_migrations(&conn).expect("Failed to run database migrations");
 

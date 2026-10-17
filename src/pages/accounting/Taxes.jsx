@@ -5,7 +5,13 @@ import { useStore } from "@/hooks/use-store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
@@ -13,7 +19,7 @@ import {
   BookOpen02Icon,
   ShuffleIcon,
   DollarSignIcon,
-  BadgePercentIcon
+  BadgePercentIcon,
 } from "@hugeicons/core-free-icons";
 
 export default function Taxes() {
@@ -55,7 +61,7 @@ export default function Taxes() {
       await invoke("create_tax_rate_cmd", {
         token,
         name: taxForm.name,
-        rate: parseFloat(taxForm.rate)
+        rate: parseFloat(taxForm.rate),
       });
       setIsTaxModalOpen(false);
       setTaxForm({ name: "", rate: 0 });
@@ -67,10 +73,13 @@ export default function Taxes() {
 
   return (
     <div className="space-y-6 pb-8 font-sans">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-border/40 pb-4">
+      <div className="flex flex-col items-start justify-between gap-4 border-b border-border/40 pb-4 md:flex-row md:items-center">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Ledger & Accounting</h1>
-          <p className="text-muted-foreground">Manage chart of accounts, draft balancing journal entries, log expenses, and configure tax rules.</p>
+          <p className="text-muted-foreground">
+            Manage chart of accounts, draft balancing journal entries, log expenses, and configure
+            tax rules.
+          </p>
         </div>
         <div className="flex flex-wrap gap-2 print:hidden">
           <Button
@@ -110,7 +119,7 @@ export default function Taxes() {
         </div>
       ) : (
         <div className="space-y-4">
-          <div className="flex justify-between items-center">
+          <div className="flex items-center justify-between">
             <h3 className="text-lg font-semibold">Configured VAT / Sales Taxes</h3>
             {!isReadOnly && (
               <Button onClick={() => setIsTaxModalOpen(true)} className="flex items-center gap-1.5">
@@ -122,23 +131,25 @@ export default function Taxes() {
           <Card className="border-border/40 bg-card/65 backdrop-blur-sm">
             <CardContent className="p-0">
               <div className="overflow-x-auto">
-                <table className="w-full text-sm text-left border-collapse">
+                <table className="w-full border-collapse text-left text-sm">
                   <thead>
-                    <tr className="border-b border-border/40 text-muted-foreground text-xs uppercase bg-muted/20">
+                    <tr className="border-b border-border/40 bg-muted/20 text-xs text-muted-foreground uppercase">
                       <th className="p-4 font-medium">Tax Rule Name</th>
-                      <th className="p-4 font-medium text-right">Percentage Rate (%)</th>
+                      <th className="p-4 text-right font-medium">Percentage Rate (%)</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border/20">
                     {taxes.map((t) => (
                       <tr key={t.id} className="hover:bg-muted/10">
                         <td className="p-4 font-semibold">{t.name}</td>
-                        <td className="p-4 text-right font-mono font-bold text-primary">{t.rate.toFixed(2)}%</td>
+                        <td className="p-4 text-right font-mono font-bold text-primary">
+                          {t.rate.toFixed(2)}%
+                        </td>
                       </tr>
                     ))}
                     {taxes.length === 0 && (
                       <tr>
-                        <td colSpan={2} className="py-8 text-center text-muted-foreground text-xs">
+                        <td colSpan={2} className="py-8 text-center text-xs text-muted-foreground">
                           No sales tax rates configured.
                         </td>
                       </tr>
@@ -153,7 +164,7 @@ export default function Taxes() {
 
       {/* Tax Modal */}
       <Dialog open={isTaxModalOpen} onOpenChange={setIsTaxModalOpen}>
-        <DialogContent className="sm:max-w-md font-sans">
+        <DialogContent className="font-sans sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Add Sales Tax Rule</DialogTitle>
           </DialogHeader>
@@ -181,7 +192,9 @@ export default function Taxes() {
               />
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsTaxModalOpen(false)}>Cancel</Button>
+              <Button type="button" variant="outline" onClick={() => setIsTaxModalOpen(false)}>
+                Cancel
+              </Button>
               <Button type="submit">Create Tax Rule</Button>
             </DialogFooter>
           </form>

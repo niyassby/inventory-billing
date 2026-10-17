@@ -5,7 +5,13 @@ import { useStore } from "@/hooks/use-store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
@@ -14,9 +20,16 @@ import {
   BarcodeIcon,
   Tag01Icon,
   ArchiveIcon,
-  ShuffleIcon
+  ShuffleIcon,
 } from "@hugeicons/core-free-icons";
-import { useBrands, useCategories, useCreateBrand, useCreateCategorie, useDeleteBrand, useDeleteCategory } from "@/hooks/tanstack/useCategorie&Brand";
+import {
+  useBrands,
+  useCategories,
+  useCreateBrand,
+  useCreateCategorie,
+  useDeleteBrand,
+  useDeleteCategory,
+} from "@/hooks/tanstack/useCategorie&Brand";
 import { useUnits, useCreateUnit, useDeleteUnit } from "@/hooks/tanstack/useUnits";
 import { toast } from "sonner";
 
@@ -29,17 +42,17 @@ export default function Categories() {
   const cannotDelete = userRole === "staff" || userRole === "accountant";
 
   // Data State
-  const {data: categories, isLoading: catLoading}= useCategories({token});
-  const {data: brands, isLoading: brandLoading}= useBrands({token});
-  const {data: units, isLoading: unitLoading}= useUnits({token});
-  
-  const {mutate: createCategory, isPending: isCreatingCategory}=useCreateCategorie()
-  const {mutate: createBrand, isPending: isCreatingBrand}=useCreateBrand()
-  const {mutate: createUnit, isPending: isCreatingUnit}=useCreateUnit()
-  
-  const {mutate: deleteCategory}=useDeleteCategory()
-  const {mutate: deleteBrand}=useDeleteBrand()
-  const {mutate: deleteUnit}=useDeleteUnit()
+  const { data: categories, isLoading: catLoading } = useCategories({ token });
+  const { data: brands, isLoading: brandLoading } = useBrands({ token });
+  const { data: units, isLoading: unitLoading } = useUnits({ token });
+
+  const { mutate: createCategory, isPending: isCreatingCategory } = useCreateCategorie();
+  const { mutate: createBrand, isPending: isCreatingBrand } = useCreateBrand();
+  const { mutate: createUnit, isPending: isCreatingUnit } = useCreateUnit();
+
+  const { mutate: deleteCategory } = useDeleteCategory();
+  const { mutate: deleteBrand } = useDeleteBrand();
+  const { mutate: deleteUnit } = useDeleteUnit();
 
   // Modals State
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
@@ -52,106 +65,127 @@ export default function Categories() {
   const [unitName, setUnitName] = useState("");
   const [unitShortName, setUnitShortName] = useState("");
 
-
   // Category and Brand submits
   const handleCategorySubmit = async (e) => {
     e.preventDefault();
-    createCategory({token, name: categoryName}, {
-      onSuccess: () => {
-        setCategoryName("");
-        setIsCategoryModalOpen(false);
-        toast.success("Category created successfully");
+    createCategory(
+      { token, name: categoryName },
+      {
+        onSuccess: () => {
+          setCategoryName("");
+          setIsCategoryModalOpen(false);
+          toast.success("Category created successfully");
+        },
+        onError: (error) => {
+          toast.error("Error creating category: " + error);
+        },
       },
-      onError: (error) => {
-        toast.error("Error creating category: " + error);
-      }
-    })
-    
+    );
   };
 
   const handleBrandSubmit = async (e) => {
     e.preventDefault();
-    createBrand({token, name: brandName}, {
-      onSuccess: () => {
-        setBrandName("");
-        setIsBrandModalOpen(false);
-        toast.success("Brand created successfully");
+    createBrand(
+      { token, name: brandName },
+      {
+        onSuccess: () => {
+          setBrandName("");
+          setIsBrandModalOpen(false);
+          toast.success("Brand created successfully");
+        },
+        onError: (error) => {
+          toast.error("Error creating brand: " + error);
+        },
       },
-      onError: (error) => {
-        toast.error("Error creating brand: " + error);
-      }
-    })
+    );
   };
 
   const handleCategoryDelete = async (id) => {
     if (!window.confirm("Are you sure you want to delete this category?")) return;
-    deleteCategory({token, id}, {
-      onSuccess: () => {
-        toast.success("Category deleted successfully");
+    deleteCategory(
+      { token, id },
+      {
+        onSuccess: () => {
+          toast.success("Category deleted successfully");
+        },
+        onError: (error) => {
+          toast.error("Error deleting category: " + error);
+        },
       },
-      onError: (error) => {
-        toast.error("Error deleting category: " + error);
-      }
-    })
+    );
   };
 
   const handleBrandDelete = async (id) => {
     if (!window.confirm("Are you sure you want to delete this brand?")) return;
-    deleteBrand({token, id}, {
-      onSuccess: () => {
-        toast.success("Brand deleted successfully");
+    deleteBrand(
+      { token, id },
+      {
+        onSuccess: () => {
+          toast.success("Brand deleted successfully");
+        },
+        onError: (error) => {
+          toast.error("Error deleting brand: " + error);
+        },
       },
-      onError: (error) => {
-        toast.error("Error deleting brand: " + error);
-      }
-    })
+    );
   };
 
   const handleUnitSubmit = async (e) => {
     e.preventDefault();
-    createUnit({token, name: unitName, shortName: unitShortName}, {
-      onSuccess: () => {
-        setUnitName("");
-        setUnitShortName("");
-        setIsUnitModalOpen(false);
-        toast.success("Unit created successfully");
+    createUnit(
+      { token, name: unitName, shortName: unitShortName },
+      {
+        onSuccess: () => {
+          setUnitName("");
+          setUnitShortName("");
+          setIsUnitModalOpen(false);
+          toast.success("Unit created successfully");
+        },
+        onError: (error) => {
+          toast.error("Error creating unit: " + error);
+        },
       },
-      onError: (error) => {
-        toast.error("Error creating unit: " + error);
-      }
-    })
+    );
   };
 
   const handleUnitDelete = async (id) => {
     if (!window.confirm("Are you sure you want to delete this unit?")) return;
-    deleteUnit({token, id}, {
-      onSuccess: () => {
-        toast.success("Unit deleted successfully");
+    deleteUnit(
+      { token, id },
+      {
+        onSuccess: () => {
+          toast.success("Unit deleted successfully");
+        },
+        onError: (error) => {
+          toast.error("Error deleting unit: " + error);
+        },
       },
-      onError: (error) => {
-        toast.error("Error deleting unit: " + error);
-      }
-    })
+    );
   };
 
   return (
     <div className="space-y-6 p-4 font-sans">
-
       {catLoading || brandLoading || unitLoading ? (
         <div className="flex h-[40vh] items-center justify-center">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
         </div>
       ) : (
-        <div className="grid gap-6 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
           {/* Category Card */}
           <Card className="border-border/40 bg-card/65 backdrop-blur-sm">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
               <div>
                 <CardTitle>Categories</CardTitle>
-                <CardDescription>Classify products for advanced accounting reports.</CardDescription>
+                <CardDescription>
+                  Classify products for advanced accounting reports.
+                </CardDescription>
               </div>
               {!isReadOnly && (
-                <Button size="sm" onClick={() => setIsCategoryModalOpen(true)} className="flex items-center gap-1">
+                <Button
+                  size="sm"
+                  onClick={() => setIsCategoryModalOpen(true)}
+                  className="flex items-center gap-1"
+                >
                   <HugeiconsIcon icon={Add01Icon} size={14} /> New Category
                 </Button>
               )}
@@ -159,17 +193,24 @@ export default function Categories() {
             <CardContent>
               <div className="divide-y divide-border/20">
                 {categories?.map((c) => (
-                  <div key={c.id} className="flex justify-between items-center py-2.5">
+                  <div key={c.id} className="flex items-center justify-between py-2.5">
                     <span className="text-sm font-medium">{c.name}</span>
                     {!cannotDelete && (
-                      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => handleCategoryDelete(c.id)}>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-destructive"
+                        onClick={() => handleCategoryDelete(c.id)}
+                      >
                         <HugeiconsIcon icon={Delete02Icon} size={14} />
                       </Button>
                     )}
                   </div>
                 ))}
                 {categories?.length === 0 && (
-                  <p className="text-xs text-muted-foreground py-4 text-center">No categories defined yet.</p>
+                  <p className="py-4 text-center text-xs text-muted-foreground">
+                    No categories defined yet.
+                  </p>
                 )}
               </div>
             </CardContent>
@@ -180,10 +221,16 @@ export default function Categories() {
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
               <div>
                 <CardTitle>Brands</CardTitle>
-                <CardDescription>Associate brands with products for tracking statistics.</CardDescription>
+                <CardDescription>
+                  Associate brands with products for tracking statistics.
+                </CardDescription>
               </div>
               {!isReadOnly && (
-                <Button size="sm" onClick={() => setIsBrandModalOpen(true)} className="flex items-center gap-1">
+                <Button
+                  size="sm"
+                  onClick={() => setIsBrandModalOpen(true)}
+                  className="flex items-center gap-1"
+                >
                   <HugeiconsIcon icon={Add01Icon} size={14} /> New Brand
                 </Button>
               )}
@@ -191,17 +238,24 @@ export default function Categories() {
             <CardContent>
               <div className="divide-y divide-border/20">
                 {brands?.map((b) => (
-                  <div key={b.id} className="flex justify-between items-center py-2.5">
+                  <div key={b.id} className="flex items-center justify-between py-2.5">
                     <span className="text-sm font-medium">{b.name}</span>
                     {!cannotDelete && (
-                      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => handleBrandDelete(b.id)}>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-destructive"
+                        onClick={() => handleBrandDelete(b.id)}
+                      >
                         <HugeiconsIcon icon={Delete02Icon} size={14} />
                       </Button>
                     )}
                   </div>
                 ))}
                 {brands?.length === 0 && (
-                  <p className="text-xs text-muted-foreground py-4 text-center">No brands defined yet.</p>
+                  <p className="py-4 text-center text-xs text-muted-foreground">
+                    No brands defined yet.
+                  </p>
                 )}
               </div>
             </CardContent>
@@ -215,7 +269,11 @@ export default function Categories() {
                 <CardDescription>Manage unit lookups for products.</CardDescription>
               </div>
               {!isReadOnly && (
-                <Button size="sm" onClick={() => setIsUnitModalOpen(true)} className="flex items-center gap-1">
+                <Button
+                  size="sm"
+                  onClick={() => setIsUnitModalOpen(true)}
+                  className="flex items-center gap-1"
+                >
                   <HugeiconsIcon icon={Add01Icon} size={14} /> New Unit
                 </Button>
               )}
@@ -223,17 +281,27 @@ export default function Categories() {
             <CardContent>
               <div className="divide-y divide-border/20">
                 {units?.map((u) => (
-                  <div key={u.id} className="flex justify-between items-center py-2.5">
-                    <span className="text-sm font-medium">{u.name} <span className="text-xs text-muted-foreground">({u.short_name})</span></span>
+                  <div key={u.id} className="flex items-center justify-between py-2.5">
+                    <span className="text-sm font-medium">
+                      {u.name}{" "}
+                      <span className="text-xs text-muted-foreground">({u.short_name})</span>
+                    </span>
                     {!cannotDelete && (
-                      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => handleUnitDelete(u.id)}>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-destructive"
+                        onClick={() => handleUnitDelete(u.id)}
+                      >
                         <HugeiconsIcon icon={Delete02Icon} size={14} />
                       </Button>
                     )}
                   </div>
                 ))}
                 {units?.length === 0 && (
-                  <p className="text-xs text-muted-foreground py-4 text-center">No units defined yet.</p>
+                  <p className="py-4 text-center text-xs text-muted-foreground">
+                    No units defined yet.
+                  </p>
                 )}
               </div>
             </CardContent>
@@ -243,7 +311,7 @@ export default function Categories() {
 
       {/* Category Modal */}
       <Dialog open={isCategoryModalOpen} onOpenChange={setIsCategoryModalOpen}>
-        <DialogContent className="sm:max-w-md font-sans">
+        <DialogContent className="font-sans sm:max-w-md">
           <DialogHeader>
             <DialogTitle>New Category</DialogTitle>
           </DialogHeader>
@@ -258,8 +326,12 @@ export default function Categories() {
               />
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsCategoryModalOpen(false)}>Cancel</Button>
-              <Button type="submit" disabled={isCreatingCategory}>{isCreatingCategory ? "Adding..." : "Add Category"}</Button>
+              <Button type="button" variant="outline" onClick={() => setIsCategoryModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isCreatingCategory}>
+                {isCreatingCategory ? "Adding..." : "Add Category"}
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>
@@ -267,7 +339,7 @@ export default function Categories() {
 
       {/* Brand Modal */}
       <Dialog open={isBrandModalOpen} onOpenChange={setIsBrandModalOpen}>
-        <DialogContent className="sm:max-w-md font-sans">
+        <DialogContent className="font-sans sm:max-w-md">
           <DialogHeader>
             <DialogTitle>New Brand</DialogTitle>
           </DialogHeader>
@@ -282,8 +354,12 @@ export default function Categories() {
               />
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsBrandModalOpen(false)}>Cancel</Button>
-              <Button type="submit" disabled={isCreatingBrand}>{isCreatingBrand ? "Adding..." : "Add Brand"}</Button>
+              <Button type="button" variant="outline" onClick={() => setIsBrandModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isCreatingBrand}>
+                {isCreatingBrand ? "Adding..." : "Add Brand"}
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>
@@ -291,7 +367,7 @@ export default function Categories() {
 
       {/* Unit Modal */}
       <Dialog open={isUnitModalOpen} onOpenChange={setIsUnitModalOpen}>
-        <DialogContent className="sm:max-w-md font-sans">
+        <DialogContent className="font-sans sm:max-w-md">
           <DialogHeader>
             <DialogTitle>New Unit</DialogTitle>
           </DialogHeader>
@@ -317,8 +393,12 @@ export default function Categories() {
               />
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsUnitModalOpen(false)}>Cancel</Button>
-              <Button type="submit" disabled={isCreatingUnit}>{isCreatingUnit ? "Adding..." : "Add Unit"}</Button>
+              <Button type="button" variant="outline" onClick={() => setIsUnitModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isCreatingUnit}>
+                {isCreatingUnit ? "Adding..." : "Add Unit"}
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>

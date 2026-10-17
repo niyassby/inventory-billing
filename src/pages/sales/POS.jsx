@@ -5,7 +5,13 @@ import { useStore } from "@/hooks/use-store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -15,7 +21,7 @@ import {
   Delete02Icon,
   InvoiceIcon,
   ArrowLeft01Icon,
-  Clock01Icon
+  Clock01Icon,
 } from "@hugeicons/core-free-icons";
 import { PrinterIcon } from "@hugeicons/core-free-icons/index";
 import { useCategories } from "@/hooks/tanstack/useCategorie&Brand";
@@ -42,7 +48,7 @@ export default function POS() {
     holdCurrentOrder,
     recallOrder,
     fetchHeldOrders,
-    deleteHeldOrder
+    deleteHeldOrder,
   } = useStore();
 
   // Data States
@@ -50,8 +56,8 @@ export default function POS() {
   const [customers, setCustomers] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState("ALL");
   const [searchQuery, setSearchQuery] = useState("");
-  
-  const {data: categories}=useCategories({token});
+
+  const { data: categories } = useCategories({ token });
 
   // Customer states
   const [selectedCustomerId, setSelectedCustomerId] = useState("");
@@ -101,7 +107,7 @@ export default function POS() {
       const loadInvoiceForEditing = async () => {
         try {
           const invDetail = await invoke("get_invoice_cmd", { token, id: editInvoiceId });
-          
+
           // Map invoice items to POS Cart format
           const mappedItems = invDetail.items.map((item) => ({
             id: item.product_id,
@@ -111,15 +117,15 @@ export default function POS() {
             cost: 0,
             quantity: item.quantity,
             total: item.total,
-            tax_rate: item.tax_rate !== undefined && item.tax_rate !== null ? item.tax_rate : 0
+            tax_rate: item.tax_rate !== undefined && item.tax_rate !== null ? item.tax_rate : 0,
           }));
-          
+
           useStore.setState({
             posCart: mappedItems,
             posDiscount: invDetail.discount,
-            posTaxRate: invDetail.subtotal > 0 ? (invDetail.tax * 100) / invDetail.subtotal : 18
+            posTaxRate: invDetail.subtotal > 0 ? (invDetail.tax * 100) / invDetail.subtotal : 18,
           });
-          
+
           setSelectedCustomerId(invDetail.customer_id);
           setPaymentMethod(invDetail.payment_method || "CASH");
           setAmountPaid(invDetail.amount_paid);
@@ -128,14 +134,17 @@ export default function POS() {
           alert("Failed to load invoice for editing: " + e);
         }
       };
-      
+
       loadInvoiceForEditing();
     }
   }, [editInvoiceId, token]);
 
   // Set default amount paid when cart changes
   const subtotal = posCart.reduce((acc, item) => acc + item.total, 0);
-  const taxAmount = posCart.reduce((acc, item) => acc + (item.total * (item.tax_rate || 0)) / 100, 0);
+  const taxAmount = posCart.reduce(
+    (acc, item) => acc + (item.total * (item.tax_rate || 0)) / 100,
+    0,
+  );
   const netTotal = Math.max(0, subtotal + taxAmount - posDiscount);
 
   useEffect(() => {
@@ -148,7 +157,7 @@ export default function POS() {
       const match = products.find(
         (p) =>
           p.sku.toLowerCase() === searchQuery.trim().toLowerCase() ||
-          (p.barcode && p.barcode.toLowerCase() === searchQuery.trim().toLowerCase())
+          (p.barcode && p.barcode.toLowerCase() === searchQuery.trim().toLowerCase()),
       );
       if (match) {
         const res = addToCart(match);
@@ -170,7 +179,7 @@ export default function POS() {
         name: customerForm.name,
         email: customerForm.email || null,
         phone: customerForm.phone || null,
-        address: customerForm.address || null
+        address: customerForm.address || null,
       });
       setCustomers([...customers, newCust]);
       setSelectedCustomerId(newCust.id);
@@ -194,7 +203,7 @@ export default function POS() {
       product_name: item.name,
       quantity: item.quantity,
       unit_price: item.price,
-      total: item.total
+      total: item.total,
     }));
 
     try {
@@ -209,7 +218,7 @@ export default function POS() {
           total: netTotal,
           amountPaid: parseFloat(amountPaid) || 0,
           paymentMethod: paymentMethod,
-          items
+          items,
         });
 
         setPrintedInvoice(invoice);
@@ -226,7 +235,7 @@ export default function POS() {
           total: netTotal,
           amountPaid: parseFloat(amountPaid) || 0,
           paymentMethod: paymentMethod,
-          items
+          items,
         });
 
         setPrintedInvoice(invoice);
@@ -261,21 +270,24 @@ export default function POS() {
   };
 
   // Filter products
-  const filteredProducts = products.filter((p) => {
-    const matchesSearch =
-      p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.sku.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (p.barcode && p.barcode.toLowerCase().includes(searchQuery.toLowerCase()));
-    
-    const matchesCategory = selectedCategory === "ALL" ? true : p.category_id === selectedCategory;
-    
-    return matchesSearch && matchesCategory;
-  }).sort((a, b) => b.stock - a.stock);
+  const filteredProducts = products
+    .filter((p) => {
+      const matchesSearch =
+        p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        p.sku.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (p.barcode && p.barcode.toLowerCase().includes(searchQuery.toLowerCase()));
+
+      const matchesCategory =
+        selectedCategory === "ALL" ? true : p.category_id === selectedCategory;
+
+      return matchesSearch && matchesCategory;
+    })
+    .sort((a, b) => b.stock - a.stock);
 
   return (
-    <div className="flex flex-col min- h-screen bg-muted/20 font-sans text-foreground overflow-hidden">
+    <div className="min- flex h-screen flex-col overflow-hidden bg-muted/20 font-sans text-foreground">
       {/* POS Top Navigation Bar */}
-      <header className="flex h-16 shrink-0 bg-background border-b items-center justify-between px-6 border-border/40 print:hidden">
+      <header className="flex h-16 shrink-0 items-center justify-between border-b border-border/40 bg-background px-6 print:hidden">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="h-9 w-9">
             <HugeiconsIcon icon={ArrowLeft01Icon} size={18} />
@@ -293,45 +305,52 @@ export default function POS() {
               <HugeiconsIcon icon={Clock01Icon} size={16} /> Held Drafts ({heldOrders.length})
             </Button>
           )}
-          <div className="text-xs px-3 py-1 rounded-full font-medium bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
+          <div className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-600">
             Terminal Online (Offline-First)
           </div>
         </div>
       </header>
 
       {/* Main Grid Workspace */}
-      <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 overflow-hidden print:hidden">
+      <div className="grid flex-1 grid-cols-1 overflow-hidden lg:grid-cols-12 print:hidden">
         {/* Left Side: Product tiles catalog (cols-7) */}
-        <div className="lg:col-span-7 flex flex-col h-full bg-background border-r border-border/40 overflow-hidden">
+        <div className="flex h-full flex-col overflow-hidden border-r border-border/40 bg-background lg:col-span-7">
           {/* Filters Bar */}
-          <div className="p-4 border-b border-border/40 flex flex-col md:flex-row gap-3">
+          <div className="flex flex-col gap-3 border-b border-border/40 p-4 md:flex-row">
             <div className="relative flex-1">
-              <HugeiconsIcon icon={Search01Icon} size={18} strokeWidth={2} className="absolute left-3 top-2.5 text-muted-foreground" />
+              <HugeiconsIcon
+                icon={Search01Icon}
+                size={18}
+                strokeWidth={2}
+                className="absolute top-2.5 left-3 text-muted-foreground"
+              />
               <Input
                 ref={searchInputRef}
                 placeholder="Scan Barcode or Search Product name/SKU..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyDown={handleSearchKeyPress}
-                className="pl-9 bg-card border-border/40 focus-visible:ring-primary"
+                className="border-border/40 bg-card pl-9 focus-visible:ring-primary"
               />
             </div>
             {/* Quick Category tabs */}
             <select
-              className="p-2 border rounded-md text-sm bg-card border-border/40 text-foreground"
+              className="rounded-md border border-border/40 bg-card p-2 text-sm text-foreground"
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
             >
               <option value="ALL">All Categories</option>
               {categories?.map((c) => (
-                <option key={c.id} value={c.id}>{c.name}</option>
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
               ))}
             </select>
           </div>
 
           {/* Tiles Area */}
-          <ScrollArea className="flex-1 p-4 bg-muted/5 h-[60vh]">
-            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
+          <ScrollArea className="h-[60vh] flex-1 bg-muted/5 p-4">
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
               {filteredProducts.map((p) => {
                 const isLow = p.stock <= p.reorder_level;
                 const isOut = p.stock <= 0;
@@ -343,23 +362,30 @@ export default function POS() {
                       const res = addToCart(p);
                       if (!res.success) alert(res.message);
                     }}
-                    className={`flex flex-col text-left p-3.5 bg-card border border-border/40 rounded-xl hover:shadow-md hover:border-primary/40 transition-all duration-200 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed group relative`}
+                    className={`group relative flex cursor-pointer flex-col rounded-xl border border-border/40 bg-card p-3.5 text-left transition-all duration-200 hover:border-primary/40 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-40`}
                   >
                     <div className="flex-1">
-                      <div className="font-semibold text-sm group-hover:text-primary transition-colors duration-150 line-clamp-2 leading-snug">
+                      <div className="line-clamp-2 text-sm leading-snug font-semibold transition-colors duration-150 group-hover:text-primary">
                         {p.name}
                       </div>
-                      <div className="text-[10px] text-muted-foreground font-mono mt-1">
+                      <div className="mt-1 font-mono text-[10px] text-muted-foreground">
                         SKU: {p.sku}
                       </div>
                     </div>
-                    <div className="mt-3 flex justify-between items-baseline w-full">
-                      <span className="font-bold text-sm text-foreground font-mono">
-                        {currencySymbol}{p.price.toFixed(2)}
+                    <div className="mt-3 flex w-full items-baseline justify-between">
+                      <span className="font-mono text-sm font-bold text-foreground">
+                        {currencySymbol}
+                        {p.price.toFixed(2)}
                       </span>
-                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${isOut ? 'bg-destructive/15 text-destructive' :
-                        isLow ? 'bg-amber-500/10 text-amber-600' : 'bg-muted text-muted-foreground'
-                        }`}>
+                      <span
+                        className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${
+                          isOut
+                            ? "bg-destructive/15 text-destructive"
+                            : isLow
+                              ? "bg-amber-500/10 text-amber-600"
+                              : "bg-muted text-muted-foreground"
+                        }`}
+                      >
                         Stock: {p.stock}
                       </span>
                     </div>
@@ -367,7 +393,7 @@ export default function POS() {
                 );
               })}
               {filteredProducts.length === 0 && (
-                <div className="col-span-full py-16 text-center text-muted-foreground text-sm border-2 border-dashed rounded-lg bg-card/40">
+                <div className="col-span-full rounded-lg border-2 border-dashed bg-card/40 py-16 text-center text-sm text-muted-foreground">
                   No products match query. Add items to inventory list first.
                 </div>
               )}
@@ -376,26 +402,30 @@ export default function POS() {
         </div>
 
         {/* Right Side: Cash Register Cart & Billing totals (cols-5) */}
-        <div className="lg:col-span-5 flex flex-col h-full bg-card overflow-hidden relative">
+        <div className="relative flex h-full flex-col overflow-hidden bg-card lg:col-span-5">
           {/* Cart Header: Customer selector */}
-          <div className="p-4 border-b border-border/40 flex gap-2 items-center">
+          <div className="flex items-center gap-2 border-b border-border/40 p-4">
             <div className="flex-1">
               <Label className="text-xs text-muted-foreground">Select CRM Customer</Label>
               <select
-                className="w-full mt-1 p-2 border rounded-md text-sm bg-card border-border/40 text-foreground"
+                className="mt-1 w-full rounded-md border border-border/40 bg-card p-2 text-sm text-foreground"
                 value={selectedCustomerId}
                 onChange={(e) => setSelectedCustomerId(e.target.value)}
               >
-                <option value="" disabled>Select Customer</option>
+                <option value="" disabled>
+                  Select Customer
+                </option>
                 {customers.map((c) => (
-                  <option key={c.id} value={c.id}>{c.name} {c.phone ? `(${c.phone})` : ''}</option>
+                  <option key={c.id} value={c.id}>
+                    {c.name} {c.phone ? `(${c.phone})` : ""}
+                  </option>
                 ))}
               </select>
             </div>
             <Button
               variant="outline"
               size="icon"
-              className="mt-5 border-border/40 h-[38px] w-[38px]"
+              className="mt-5 h-[38px] w-[38px] border-border/40"
               onClick={() => setIsCustomerModalOpen(true)}
               title="Add New Customer"
             >
@@ -404,41 +434,47 @@ export default function POS() {
           </div>
 
           {/* Cart items list */}
-          <ScrollArea className="flex-1 p-4  min-h-[20vh]">
+          <ScrollArea className="min-h-[20vh] flex-1 p-4">
             {posCart.map((item) => {
               const product = products.find((p) => p.id === item.id);
               const maxStock = product ? product.stock : 9999;
               return (
-                <div key={item.id} className="py-3.5 flex justify-between items-center first:pt-0">
-                  <div className="flex-1 min-w-0 pr-2">
-                    <div className="font-semibold text-sm truncate">{item.name}</div>
-                    <div className="text-xs text-muted-foreground font-mono mt-0.5">
-                      {currencySymbol}{item.price.toFixed(2)}/unit
+                <div key={item.id} className="flex items-center justify-between py-3.5 first:pt-0">
+                  <div className="min-w-0 flex-1 pr-2">
+                    <div className="truncate text-sm font-semibold">{item.name}</div>
+                    <div className="mt-0.5 font-mono text-xs text-muted-foreground">
+                      {currencySymbol}
+                      {item.price.toFixed(2)}/unit
                     </div>
                   </div>
                   {/* Quantity adjusts */}
-                  <div className="flex items-center gap-1.5 mr-4 shrink-0">
+                  <div className="mr-4 flex shrink-0 items-center gap-1.5">
                     <Button
-                      size='icon'
+                      size="icon"
                       variant="outline"
                       onClick={() => updateCartQuantity(item.id, item.quantity - 1, maxStock)}
                     >
                       -
                     </Button>
-                    <span className="w-8 text-center font-bold text-sm font-mono">{item.quantity}</span>
+                    <span className="w-8 text-center font-mono text-sm font-bold">
+                      {item.quantity}
+                    </span>
                     <Button
-                      size='icon'
+                      size="icon"
                       variant="outline"
                       onClick={() => updateCartQuantity(item.id, item.quantity + 1, maxStock)}
                     >
                       +
                     </Button>
                   </div>
-                  <div className="text-right shrink-0">
-                    <div className="font-bold text-sm font-mono">{currencySymbol}{item.total.toFixed(2)}</div>
+                  <div className="shrink-0 text-right">
+                    <div className="font-mono text-sm font-bold">
+                      {currencySymbol}
+                      {item.total.toFixed(2)}
+                    </div>
                     <button
                       onClick={() => removeFromCart(item.id)}
-                      className="text-xs text-destructive hover:underline mt-1 font-semibold flex items-center gap-0.5 ml-auto cursor-pointer"
+                      className="mt-1 ml-auto flex cursor-pointer items-center gap-0.5 text-xs font-semibold text-destructive hover:underline"
                     >
                       <HugeiconsIcon icon={Delete02Icon} size={12} /> Remove
                     </button>
@@ -447,124 +483,149 @@ export default function POS() {
               );
             })}
             {posCart.length === 0 && (
-              <div className="flex flex-col items-center justify-center py-20 text-center text-muted-foreground text-sm">
-                <HugeiconsIcon icon={InvoiceIcon} size={36} className="text-muted-foreground/45 mb-2" />
+              <div className="flex flex-col items-center justify-center py-20 text-center text-sm text-muted-foreground">
+                <HugeiconsIcon
+                  icon={InvoiceIcon}
+                  size={36}
+                  className="mb-2 text-muted-foreground/45"
+                />
                 <p>Checkout cart is currently empty.</p>
-                <p className="text-xs mt-1 text-muted-foreground/80">Click on products on the left or scan item barcode.</p>
+                <p className="mt-1 text-xs text-muted-foreground/80">
+                  Click on products on the left or scan item barcode.
+                </p>
               </div>
             )}
           </ScrollArea>
 
           {/* Pricing Totals Section */}
           <div className="">
-          <div className="p-4 border-t border-border/40 bg-muted/10 space-y-3 shrink-0">
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Subtotal</span>
-              <span className="font-bold font-mono">{currencySymbol}{subtotal.toFixed(2)}</span>
+            <div className="shrink-0 space-y-3 border-t border-border/40 bg-muted/10 p-4">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Subtotal</span>
+                <span className="font-mono font-bold">
+                  {currencySymbol}
+                  {subtotal.toFixed(2)}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-[10px] font-bold text-muted-foreground uppercase">
+                    Discount Amount
+                  </Label>
+                  <div className="relative mt-1">
+                    <span className="absolute top-2.5 left-2.5 text-xs text-muted-foreground">
+                      {currencySymbol}
+                    </span>
+                    <Input
+                      type="number"
+                      value={posDiscount}
+                      onChange={(e) => setPosDiscount(parseFloat(e.target.value) || 0)}
+                      className="h-8 border-border/40 bg-card pl-6 font-mono text-xs"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <Label className="text-[10px] font-bold text-muted-foreground uppercase">
+                    Tax Amount
+                  </Label>
+                  <div className="relative mt-1">
+                    <span className="absolute top-2.5 left-2.5 text-xs text-muted-foreground">
+                      {currencySymbol}
+                    </span>
+                    <Input
+                      type="text"
+                      value={taxAmount.toFixed(2)}
+                      disabled
+                      className="h-8 cursor-not-allowed border-border/40 bg-muted pl-6 font-mono text-xs opacity-80"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-between border-t border-border/30 pt-3 text-lg font-bold">
+                <span>Total Price</span>
+                <span className="font-mono text-primary">
+                  {currencySymbol}
+                  {netTotal.toFixed(2)}
+                </span>
+              </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label className="text-[10px] text-muted-foreground uppercase font-bold">Discount Amount</Label>
-                <div className="relative mt-1">
-                  <span className="absolute left-2.5 top-2.5 text-xs text-muted-foreground">{currencySymbol}</span>
+            {/* Checkout Controls Drawer */}
+            <div className="shrink-0 space-y-4 border-t border-border/40 bg-background p-4">
+              {/* Payment options */}
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground">Select Payment Method</Label>
+                <div className="grid grid-cols-4 gap-2">
+                  {["CASH", "CARD", "UPI", "CREDIT"].map((m) => (
+                    <button
+                      key={m}
+                      onClick={() => setPaymentMethod(m)}
+                      className={`cursor-pointer rounded-lg border p-2 text-center text-xs font-bold transition-all ${
+                        paymentMethod === m
+                          ? "border-primary bg-primary text-primary-foreground shadow"
+                          : "border-border/40 bg-card text-muted-foreground hover:bg-muted/40"
+                      }`}
+                    >
+                      {m}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Split payments / Amount Paid */}
+              {paymentMethod !== "CREDIT" && (
+                <div className="space-y-2">
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <Label>Amount Tendered (Paid)</Label>
+                    <button
+                      onClick={() => setAmountPaid(netTotal)}
+                      className="font-medium text-primary underline hover:text-primary/95"
+                    >
+                      Exact Amount
+                    </button>
+                  </div>
                   <Input
                     type="number"
-                    value={posDiscount}
-                    onChange={(e) => setPosDiscount(parseFloat(e.target.value) || 0)}
-                    className="pl-6 h-8 text-xs bg-card border-border/40 font-mono"
+                    value={amountPaid}
+                    onChange={(e) => setAmountPaid(parseFloat(e.target.value) || 0)}
+                    className="border-border/40 bg-card font-mono"
                   />
+                  {amountPaid > netTotal && (
+                    <div className="mt-1 flex justify-between rounded bg-emerald-500/10 p-2 text-xs font-semibold text-emerald-600">
+                      <span>Change Return:</span>
+                      <span className="font-mono">
+                        {currencySymbol}
+                        {(amountPaid - netTotal).toFixed(2)}
+                      </span>
+                    </div>
+                  )}
                 </div>
-              </div>
-              <div>
-                <Label className="text-[10px] text-muted-foreground uppercase font-bold">Tax Amount</Label>
-                <div className="relative mt-1">
-                  <span className="absolute left-2.5 top-2.5 text-xs text-muted-foreground">{currencySymbol}</span>
-                  <Input
-                    type="text"
-                    value={taxAmount.toFixed(2)}
-                    disabled
-                    className="pl-6 h-8 text-xs bg-muted border-border/40 font-mono opacity-80 cursor-not-allowed"
-                  />
-                </div>
-              </div>
-            </div>
+              )}
 
-            <div className="flex justify-between border-t border-border/30 pt-3 text-lg font-bold">
-              <span>Total Price</span>
-              <span className="font-mono text-primary">{currencySymbol}{netTotal.toFixed(2)}</span>
-            </div>
-          </div>
-
-          {/* Checkout Controls Drawer */}
-          <div className="p-4 border-t border-border/40 bg-background space-y-4 shrink-0">
-            {/* Payment options */}
-            <div className="space-y-2">
-              <Label className="text-xs text-muted-foreground">Select Payment Method</Label>
-              <div className="grid grid-cols-4 gap-2">
-                {["CASH", "CARD", "UPI", "CREDIT"].map((m) => (
-                  <button
-                    key={m}
-                    onClick={() => setPaymentMethod(m)}
-                    className={`p-2 text-xs font-bold rounded-lg border text-center transition-all cursor-pointer ${paymentMethod === m
-                      ? "bg-primary border-primary text-primary-foreground shadow"
-                      : "bg-card border-border/40 text-muted-foreground hover:bg-muted/40"
-                      }`}
-                  >
-                    {m}
-                  </button>
-                ))}
+              {/* Action buttons */}
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  className="w-1/3 border-border/40"
+                  onClick={() => {
+                    if (posCart.length === 0) return alert("Cart is empty");
+                    setIsHoldModalOpen(true);
+                  }}
+                >
+                  Hold Order
+                </Button>
+                <Button
+                  onClick={handleCheckout}
+                  disabled={posCart.length === 0}
+                  className="flex flex-1 items-center justify-center gap-1.5 bg-primary font-bold text-primary-foreground shadow hover:bg-primary/95"
+                >
+                  <HugeiconsIcon icon={InvoiceIcon} size={16} /> Complete Sale ({currencySymbol}
+                  {netTotal.toFixed(2)})
+                </Button>
               </div>
             </div>
-
-            {/* Split payments / Amount Paid */}
-            {paymentMethod !== "CREDIT" && (
-              <div className="space-y-2">
-                <div className="flex justify-between text-xs text-muted-foreground">
-                  <Label>Amount Tendered (Paid)</Label>
-                  <button
-                    onClick={() => setAmountPaid(netTotal)}
-                    className="text-primary underline font-medium hover:text-primary/95"
-                  >
-                    Exact Amount
-                  </button>
-                </div>
-                <Input
-                  type="number"
-                  value={amountPaid}
-                  onChange={(e) => setAmountPaid(parseFloat(e.target.value) || 0)}
-                  className="bg-card border-border/40 font-mono"
-                />
-                {amountPaid > netTotal && (
-                  <div className="flex justify-between text-xs text-emerald-600 font-semibold mt-1 bg-emerald-500/10 p-2 rounded">
-                    <span>Change Return:</span>
-                    <span className="font-mono">{currencySymbol}{(amountPaid - netTotal).toFixed(2)}</span>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Action buttons */}
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                className="w-1/3 border-border/40"
-                onClick={() => {
-                  if (posCart.length === 0) return alert("Cart is empty");
-                  setIsHoldModalOpen(true);
-                }}
-              >
-                Hold Order
-              </Button>
-              <Button
-                onClick={handleCheckout}
-                disabled={posCart.length === 0}
-                className="flex-1 bg-primary text-primary-foreground font-bold shadow hover:bg-primary/95 flex items-center justify-center gap-1.5"
-              >
-                <HugeiconsIcon icon={InvoiceIcon} size={16} /> Complete Sale ({currencySymbol}{netTotal.toFixed(2)})
-              </Button>
-            </div>
-          </div>
           </div>
         </div>
       </div>
@@ -575,7 +636,7 @@ export default function POS() {
 
       {/* Customer Addition Modal */}
       <Dialog open={isCustomerModalOpen} onOpenChange={setIsCustomerModalOpen}>
-        <DialogContent className="sm:max-w-md font-sans">
+        <DialogContent className="font-sans sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Quick Register Customer</DialogTitle>
           </DialogHeader>
@@ -615,7 +676,9 @@ export default function POS() {
               />
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsCustomerModalOpen(false)}>Cancel</Button>
+              <Button type="button" variant="outline" onClick={() => setIsCustomerModalOpen(false)}>
+                Cancel
+              </Button>
               <Button type="submit">Create Customer</Button>
             </DialogFooter>
           </form>
@@ -624,14 +687,14 @@ export default function POS() {
 
       {/* Hold Order Modal */}
       <Dialog open={isHoldModalOpen} onOpenChange={setIsHoldModalOpen}>
-        <DialogContent className="sm:max-w-md font-sans">
+        <DialogContent className="font-sans sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Hold Order / Recall Drafts</DialogTitle>
           </DialogHeader>
 
           {/* If holding current order */}
           {posCart.length > 0 && (
-            <div className="space-y-4 pb-4 border-b">
+            <div className="space-y-4 border-b pb-4">
               <h4 className="text-sm font-semibold">Hold Current Cart</h4>
               <div className="space-y-2">
                 <Label>Tag/Customer Name</Label>
@@ -647,34 +710,48 @@ export default function POS() {
           )}
 
           {/* Held orders list */}
-          <div className="space-y-3 mt-4">
+          <div className="mt-4 space-y-3">
             <h4 className="text-sm font-semibold">Active Held Orders</h4>
             <ScrollArea className="h-48 divide-y">
               {heldOrders.map((o) => (
-                <div key={o.id} className="py-2.5 flex justify-between items-center">
+                <div key={o.id} className="flex items-center justify-between py-2.5">
                   <div>
-                    <div className="font-semibold text-xs text-foreground">{o.customerName}</div>
-                    <div className="text-[10px] text-muted-foreground mt-0.5">{o.heldAt} • {o.items.length} items</div>
+                    <div className="text-xs font-semibold text-foreground">{o.customerName}</div>
+                    <div className="mt-0.5 text-[10px] text-muted-foreground">
+                      {o.heldAt} • {o.items.length} items
+                    </div>
                   </div>
                   <div className="flex gap-1.5">
-                    <Button size="sm" variant="outline" className="text-xs py-1 h-7" onClick={() => {
-                      handleRecall(o.id);
-                      setIsHoldModalOpen(false);
-                    }}>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 py-1 text-xs"
+                      onClick={() => {
+                        handleRecall(o.id);
+                        setIsHoldModalOpen(false);
+                      }}
+                    >
                       Recall
                     </Button>
-                    <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => {
-                      if (window.confirm("Delete held draft?")) {
-                        deleteHeldOrder(o.id);
-                      }
-                    }}>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-7 w-7 text-destructive"
+                      onClick={() => {
+                        if (window.confirm("Delete held draft?")) {
+                          deleteHeldOrder(o.id);
+                        }
+                      }}
+                    >
                       <HugeiconsIcon icon={Delete02Icon} size={12} />
                     </Button>
                   </div>
                 </div>
               ))}
               {heldOrders.length === 0 && (
-                <p className="text-xs text-center text-muted-foreground py-6">No held orders found.</p>
+                <p className="py-6 text-center text-xs text-muted-foreground">
+                  No held orders found.
+                </p>
               )}
             </ScrollArea>
           </div>
@@ -684,12 +761,17 @@ export default function POS() {
       {/* Thermal Receipt Print Modal */}
       {isReceiptOpen && printedInvoice && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 font-sans print:bg-white">
-          <div className="bg-card w-full max-w-sm rounded-xl border p-5 shadow-2xl flex flex-col max-h-[90vh] print:border-none print:shadow-none print:max-h-none print:p-0 print:w-full print:max-w-none">
+          <div className="flex max-h-[90vh] w-full max-w-sm flex-col rounded-xl border bg-card p-5 shadow-2xl print:max-h-none print:w-full print:max-w-none print:border-none print:p-0 print:shadow-none">
             {/* Header: Actions */}
-            <div className="flex justify-between items-center mb-4 border-b pb-2 print:hidden">
-              <h3 className="font-bold text-sm">Receipt Printed</h3>
+            <div className="mb-4 flex items-center justify-between border-b pb-2 print:hidden">
+              <h3 className="text-sm font-bold">Receipt Printed</h3>
               <div className="flex gap-2">
-                <Button size="sm" variant="outline" onClick={() => window.print()} className="flex items-center gap-1">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => window.print()}
+                  className="flex items-center gap-1"
+                >
                   <HugeiconsIcon icon={PrinterIcon} size={14} /> Print
                 </Button>
                 <Button size="sm" onClick={() => setIsReceiptOpen(false)}>
@@ -699,22 +781,37 @@ export default function POS() {
             </div>
 
             {/* Scrollable Receipt Body (80mm width look) */}
-            <ScrollArea className="flex-1 bg-white text-black p-4 rounded-lg font-mono text-xs border border-dashed border-gray-300 print:border-none print:p-0">
-              <div className="text-center space-y-1">
-                <h2 className="text-base font-bold uppercase tracking-wide">Offline Billing Store</h2>
+            <ScrollArea className="flex-1 rounded-lg border border-dashed border-gray-300 bg-white p-4 font-mono text-xs text-black print:border-none print:p-0">
+              <div className="space-y-1 text-center">
+                <h2 className="text-base font-bold tracking-wide uppercase">
+                  Offline Billing Store
+                </h2>
                 <p className="text-[10px] text-gray-500">123 Local Street, City Central</p>
                 <p className="text-[10px] text-gray-500">Phone: +1 (234) 567-890</p>
               </div>
 
-              <div className="my-4 border-t border-b border-gray-300 py-2 space-y-1 text-[10px]">
-                <div><span className="font-bold">INVOICE:</span> #{printedInvoice.id.substring(0, 8).toUpperCase()}</div>
-                <div><span className="font-bold">DATE:</span> {new Date(printedInvoice.created_at).toLocaleString()}</div>
-                <div><span className="font-bold">CUSTOMER:</span> {printedInvoice.customer_name || "Walk-in"}</div>
-                {printedInvoice.customer_phone && <div><span className="font-bold">PHONE:</span> {printedInvoice.customer_phone}</div>}
+              <div className="my-4 space-y-1 border-t border-b border-gray-300 py-2 text-[10px]">
+                <div>
+                  <span className="font-bold">INVOICE:</span> #
+                  {printedInvoice.id.substring(0, 8).toUpperCase()}
+                </div>
+                <div>
+                  <span className="font-bold">DATE:</span>{" "}
+                  {new Date(printedInvoice.created_at).toLocaleString()}
+                </div>
+                <div>
+                  <span className="font-bold">CUSTOMER:</span>{" "}
+                  {printedInvoice.customer_name || "Walk-in"}
+                </div>
+                {printedInvoice.customer_phone && (
+                  <div>
+                    <span className="font-bold">PHONE:</span> {printedInvoice.customer_phone}
+                  </div>
+                )}
               </div>
 
               {/* Items List */}
-              <table className="w-full text-[10px] text-left border-collapse">
+              <table className="w-full border-collapse text-left text-[10px]">
                 <thead>
                   <tr className="border-b border-gray-400 font-bold">
                     <th className="pb-1.5">Item</th>
@@ -724,52 +821,81 @@ export default function POS() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {(Array.isArray(printedInvoice.items) ? printedInvoice.items : (typeof printedInvoice.items === 'string' ? JSON.parse(printedInvoice.items) : [])).map((item) => (
+                  {(Array.isArray(printedInvoice.items)
+                    ? printedInvoice.items
+                    : typeof printedInvoice.items === "string"
+                      ? JSON.parse(printedInvoice.items)
+                      : []
+                  ).map((item) => (
                     <tr key={item.product_id}>
-                      <td className="py-1.5 truncate max-w-[120px]">{item.product_name}</td>
+                      <td className="max-w-[120px] truncate py-1.5">{item.product_name}</td>
                       <td className="py-1.5 text-center font-bold">{item.quantity}</td>
-                      <td className="py-1.5 text-right">{currencySymbol}{(item.unit_price || item.price || 0).toFixed(2)}</td>
-                      <td className="py-1.5 text-right">{currencySymbol}{item.total.toFixed(2)}</td>
+                      <td className="py-1.5 text-right">
+                        {currencySymbol}
+                        {(item.unit_price || item.price || 0).toFixed(2)}
+                      </td>
+                      <td className="py-1.5 text-right">
+                        {currencySymbol}
+                        {item.total.toFixed(2)}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
 
               {/* Summary Totals */}
-              <div className="mt-4 border-t border-gray-300 pt-2 space-y-1.5 text-[10px]">
+              <div className="mt-4 space-y-1.5 border-t border-gray-300 pt-2 text-[10px]">
                 <div className="flex justify-between">
                   <span>Subtotal</span>
-                  <span>{currencySymbol}{printedInvoice.subtotal.toFixed(2)}</span>
+                  <span>
+                    {currencySymbol}
+                    {printedInvoice.subtotal.toFixed(2)}
+                  </span>
                 </div>
                 {printedInvoice.discount > 0 && (
                   <div className="flex justify-between text-gray-600">
                     <span>Discount</span>
-                    <span>-{currencySymbol}{printedInvoice.discount.toFixed(2)}</span>
+                    <span>
+                      -{currencySymbol}
+                      {printedInvoice.discount.toFixed(2)}
+                    </span>
                   </div>
                 )}
                 {printedInvoice.tax > 0 && (
                   <div className="flex justify-between">
                     <span>Tax</span>
-                    <span>{currencySymbol}{printedInvoice.tax.toFixed(2)}</span>
+                    <span>
+                      {currencySymbol}
+                      {printedInvoice.tax.toFixed(2)}
+                    </span>
                   </div>
                 )}
-                <div className="flex justify-between text-sm font-bold border-t border-gray-400 pt-1.5">
+                <div className="flex justify-between border-t border-gray-400 pt-1.5 text-sm font-bold">
                   <span>Net Amount</span>
-                  <span>{currencySymbol}{printedInvoice.total.toFixed(2)}</span>
+                  <span>
+                    {currencySymbol}
+                    {printedInvoice.total.toFixed(2)}
+                  </span>
                 </div>
-                <div className="flex justify-between text-[10px] text-gray-500 pt-1">
+                <div className="flex justify-between pt-1 text-[10px] text-gray-500">
                   <span>Amount Paid ({printedInvoice.payment_method})</span>
-                  <span>{currencySymbol}{printedInvoice.amount_paid.toFixed(2)}</span>
+                  <span>
+                    {currencySymbol}
+                    {printedInvoice.amount_paid.toFixed(2)}
+                  </span>
                 </div>
                 {printedInvoice.total > printedInvoice.amount_paid && (
-                  <div className="flex justify-between text-rose-600 font-bold">
+                  <div className="flex justify-between font-bold text-rose-600">
                     <span>Balance Due</span>
-                    <span>{currencySymbol}{(printedInvoice.total - printedInvoice.amount_paid).toFixed(2)}</span>
+                    <span>
+                      {currencySymbol}
+                      {(printedInvoice.total - printedInvoice.amount_paid).toFixed(2)}
+                    </span>
                   </div>
                 )}
               </div>
 
-              <div className="text-center mt-6 pt-4 border-t border-dashed border-gray-400 space-y-1 text-[10px]">
+              <div className="mt-6 space-y-1 border-t border-dashed border-gray-400 pt-4 text-center text-[10px]">
                 <p className="font-bold">THANK YOU FOR YOUR VISIT!</p>
                 <p className="text-gray-500">Offline-first Billing Engine</p>
               </div>

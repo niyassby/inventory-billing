@@ -9,7 +9,7 @@ import {
   UserIcon,
   Database02Icon,
   Configuration02Icon,
-  BookOpen01Icon
+  BookOpen01Icon,
 } from "@hugeicons/core-free-icons";
 import { Label } from "@/components/ui/label";
 
@@ -23,7 +23,7 @@ export default function Company() {
     name: localStorage.getItem("company_name") || "Acme Wholesale Ltd",
     phone: localStorage.getItem("company_phone") || "+1 (555) 019-2834",
     address: localStorage.getItem("company_address") || "456 Commerce Avenue, Suite 100",
-    taxNo: localStorage.getItem("company_tax_no") || "TAX-998877-XX"
+    taxNo: localStorage.getItem("company_tax_no") || "TAX-998877-XX",
   });
 
   // Company details save
@@ -38,10 +38,12 @@ export default function Company() {
 
   return (
     <div className="space-y-6 pb-8 font-sans">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-border/40 pb-4">
+      <div className="flex flex-col items-start justify-between gap-4 border-b border-border/40 pb-4 md:flex-row md:items-center">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">System Settings</h1>
-          <p className="text-muted-foreground">Configure profile details, preferences, accounts control, and database maintenance.</p>
+          <p className="text-muted-foreground">
+            Configure profile details, preferences, accounts control, and database maintenance.
+          </p>
         </div>
         <div className="flex flex-wrap gap-2 print:hidden">
           <Button
@@ -75,10 +77,12 @@ export default function Company() {
         </div>
       </div>
 
-      <Card className="border-border/40 bg-card/65 backdrop-blur-sm max-w-lg">
+      <Card className="max-w-lg border-border/40 bg-card/65 backdrop-blur-sm">
         <CardHeader>
           <CardTitle>Merchant Profile Details</CardTitle>
-          <CardDescription>Details printed on sales checkout receipts and invoice copies.</CardDescription>
+          <CardDescription>
+            Details printed on sales checkout receipts and invoice copies.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleCompanySave} className="space-y-4">

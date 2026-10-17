@@ -10,7 +10,7 @@ import {
   ShuffleIcon,
   DollarSignIcon,
   BadgePercentIcon,
-  InvoiceIcon
+  InvoiceIcon,
 } from "@hugeicons/core-free-icons";
 
 export default function PaymentsReceived() {
@@ -36,7 +36,7 @@ export default function PaymentsReceived() {
           customer_name: inv.customer_name || "Walk-in Customer",
           amount: inv.amount_paid,
           method: inv.payment_method || "CASH",
-          invoice_ref: inv.id.substring(0, 8).toUpperCase()
+          invoice_ref: inv.id.substring(0, 8).toUpperCase(),
         }));
       setPayments(loggedPayments);
     } catch (e) {
@@ -52,10 +52,13 @@ export default function PaymentsReceived() {
 
   return (
     <div className="space-y-6 pb-8 font-sans">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-border/40 pb-4">
+      <div className="flex flex-col items-start justify-between gap-4 border-b border-border/40 pb-4 md:flex-row md:items-center">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Ledger & Accounting</h1>
-          <p className="text-muted-foreground">Manage chart of accounts, draft balancing journal entries, log expenses, and configure tax rules.</p>
+          <p className="text-muted-foreground">
+            Manage chart of accounts, draft balancing journal entries, log expenses, and configure
+            tax rules.
+          </p>
         </div>
         <div className="flex flex-wrap gap-2 print:hidden">
           <Button
@@ -100,14 +103,14 @@ export default function PaymentsReceived() {
           <Card className="border-border/40 bg-card/65 backdrop-blur-sm">
             <CardContent className="p-0">
               <div className="overflow-x-auto">
-                <table className="w-full text-sm text-left border-collapse">
+                <table className="w-full border-collapse text-left text-sm">
                   <thead>
-                    <tr className="border-b border-border/40 text-muted-foreground text-xs uppercase bg-muted/20">
+                    <tr className="border-b border-border/40 bg-muted/20 text-xs text-muted-foreground uppercase">
                       <th className="p-4 font-medium">Payment Date</th>
                       <th className="p-4 font-medium">Invoice Reference</th>
                       <th className="p-4 font-medium">Customer</th>
                       <th className="p-4 font-medium">Payment Method</th>
-                      <th className="p-4 font-medium text-right">Amount Received</th>
+                      <th className="p-4 text-right font-medium">Amount Received</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border/20">
@@ -116,20 +119,22 @@ export default function PaymentsReceived() {
                         <td className="p-4 font-mono text-xs text-muted-foreground">
                           {new Date(p.date).toLocaleString()}
                         </td>
-                        <td className="p-4 font-semibold font-mono text-xs text-primary">
+                        <td className="p-4 font-mono text-xs font-semibold text-primary">
                           #INV-{p.invoice_ref}
                         </td>
                         <td className="p-4 font-medium">{p.customer_name}</td>
                         <td className="p-4 text-xs font-semibold uppercase">{p.method}</td>
                         <td className="p-4 text-right font-mono font-bold text-emerald-600">
-                          {currencySymbol}{p.amount.toFixed(2)}
+                          {currencySymbol}
+                          {p.amount.toFixed(2)}
                         </td>
                       </tr>
                     ))}
                     {payments.length === 0 && (
                       <tr>
-                        <td colSpan={5} className="py-8 text-center text-muted-foreground text-xs">
-                          No customer payments logged yet. Complete sales at POS or Invoice workspace.
+                        <td colSpan={5} className="py-8 text-center text-xs text-muted-foreground">
+                          No customer payments logged yet. Complete sales at POS or Invoice
+                          workspace.
                         </td>
                       </tr>
                     )}

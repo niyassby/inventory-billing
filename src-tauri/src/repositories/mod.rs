@@ -1,7 +1,7 @@
+use crate::models::*;
+use chrono::Utc;
 use rusqlite::{params, Connection, Result, Row};
 use uuid::Uuid;
-use chrono::Utc;
-use crate::models::*;
 
 // ==========================================
 // AUDIT LOGS
@@ -45,7 +45,7 @@ pub fn get_audit_logs(conn: &Connection) -> Result<Vec<AuditLog>> {
             timestamp: row.get(8)?,
         })
     })?;
-    
+
     let mut list = Vec::new();
     for r in rows {
         list.push(r?);
@@ -124,7 +124,15 @@ pub fn create_user(
     };
 
     let serialized = serde_json::to_string(&new_user).unwrap_or_default();
-    log_audit(conn, actor_id, "CREATE", "users", Some(&id), None, Some(&serialized))?;
+    log_audit(
+        conn,
+        actor_id,
+        "CREATE",
+        "users",
+        Some(&id),
+        None,
+        Some(&serialized),
+    )?;
 
     Ok(new_user)
 }
@@ -163,18 +171,25 @@ pub fn update_user(
 
 pub fn delete_user(conn: &Connection, id: &str, actor_id: Option<&str>) -> Result<()> {
     let old_user = get_user_by_id(conn, id)?;
-    conn.execute(
-        "UPDATE users SET is_deleted = 1 WHERE id = ?1",
-        params![id],
-    )?;
+    conn.execute("UPDATE users SET is_deleted = 1 WHERE id = ?1", params![id])?;
 
     let old_serialized = serde_json::to_string(&old_user).unwrap_or_default();
-    log_audit(conn, actor_id, "DELETE", "users", Some(id), Some(&old_serialized), None)?;
+    log_audit(
+        conn,
+        actor_id,
+        "DELETE",
+        "users",
+        Some(id),
+        Some(&old_serialized),
+        None,
+    )?;
     Ok(())
 }
 
 pub fn list_users(conn: &Connection) -> Result<Vec<User>> {
-    let mut stmt = conn.prepare("SELECT id, name, email, role, created_at, updated_at FROM users WHERE is_deleted = 0")?;
+    let mut stmt = conn.prepare(
+        "SELECT id, name, email, role, created_at, updated_at FROM users WHERE is_deleted = 0",
+    )?;
     let rows = stmt.query_map([], |row| {
         Ok(User {
             id: row.get(0)?,
@@ -200,11 +215,17 @@ pub fn create_session(conn: &Connection, user_id: &str, token_hash: &str) -> Res
     let id = Uuid::new_v4().to_string();
     let now = Utc::now();
     let expires = now + chrono::Duration::hours(8);
-    
+
     conn.execute(
         "INSERT INTO sessions (id, user_id, token_hash, expires_at, created_at)
          VALUES (?1, ?2, ?3, ?4, ?5)",
-        params![id, user_id, token_hash, expires.to_rfc3339(), now.to_rfc3339()],
+        params![
+            id,
+            user_id,
+            token_hash,
+            expires.to_rfc3339(),
+            now.to_rfc3339()
+        ],
     )?;
     Ok(())
 }
@@ -221,7 +242,10 @@ pub fn validate_session(conn: &Connection, token_hash: &str) -> Result<User> {
 }
 
 pub fn delete_session(conn: &Connection, token_hash: &str) -> Result<()> {
-    conn.execute("DELETE FROM sessions WHERE token_hash = ?1", params![token_hash])?;
+    conn.execute(
+        "DELETE FROM sessions WHERE token_hash = ?1",
+        params![token_hash],
+    )?;
     Ok(())
 }
 
@@ -236,14 +260,28 @@ pub fn create_category(conn: &Connection, name: &str, actor_id: Option<&str>) ->
         params![id, name, now],
     )?;
 
-    let cat = Category { id: id.clone(), name: name.to_string(), created_at: now };
+    let cat = Category {
+        id: id.clone(),
+        name: name.to_string(),
+        created_at: now,
+    };
     let serialized = serde_json::to_string(&cat).unwrap_or_default();
-    log_audit(conn, actor_id, "CREATE", "categories", Some(&id), None, Some(&serialized))?;
+    log_audit(
+        conn,
+        actor_id,
+        "CREATE",
+        "categories",
+        Some(&id),
+        None,
+        Some(&serialized),
+    )?;
     Ok(cat)
 }
 
 pub fn list_categories(conn: &Connection) -> Result<Vec<Category>> {
-    let mut stmt = conn.prepare("SELECT id, name, created_at FROM categories WHERE is_deleted = 0 ORDER BY name ASC")?;
+    let mut stmt = conn.prepare(
+        "SELECT id, name, created_at FROM categories WHERE is_deleted = 0 ORDER BY name ASC",
+    )?;
     let rows = stmt.query_map([], |row| {
         Ok(Category {
             id: row.get(0)?,
@@ -259,7 +297,10 @@ pub fn list_categories(conn: &Connection) -> Result<Vec<Category>> {
 }
 
 pub fn delete_category(conn: &Connection, id: &str, actor_id: Option<&str>) -> Result<()> {
-    conn.execute("UPDATE categories SET is_deleted = 1 WHERE id = ?1", params![id])?;
+    conn.execute(
+        "UPDATE categories SET is_deleted = 1 WHERE id = ?1",
+        params![id],
+    )?;
     log_audit(conn, actor_id, "DELETE", "categories", Some(id), None, None)?;
     Ok(())
 }
@@ -272,14 +313,28 @@ pub fn create_brand(conn: &Connection, name: &str, actor_id: Option<&str>) -> Re
         params![id, name, now],
     )?;
 
-    let br = Brand { id: id.clone(), name: name.to_string(), created_at: now };
+    let br = Brand {
+        id: id.clone(),
+        name: name.to_string(),
+        created_at: now,
+    };
     let serialized = serde_json::to_string(&br).unwrap_or_default();
-    log_audit(conn, actor_id, "CREATE", "brands", Some(&id), None, Some(&serialized))?;
+    log_audit(
+        conn,
+        actor_id,
+        "CREATE",
+        "brands",
+        Some(&id),
+        None,
+        Some(&serialized),
+    )?;
     Ok(br)
 }
 
 pub fn list_brands(conn: &Connection) -> Result<Vec<Brand>> {
-    let mut stmt = conn.prepare("SELECT id, name, created_at FROM brands WHERE is_deleted = 0 ORDER BY name ASC")?;
+    let mut stmt = conn.prepare(
+        "SELECT id, name, created_at FROM brands WHERE is_deleted = 0 ORDER BY name ASC",
+    )?;
     let rows = stmt.query_map([], |row| {
         Ok(Brand {
             id: row.get(0)?,
@@ -295,7 +350,10 @@ pub fn list_brands(conn: &Connection) -> Result<Vec<Brand>> {
 }
 
 pub fn delete_brand(conn: &Connection, id: &str, actor_id: Option<&str>) -> Result<()> {
-    conn.execute("UPDATE brands SET is_deleted = 1 WHERE id = ?1", params![id])?;
+    conn.execute(
+        "UPDATE brands SET is_deleted = 1 WHERE id = ?1",
+        params![id],
+    )?;
     log_audit(conn, actor_id, "DELETE", "brands", Some(id), None, None)?;
     Ok(())
 }
@@ -407,7 +465,15 @@ pub fn create_product(
 
     let prod = get_product_by_id(conn, &id)?;
     let serialized = serde_json::to_string(&prod).unwrap_or_default();
-    log_audit(conn, actor_id, "CREATE", "products", Some(&id), None, Some(&serialized))?;
+    log_audit(
+        conn,
+        actor_id,
+        "CREATE",
+        "products",
+        Some(&id),
+        None,
+        Some(&serialized),
+    )?;
     Ok(prod)
 }
 
@@ -482,10 +548,21 @@ pub fn update_product(
 
 pub fn delete_product(conn: &Connection, id: &str, actor_id: Option<&str>) -> Result<()> {
     let old_prod = get_product_by_id(conn, id)?;
-    conn.execute("UPDATE products SET is_deleted = 1 WHERE id = ?1", params![id])?;
+    conn.execute(
+        "UPDATE products SET is_deleted = 1 WHERE id = ?1",
+        params![id],
+    )?;
 
     let old_serialized = serde_json::to_string(&old_prod).unwrap_or_default();
-    log_audit(conn, actor_id, "DELETE", "products", Some(id), Some(&old_serialized), None)?;
+    log_audit(
+        conn,
+        actor_id,
+        "DELETE",
+        "products",
+        Some(id),
+        Some(&old_serialized),
+        None,
+    )?;
     Ok(())
 }
 
@@ -526,7 +603,7 @@ pub fn list_products_filtered(
          LEFT JOIN brands b ON p.brand_id = b.id
          LEFT JOIN tax_rates t ON p.tax_id = t.id
          LEFT JOIN units u ON p.unit_id = u.id
-         WHERE p.is_deleted = 0"
+         WHERE p.is_deleted = 0",
     );
 
     let mut params_vec: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
@@ -534,7 +611,12 @@ pub fn list_products_filtered(
 
     if let Some(s) = search {
         if !s.trim().is_empty() {
-            query.push_str(&format!(" AND (p.name LIKE ?{} OR p.sku LIKE ?{} OR p.barcode LIKE ?{})", param_index, param_index + 1, param_index + 2));
+            query.push_str(&format!(
+                " AND (p.name LIKE ?{} OR p.sku LIKE ?{} OR p.barcode LIKE ?{})",
+                param_index,
+                param_index + 1,
+                param_index + 2
+            ));
             let s_pattern = format!("%{}%", s);
             params_vec.push(Box::new(s_pattern.clone()));
             params_vec.push(Box::new(s_pattern.clone()));
@@ -562,7 +644,7 @@ pub fn list_products_filtered(
     // Count query
     let count_query = format!("SELECT COUNT(*) {}", query);
     let mut stmt_count = conn.prepare(&count_query)?;
-    
+
     // We need to convert params_vec to references
     let count_params: Vec<&dyn rusqlite::ToSql> = params_vec.iter().map(|p| p.as_ref()).collect();
     let total_count: i64 = stmt_count.query_row(&count_params[..], |row| row.get(0))?;
@@ -576,7 +658,7 @@ pub fn list_products_filtered(
         "cost" => "p.cost",
         _ => "p.name",
     };
-    
+
     let order = match sort_order.unwrap_or("ASC") {
         "DESC" => "DESC",
         _ => "ASC",
@@ -586,7 +668,11 @@ pub fn list_products_filtered(
 
     // Pagination
     let offset = (page - 1) * limit;
-    query.push_str(&format!(" LIMIT ?{} OFFSET ?{}", param_index, param_index + 1));
+    query.push_str(&format!(
+        " LIMIT ?{} OFFSET ?{}",
+        param_index,
+        param_index + 1
+    ));
     params_vec.push(Box::new(limit));
     params_vec.push(Box::new(offset));
 
@@ -599,7 +685,7 @@ pub fn list_products_filtered(
 
     let mut stmt_select = conn.prepare(&select_query)?;
     let select_params: Vec<&dyn rusqlite::ToSql> = params_vec.iter().map(|p| p.as_ref()).collect();
-    
+
     let rows = stmt_select.query_map(&select_params[..], map_product_row)?;
     let mut products = Vec::new();
     for r in rows {
@@ -715,7 +801,15 @@ pub fn create_customer(
         updated_at: now.clone(),
     };
     let serialized = serde_json::to_string(&cust).unwrap_or_default();
-    log_audit(conn, actor_id, "CREATE", "customers", Some(&id), None, Some(&serialized))?;
+    log_audit(
+        conn,
+        actor_id,
+        "CREATE",
+        "customers",
+        Some(&id),
+        None,
+        Some(&serialized),
+    )?;
     Ok(cust)
 }
 
@@ -743,7 +837,7 @@ pub fn update_customer(
             updated_at: row.get(7)?,
         })
     )?;
-    
+
     let now = Utc::now().to_rfc3339();
     conn.execute(
         "UPDATE customers SET name = ?1, email = ?2, phone = ?3, address = ?4, due_amount = ?5, updated_at = ?6 WHERE id = ?7",
@@ -763,7 +857,15 @@ pub fn update_customer(
 
     let old_serialized = serde_json::to_string(&old_cust).unwrap_or_default();
     let new_serialized = serde_json::to_string(&updated).unwrap_or_default();
-    log_audit(conn, actor_id, "UPDATE", "customers", Some(id), Some(&old_serialized), Some(&new_serialized))?;
+    log_audit(
+        conn,
+        actor_id,
+        "UPDATE",
+        "customers",
+        Some(id),
+        Some(&old_serialized),
+        Some(&new_serialized),
+    )?;
     Ok(updated)
 }
 
@@ -789,7 +891,10 @@ pub fn list_customers(conn: &Connection) -> Result<Vec<Customer>> {
 }
 
 pub fn delete_customer(conn: &Connection, id: &str, actor_id: Option<&str>) -> Result<()> {
-    conn.execute("UPDATE customers SET is_deleted = 1 WHERE id = ?1", params![id])?;
+    conn.execute(
+        "UPDATE customers SET is_deleted = 1 WHERE id = ?1",
+        params![id],
+    )?;
     log_audit(conn, actor_id, "DELETE", "customers", Some(id), None, None)?;
     Ok(())
 }
@@ -821,7 +926,15 @@ pub fn create_supplier(
         updated_at: now.clone(),
     };
     let serialized = serde_json::to_string(&supp).unwrap_or_default();
-    log_audit(conn, actor_id, "CREATE", "suppliers", Some(&id), None, Some(&serialized))?;
+    log_audit(
+        conn,
+        actor_id,
+        "CREATE",
+        "suppliers",
+        Some(&id),
+        None,
+        Some(&serialized),
+    )?;
     Ok(supp)
 }
 
@@ -849,7 +962,7 @@ pub fn update_supplier(
             updated_at: row.get(7)?,
         })
     )?;
-    
+
     let now = Utc::now().to_rfc3339();
     conn.execute(
         "UPDATE suppliers SET name = ?1, email = ?2, phone = ?3, address = ?4, balance = ?5, updated_at = ?6 WHERE id = ?7",
@@ -869,7 +982,15 @@ pub fn update_supplier(
 
     let old_serialized = serde_json::to_string(&old_supp).unwrap_or_default();
     let new_serialized = serde_json::to_string(&updated).unwrap_or_default();
-    log_audit(conn, actor_id, "UPDATE", "suppliers", Some(id), Some(&old_serialized), Some(&new_serialized))?;
+    log_audit(
+        conn,
+        actor_id,
+        "UPDATE",
+        "suppliers",
+        Some(id),
+        Some(&old_serialized),
+        Some(&new_serialized),
+    )?;
     Ok(updated)
 }
 
@@ -895,7 +1016,10 @@ pub fn list_suppliers(conn: &Connection) -> Result<Vec<Supplier>> {
 }
 
 pub fn delete_supplier(conn: &Connection, id: &str, actor_id: Option<&str>) -> Result<()> {
-    conn.execute("UPDATE suppliers SET is_deleted = 1 WHERE id = ?1", params![id])?;
+    conn.execute(
+        "UPDATE suppliers SET is_deleted = 1 WHERE id = ?1",
+        params![id],
+    )?;
     log_audit(conn, actor_id, "DELETE", "suppliers", Some(id), None, None)?;
     Ok(())
 }
@@ -932,7 +1056,15 @@ pub fn create_lead(
         updated_at: now.clone(),
     };
     let serialized = serde_json::to_string(&ld).unwrap_or_default();
-    log_audit(conn, actor_id, "CREATE", "leads", Some(&id), None, Some(&serialized))?;
+    log_audit(
+        conn,
+        actor_id,
+        "CREATE",
+        "leads",
+        Some(&id),
+        None,
+        Some(&serialized),
+    )?;
     Ok(ld)
 }
 
@@ -964,7 +1096,7 @@ pub fn update_lead(
             updated_at: row.get(9)?,
         })
     )?;
-    
+
     let now = Utc::now().to_rfc3339();
     conn.execute(
         "UPDATE leads SET name = ?1, contact_name = ?2, phone = ?3, email = ?4, stage = ?5, deal_value = ?6, notes = ?7, updated_at = ?8 WHERE id = ?9",
@@ -986,7 +1118,15 @@ pub fn update_lead(
 
     let old_serialized = serde_json::to_string(&old_lead).unwrap_or_default();
     let new_serialized = serde_json::to_string(&updated).unwrap_or_default();
-    log_audit(conn, actor_id, "UPDATE", "leads", Some(id), Some(&old_serialized), Some(&new_serialized))?;
+    log_audit(
+        conn,
+        actor_id,
+        "UPDATE",
+        "leads",
+        Some(id),
+        Some(&old_serialized),
+        Some(&new_serialized),
+    )?;
     Ok(updated)
 }
 
@@ -1039,7 +1179,7 @@ pub fn create_invoice(
     let invoice_number = format!("INV-{:06}", count + 1);
     let now_date = Utc::now().format("%Y-%m-%d").to_string();
     let now = Utc::now().to_rfc3339();
-    
+
     let due_amount = total - amount_paid;
     let payment_status = if due_amount <= 0.0 {
         "Paid"
@@ -1069,7 +1209,14 @@ pub fn create_invoice(
         conn.execute(
             "INSERT INTO invoice_items (id, invoice_id, product_id, quantity, unit_price, total)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
-            params![item_id, id, item.product_id, item.quantity, item.unit_price, item.total],
+            params![
+                item_id,
+                id,
+                item.product_id,
+                item.quantity,
+                item.unit_price,
+                item.total
+            ],
         )?;
 
         // Subtract stock
@@ -1077,7 +1224,7 @@ pub fn create_invoice(
             "UPDATE products SET stock = stock - ?1, updated_at = ?2 WHERE id = ?3",
             params![item.quantity, now, item.product_id],
         )?;
-        
+
         // Stock adjustment log
         let adj_id = Uuid::new_v4().to_string();
         conn.execute(
@@ -1095,20 +1242,43 @@ pub fn create_invoice(
     conn.execute(
         "INSERT INTO journal_entries (id, entry_date, description, reference, created_at)
          VALUES (?1, ?2, ?3, ?4, ?5)",
-        params![journal_id, now_date, format!("Sale invoice {}", invoice_number), invoice_number, now],
+        params![
+            journal_id,
+            now_date,
+            format!("Sale invoice {}", invoice_number),
+            invoice_number,
+            now
+        ],
     )?;
 
     // Find accounts IDs
-    let ar_acct_id: String = conn.query_row("SELECT id FROM chart_of_accounts WHERE code = '1200'", [], |r| r.get(0))?;
-    let sales_acct_id: String = conn.query_row("SELECT id FROM chart_of_accounts WHERE code = '4000'", [], |r| r.get(0))?;
-    let cash_acct_id: String = conn.query_row("SELECT id FROM chart_of_accounts WHERE code = '1000'", [], |r| r.get(0))?;
+    let ar_acct_id: String = conn.query_row(
+        "SELECT id FROM chart_of_accounts WHERE code = '1200'",
+        [],
+        |r| r.get(0),
+    )?;
+    let sales_acct_id: String = conn.query_row(
+        "SELECT id FROM chart_of_accounts WHERE code = '4000'",
+        [],
+        |r| r.get(0),
+    )?;
+    let cash_acct_id: String = conn.query_row(
+        "SELECT id FROM chart_of_accounts WHERE code = '1000'",
+        [],
+        |r| r.get(0),
+    )?;
 
     // Debit Receivable
     if due_amount > 0.0 {
         conn.execute(
             "INSERT INTO journal_lines (id, journal_entry_id, account_id, debit, credit)
              VALUES (?1, ?2, ?3, ?4, 0.0)",
-            (Uuid::new_v4().to_string(), &journal_id, &ar_acct_id, due_amount),
+            (
+                Uuid::new_v4().to_string(),
+                &journal_id,
+                &ar_acct_id,
+                due_amount,
+            ),
         )?;
     }
     // Debit Cash
@@ -1116,19 +1286,37 @@ pub fn create_invoice(
         conn.execute(
             "INSERT INTO journal_lines (id, journal_entry_id, account_id, debit, credit)
              VALUES (?1, ?2, ?3, ?4, 0.0)",
-            (Uuid::new_v4().to_string(), &journal_id, &cash_acct_id, amount_paid),
+            (
+                Uuid::new_v4().to_string(),
+                &journal_id,
+                &cash_acct_id,
+                amount_paid,
+            ),
         )?;
     }
     // Credit Revenue
     conn.execute(
         "INSERT INTO journal_lines (id, journal_entry_id, account_id, debit, credit)
          VALUES (?1, ?2, ?3, 0.0, ?4)",
-        (Uuid::new_v4().to_string(), &journal_id, &sales_acct_id, total),
+        (
+            Uuid::new_v4().to_string(),
+            &journal_id,
+            &sales_acct_id,
+            total,
+        ),
     )?;
 
     let inv = get_invoice(conn, &id)?;
     let serialized = serde_json::to_string(&inv).unwrap_or_default();
-    log_audit(conn, actor_id, "CREATE", "invoices", Some(&id), None, Some(&serialized))?;
+    log_audit(
+        conn,
+        actor_id,
+        "CREATE",
+        "invoices",
+        Some(&id),
+        None,
+        Some(&serialized),
+    )?;
     Ok(inv)
 }
 
@@ -1255,7 +1443,15 @@ pub fn create_quotation(
 
     let qt = get_quotation(conn, &id)?;
     let serialized = serde_json::to_string(&qt).unwrap_or_default();
-    log_audit(conn, actor_id, "CREATE", "quotations", Some(&id), None, Some(&serialized))?;
+    log_audit(
+        conn,
+        actor_id,
+        "CREATE",
+        "quotations",
+        Some(&id),
+        None,
+        Some(&serialized),
+    )?;
     Ok(qt)
 }
 
@@ -1368,7 +1564,14 @@ pub fn create_purchase(
         conn.execute(
             "INSERT INTO purchase_items (id, purchase_id, product_id, quantity, unit_price, total)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
-            params![item_id, id, item.product_id, item.quantity, item.unit_price, item.total],
+            params![
+                item_id,
+                id,
+                item.product_id,
+                item.quantity,
+                item.unit_price,
+                item.total
+            ],
         )?;
 
         if is_received {
@@ -1396,11 +1599,25 @@ pub fn create_purchase(
         conn.execute(
             "INSERT INTO journal_entries (id, entry_date, description, reference, created_at)
              VALUES (?1, ?2, ?3, ?4, ?5)",
-            params![journal_id, now_date, format!("Purchase PO {}", purchase_number), purchase_number, now],
+            params![
+                journal_id,
+                now_date,
+                format!("Purchase PO {}", purchase_number),
+                purchase_number,
+                now
+            ],
         )?;
 
-        let inv_acct_id: String = conn.query_row("SELECT id FROM chart_of_accounts WHERE code = '1400'", [], |r| r.get(0))?;
-        let ap_acct_id: String = conn.query_row("SELECT id FROM chart_of_accounts WHERE code = '2000'", [], |r| r.get(0))?;
+        let inv_acct_id: String = conn.query_row(
+            "SELECT id FROM chart_of_accounts WHERE code = '1400'",
+            [],
+            |r| r.get(0),
+        )?;
+        let ap_acct_id: String = conn.query_row(
+            "SELECT id FROM chart_of_accounts WHERE code = '2000'",
+            [],
+            |r| r.get(0),
+        )?;
 
         // Debit Inventory
         conn.execute(
@@ -1418,7 +1635,15 @@ pub fn create_purchase(
 
     let po = get_purchase(conn, &id)?;
     let serialized = serde_json::to_string(&po).unwrap_or_default();
-    log_audit(conn, actor_id, "CREATE", "purchases", Some(&id), None, Some(&serialized))?;
+    log_audit(
+        conn,
+        actor_id,
+        "CREATE",
+        "purchases",
+        Some(&id),
+        None,
+        Some(&serialized),
+    )?;
     Ok(po)
 }
 
@@ -1527,21 +1752,43 @@ pub fn create_expense(
         params![journal_id, date, format!("Expense: {}", title), now],
     )?;
 
-    let exp_code = if category.to_lowercase().contains("rent") { "5100" } else { "5200" };
-    let exp_acct_id: String = conn.query_row("SELECT id FROM chart_of_accounts WHERE code = ?1", params![exp_code], |r| r.get(0))?;
-    let cash_acct_id: String = conn.query_row("SELECT id FROM chart_of_accounts WHERE code = '1000'", [], |r| r.get(0))?;
+    let exp_code = if category.to_lowercase().contains("rent") {
+        "5100"
+    } else {
+        "5200"
+    };
+    let exp_acct_id: String = conn.query_row(
+        "SELECT id FROM chart_of_accounts WHERE code = ?1",
+        params![exp_code],
+        |r| r.get(0),
+    )?;
+    let cash_acct_id: String = conn.query_row(
+        "SELECT id FROM chart_of_accounts WHERE code = '1000'",
+        [],
+        |r| r.get(0),
+    )?;
 
     // Debit Expense
     conn.execute(
         "INSERT INTO journal_lines (id, journal_entry_id, account_id, debit, credit)
          VALUES (?1, ?2, ?3, ?4, 0.0)",
-        (Uuid::new_v4().to_string(), &journal_id, &exp_acct_id, amount),
+        (
+            Uuid::new_v4().to_string(),
+            &journal_id,
+            &exp_acct_id,
+            amount,
+        ),
     )?;
     // Credit Cash
     conn.execute(
         "INSERT INTO journal_lines (id, journal_entry_id, account_id, debit, credit)
          VALUES (?1, ?2, ?3, 0.0, ?4)",
-        (Uuid::new_v4().to_string(), &journal_id, &cash_acct_id, amount),
+        (
+            Uuid::new_v4().to_string(),
+            &journal_id,
+            &cash_acct_id,
+            amount,
+        ),
     )?;
 
     let exp = Expense {
@@ -1554,7 +1801,15 @@ pub fn create_expense(
         created_at: now,
     };
     let serialized = serde_json::to_string(&exp).unwrap_or_default();
-    log_audit(conn, actor_id, "CREATE", "expenses", Some(&id), None, Some(&serialized))?;
+    log_audit(
+        conn,
+        actor_id,
+        "CREATE",
+        "expenses",
+        Some(&id),
+        None,
+        Some(&serialized),
+    )?;
     Ok(exp)
 }
 
@@ -1619,14 +1874,27 @@ pub fn create_payment(
              VALUES (?1, ?2, 'Customer payment received', 'PAYMENT', ?3)",
             params![journal_id, now_date, now],
         )?;
-        
-        let cash_acct_id: String = conn.query_row("SELECT id FROM chart_of_accounts WHERE code = '1000'", [], |r| r.get(0))?;
-        let ar_acct_id: String = conn.query_row("SELECT id FROM chart_of_accounts WHERE code = '1200'", [], |r| r.get(0))?;
+
+        let cash_acct_id: String = conn.query_row(
+            "SELECT id FROM chart_of_accounts WHERE code = '1000'",
+            [],
+            |r| r.get(0),
+        )?;
+        let ar_acct_id: String = conn.query_row(
+            "SELECT id FROM chart_of_accounts WHERE code = '1200'",
+            [],
+            |r| r.get(0),
+        )?;
 
         conn.execute(
             "INSERT INTO journal_lines (id, journal_entry_id, account_id, debit, credit)
              VALUES (?1, ?2, ?3, ?4, 0.0)",
-            (Uuid::new_v4().to_string(), &journal_id, &cash_acct_id, amount),
+            (
+                Uuid::new_v4().to_string(),
+                &journal_id,
+                &cash_acct_id,
+                amount,
+            ),
         )?;
         conn.execute(
             "INSERT INTO journal_lines (id, journal_entry_id, account_id, debit, credit)
@@ -1648,9 +1916,17 @@ pub fn create_payment(
              VALUES (?1, ?2, 'Supplier payment made', 'PAYMENT', ?3)",
             params![journal_id, now_date, now],
         )?;
-        
-        let cash_acct_id: String = conn.query_row("SELECT id FROM chart_of_accounts WHERE code = '1000'", [], |r| r.get(0))?;
-        let ap_acct_id: String = conn.query_row("SELECT id FROM chart_of_accounts WHERE code = '2000'", [], |r| r.get(0))?;
+
+        let cash_acct_id: String = conn.query_row(
+            "SELECT id FROM chart_of_accounts WHERE code = '1000'",
+            [],
+            |r| r.get(0),
+        )?;
+        let ap_acct_id: String = conn.query_row(
+            "SELECT id FROM chart_of_accounts WHERE code = '2000'",
+            [],
+            |r| r.get(0),
+        )?;
 
         conn.execute(
             "INSERT INTO journal_lines (id, journal_entry_id, account_id, debit, credit)
@@ -1660,14 +1936,29 @@ pub fn create_payment(
         conn.execute(
             "INSERT INTO journal_lines (id, journal_entry_id, account_id, debit, credit)
              VALUES (?1, ?2, ?3, 0.0, ?4)",
-            (Uuid::new_v4().to_string(), &journal_id, &cash_acct_id, amount),
+            (
+                Uuid::new_v4().to_string(),
+                &journal_id,
+                &cash_acct_id,
+                amount,
+            ),
         )?;
     }
 
     let entity_name: Option<String> = if payment_type == "RECEIVE" {
-        conn.query_row("SELECT name FROM customers WHERE id = ?1", params![entity_id], |r| r.get(0)).ok()
+        conn.query_row(
+            "SELECT name FROM customers WHERE id = ?1",
+            params![entity_id],
+            |r| r.get(0),
+        )
+        .ok()
     } else {
-        conn.query_row("SELECT name FROM suppliers WHERE id = ?1", params![entity_id], |r| r.get(0)).ok()
+        conn.query_row(
+            "SELECT name FROM suppliers WHERE id = ?1",
+            params![entity_id],
+            |r| r.get(0),
+        )
+        .ok()
     };
 
     let p = Payment {
@@ -1682,7 +1973,15 @@ pub fn create_payment(
         created_at: now,
     };
     let serialized = serde_json::to_string(&p).unwrap_or_default();
-    log_audit(conn, actor_id, "CREATE", "payments", Some(&id), None, Some(&serialized))?;
+    log_audit(
+        conn,
+        actor_id,
+        "CREATE",
+        "payments",
+        Some(&id),
+        None,
+        Some(&serialized),
+    )?;
     Ok(p)
 }
 
@@ -1691,11 +1990,21 @@ pub fn list_payments(conn: &Connection) -> Result<Vec<Payment>> {
     let rows = stmt.query_map([], |row| {
         let p_type: String = row.get(1)?;
         let entity_id: String = row.get(2)?;
-        
+
         let entity_name: Option<String> = if p_type == "RECEIVE" {
-            conn.query_row("SELECT name FROM customers WHERE id = ?1", params![entity_id], |r| r.get(0)).ok()
+            conn.query_row(
+                "SELECT name FROM customers WHERE id = ?1",
+                params![entity_id],
+                |r| r.get(0),
+            )
+            .ok()
         } else {
-            conn.query_row("SELECT name FROM suppliers WHERE id = ?1", params![entity_id], |r| r.get(0)).ok()
+            conn.query_row(
+                "SELECT name FROM suppliers WHERE id = ?1",
+                params![entity_id],
+                |r| r.get(0),
+            )
+            .ok()
         };
 
         Ok(Payment {
@@ -1761,7 +2070,15 @@ pub fn create_chart_of_account(
         is_active: 1,
     };
     let serialized = serde_json::to_string(&acct).unwrap_or_default();
-    log_audit(conn, actor_id, "CREATE", "chart_of_accounts", Some(&id), None, Some(&serialized))?;
+    log_audit(
+        conn,
+        actor_id,
+        "CREATE",
+        "chart_of_accounts",
+        Some(&id),
+        None,
+        Some(&serialized),
+    )?;
     Ok(acct)
 }
 
@@ -1805,7 +2122,15 @@ pub fn create_journal_entry(
 
     let je = get_journal_entry(conn, &id)?;
     let serialized = serde_json::to_string(&je).unwrap_or_default();
-    log_audit(conn, actor_id, "CREATE", "journal_entries", Some(&id), None, Some(&serialized))?;
+    log_audit(
+        conn,
+        actor_id,
+        "CREATE",
+        "journal_entries",
+        Some(&id),
+        None,
+        Some(&serialized),
+    )?;
     Ok(je)
 }
 
@@ -1898,58 +2223,70 @@ pub fn calculate_dashboard_stats(conn: &Connection) -> Result<DashboardStats> {
     let month_str = Utc::now().format("%Y-%m").to_string() + "%";
 
     // Today Sales
-    let today_sales: f64 = conn.query_row(
-        "SELECT COALESCE(SUM(total), 0.0) FROM invoices WHERE date = ?1 AND is_deleted = 0",
-        params![today_str],
-        |r| r.get(0),
-    ).unwrap_or(0.0);
+    let today_sales: f64 = conn
+        .query_row(
+            "SELECT COALESCE(SUM(total), 0.0) FROM invoices WHERE date = ?1 AND is_deleted = 0",
+            params![today_str],
+            |r| r.get(0),
+        )
+        .unwrap_or(0.0);
 
     // Monthly Sales
-    let monthly_sales: f64 = conn.query_row(
-        "SELECT COALESCE(SUM(total), 0.0) FROM invoices WHERE date LIKE ?1 AND is_deleted = 0",
-        params![month_str],
-        |r| r.get(0),
-    ).unwrap_or(0.0);
+    let monthly_sales: f64 = conn
+        .query_row(
+            "SELECT COALESCE(SUM(total), 0.0) FROM invoices WHERE date LIKE ?1 AND is_deleted = 0",
+            params![month_str],
+            |r| r.get(0),
+        )
+        .unwrap_or(0.0);
 
     // Revenue (Total sales)
-    let revenue: f64 = conn.query_row(
-        "SELECT COALESCE(SUM(total), 0.0) FROM invoices WHERE is_deleted = 0",
-        [],
-        |r| r.get(0),
-    ).unwrap_or(0.0);
+    let revenue: f64 = conn
+        .query_row(
+            "SELECT COALESCE(SUM(total), 0.0) FROM invoices WHERE is_deleted = 0",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap_or(0.0);
 
     // Expenses (Total expenses)
-    let expenses: f64 = conn.query_row(
-        "SELECT COALESCE(SUM(amount), 0.0) FROM expenses",
-        [],
-        |r| r.get(0),
-    ).unwrap_or(0.0);
+    let expenses: f64 = conn
+        .query_row("SELECT COALESCE(SUM(amount), 0.0) FROM expenses", [], |r| {
+            r.get(0)
+        })
+        .unwrap_or(0.0);
 
     // Stock value (Sum of cost * stock)
-    let stock_value: f64 = conn.query_row(
-        "SELECT COALESCE(SUM(cost * stock), 0.0) FROM products WHERE is_deleted = 0",
-        [],
-        |r| r.get(0),
-    ).unwrap_or(0.0);
+    let stock_value: f64 = conn
+        .query_row(
+            "SELECT COALESCE(SUM(cost * stock), 0.0) FROM products WHERE is_deleted = 0",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap_or(0.0);
 
     // Low stock count (Products under reorder_level)
-    let low_stock_count: i64 = conn.query_row(
-        "SELECT COUNT(*) FROM products WHERE stock <= reorder_level AND is_deleted = 0",
-        [],
-        |r| r.get(0),
-    ).unwrap_or(0);
+    let low_stock_count: i64 = conn
+        .query_row(
+            "SELECT COUNT(*) FROM products WHERE stock <= reorder_level AND is_deleted = 0",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap_or(0);
 
     // Profit calculation: Revenue - COGS - Expenses.
     // COGS = sum of invoice_item.quantity * product.cost
-    let cogs: f64 = conn.query_row(
-        "SELECT COALESCE(SUM(ii.quantity * p.cost), 0.0)
+    let cogs: f64 = conn
+        .query_row(
+            "SELECT COALESCE(SUM(ii.quantity * p.cost), 0.0)
          FROM invoice_items ii
          JOIN products p ON ii.product_id = p.id
          JOIN invoices i ON ii.invoice_id = i.id
          WHERE i.is_deleted = 0",
-        [],
-        |r| r.get(0),
-    ).unwrap_or(0.0);
+            [],
+            |r| r.get(0),
+        )
+        .unwrap_or(0.0);
 
     let profit = revenue - cogs - expenses;
 
@@ -2019,7 +2356,9 @@ pub fn get_tax_summary(conn: &Connection) -> Result<Vec<ChartPoint>> {
 
 // TAX RATES RULES
 pub fn list_tax_rates(conn: &Connection) -> Result<Vec<TaxRate>> {
-    let mut stmt = conn.prepare("SELECT id, name, rate, is_active, created_at FROM tax_rates WHERE is_active = 1")?;
+    let mut stmt = conn.prepare(
+        "SELECT id, name, rate, is_active, created_at FROM tax_rates WHERE is_active = 1",
+    )?;
     let rows = stmt.query_map([], |row| {
         Ok(TaxRate {
             id: row.get(0)?,
@@ -2036,7 +2375,12 @@ pub fn list_tax_rates(conn: &Connection) -> Result<Vec<TaxRate>> {
     Ok(list)
 }
 
-pub fn create_tax_rate(conn: &Connection, name: &str, rate: f64, actor_id: Option<&str>) -> Result<TaxRate> {
+pub fn create_tax_rate(
+    conn: &Connection,
+    name: &str,
+    rate: f64,
+    actor_id: Option<&str>,
+) -> Result<TaxRate> {
     let id = Uuid::new_v4().to_string();
     let now = Utc::now().to_rfc3339();
     conn.execute(
@@ -2044,9 +2388,23 @@ pub fn create_tax_rate(conn: &Connection, name: &str, rate: f64, actor_id: Optio
         params![id, name, rate, now],
     )?;
 
-    let tr = TaxRate { id: id.clone(), name: name.to_string(), rate, is_active: 1, created_at: now };
+    let tr = TaxRate {
+        id: id.clone(),
+        name: name.to_string(),
+        rate,
+        is_active: 1,
+        created_at: now,
+    };
     let serialized = serde_json::to_string(&tr).unwrap_or_default();
-    log_audit(conn, actor_id, "CREATE", "tax_rates", Some(&id), None, Some(&serialized))?;
+    log_audit(
+        conn,
+        actor_id,
+        "CREATE",
+        "tax_rates",
+        Some(&id),
+        None,
+        Some(&serialized),
+    )?;
     Ok(tr)
 }
 
@@ -2107,29 +2465,61 @@ pub fn receive_purchase(
     conn.execute(
         "INSERT INTO journal_entries (id, entry_date, description, reference, created_at)
          VALUES (?1, ?2, ?3, ?4, ?5)",
-        params![journal_id, now_date, format!("Purchase PO {}", po.purchase_number), po.purchase_number, now],
+        params![
+            journal_id,
+            now_date,
+            format!("Purchase PO {}", po.purchase_number),
+            po.purchase_number,
+            now
+        ],
     )?;
 
-    let inv_acct_id: String = conn.query_row("SELECT id FROM chart_of_accounts WHERE code = '1400'", [], |r| r.get(0))?;
-    let ap_acct_id: String = conn.query_row("SELECT id FROM chart_of_accounts WHERE code = '2000'", [], |r| r.get(0))?;
+    let inv_acct_id: String = conn.query_row(
+        "SELECT id FROM chart_of_accounts WHERE code = '1400'",
+        [],
+        |r| r.get(0),
+    )?;
+    let ap_acct_id: String = conn.query_row(
+        "SELECT id FROM chart_of_accounts WHERE code = '2000'",
+        [],
+        |r| r.get(0),
+    )?;
 
     // Debit Inventory
     conn.execute(
         "INSERT INTO journal_lines (id, journal_entry_id, account_id, debit, credit)
          VALUES (?1, ?2, ?3, ?4, 0.0)",
-        (Uuid::new_v4().to_string(), &journal_id, &inv_acct_id, po.total),
+        (
+            Uuid::new_v4().to_string(),
+            &journal_id,
+            &inv_acct_id,
+            po.total,
+        ),
     )?;
     // Credit AP
     conn.execute(
         "INSERT INTO journal_lines (id, journal_entry_id, account_id, debit, credit)
          VALUES (?1, ?2, ?3, 0.0, ?4)",
-        (Uuid::new_v4().to_string(), &journal_id, &ap_acct_id, po.total),
+        (
+            Uuid::new_v4().to_string(),
+            &journal_id,
+            &ap_acct_id,
+            po.total,
+        ),
     )?;
 
     let updated_po = get_purchase(conn, purchase_id)?;
     let old_serialized = serde_json::to_string(&po).unwrap_or_default();
     let new_serialized = serde_json::to_string(&updated_po).unwrap_or_default();
-    log_audit(conn, actor_id, "UPDATE_STATUS", "purchases", Some(purchase_id), Some(&old_serialized), Some(&new_serialized))?;
+    log_audit(
+        conn,
+        actor_id,
+        "UPDATE_STATUS",
+        "purchases",
+        Some(purchase_id),
+        Some(&old_serialized),
+        Some(&new_serialized),
+    )?;
 
     Ok(updated_po)
 }
@@ -2151,7 +2541,7 @@ pub fn update_invoice(
     if old_invoice.payment_status == "Cancel" {
         return Err(rusqlite::Error::InvalidQuery);
     }
-    
+
     let now = Utc::now().to_rfc3339();
     let now_date = Utc::now().format("%Y-%m-%d").to_string();
 
@@ -2177,14 +2567,19 @@ pub fn update_invoice(
     )?;
 
     // 3. Delete old journal entries
-    let journal_id_opt: Option<String> = conn.query_row(
-        "SELECT id FROM journal_entries WHERE reference = ?1",
-        params![old_invoice.invoice_number],
-        |r| r.get(0),
-    ).ok();
+    let journal_id_opt: Option<String> = conn
+        .query_row(
+            "SELECT id FROM journal_entries WHERE reference = ?1",
+            params![old_invoice.invoice_number],
+            |r| r.get(0),
+        )
+        .ok();
 
     if let Some(j_id) = journal_id_opt {
-        conn.execute("DELETE FROM journal_lines WHERE journal_entry_id = ?1", params![j_id])?;
+        conn.execute(
+            "DELETE FROM journal_lines WHERE journal_entry_id = ?1",
+            params![j_id],
+        )?;
         conn.execute("DELETE FROM journal_entries WHERE id = ?1", params![j_id])?;
     }
 
@@ -2206,7 +2601,10 @@ pub fn update_invoice(
     )?;
 
     // 5. Delete old items
-    conn.execute("DELETE FROM invoice_items WHERE invoice_id = ?1", params![id])?;
+    conn.execute(
+        "DELETE FROM invoice_items WHERE invoice_id = ?1",
+        params![id],
+    )?;
 
     // 6. Insert new items, subtract stock, log adjustments
     for item in &items {
@@ -2214,7 +2612,14 @@ pub fn update_invoice(
         conn.execute(
             "INSERT INTO invoice_items (id, invoice_id, product_id, quantity, unit_price, total)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
-            params![item_id, id, item.product_id, item.quantity, item.unit_price, item.total],
+            params![
+                item_id,
+                id,
+                item.product_id,
+                item.quantity,
+                item.unit_price,
+                item.total
+            ],
         )?;
 
         conn.execute(
@@ -2241,37 +2646,78 @@ pub fn update_invoice(
     conn.execute(
         "INSERT INTO journal_entries (id, entry_date, description, reference, created_at)
          VALUES (?1, ?2, ?3, ?4, ?5)",
-        params![journal_id, now_date, format!("Sale invoice {}", old_invoice.invoice_number), old_invoice.invoice_number, now],
+        params![
+            journal_id,
+            now_date,
+            format!("Sale invoice {}", old_invoice.invoice_number),
+            old_invoice.invoice_number,
+            now
+        ],
     )?;
 
-    let ar_acct_id: String = conn.query_row("SELECT id FROM chart_of_accounts WHERE code = '1200'", [], |r| r.get(0))?;
-    let sales_acct_id: String = conn.query_row("SELECT id FROM chart_of_accounts WHERE code = '4000'", [], |r| r.get(0))?;
-    let cash_acct_id: String = conn.query_row("SELECT id FROM chart_of_accounts WHERE code = '1000'", [], |r| r.get(0))?;
+    let ar_acct_id: String = conn.query_row(
+        "SELECT id FROM chart_of_accounts WHERE code = '1200'",
+        [],
+        |r| r.get(0),
+    )?;
+    let sales_acct_id: String = conn.query_row(
+        "SELECT id FROM chart_of_accounts WHERE code = '4000'",
+        [],
+        |r| r.get(0),
+    )?;
+    let cash_acct_id: String = conn.query_row(
+        "SELECT id FROM chart_of_accounts WHERE code = '1000'",
+        [],
+        |r| r.get(0),
+    )?;
 
     if due_amount > 0.0 {
         conn.execute(
             "INSERT INTO journal_lines (id, journal_entry_id, account_id, debit, credit)
              VALUES (?1, ?2, ?3, ?4, 0.0)",
-            (Uuid::new_v4().to_string(), &journal_id, &ar_acct_id, due_amount),
+            (
+                Uuid::new_v4().to_string(),
+                &journal_id,
+                &ar_acct_id,
+                due_amount,
+            ),
         )?;
     }
     if amount_paid > 0.0 {
         conn.execute(
             "INSERT INTO journal_lines (id, journal_entry_id, account_id, debit, credit)
              VALUES (?1, ?2, ?3, ?4, 0.0)",
-            (Uuid::new_v4().to_string(), &journal_id, &cash_acct_id, amount_paid),
+            (
+                Uuid::new_v4().to_string(),
+                &journal_id,
+                &cash_acct_id,
+                amount_paid,
+            ),
         )?;
     }
     conn.execute(
         "INSERT INTO journal_lines (id, journal_entry_id, account_id, debit, credit)
          VALUES (?1, ?2, ?3, 0.0, ?4)",
-        (Uuid::new_v4().to_string(), &journal_id, &sales_acct_id, total),
+        (
+            Uuid::new_v4().to_string(),
+            &journal_id,
+            &sales_acct_id,
+            total,
+        ),
     )?;
 
     let updated = get_invoice(conn, id)?;
     let old_serialized = serde_json::to_string(&old_invoice).unwrap_or_default();
     let new_serialized = serde_json::to_string(&updated).unwrap_or_default();
-    log_audit(conn, actor_id, "UPDATE", "invoices", Some(id), Some(&old_serialized), Some(&new_serialized))?;
+    log_audit(
+        conn,
+        actor_id,
+        "UPDATE",
+        "invoices",
+        Some(id),
+        Some(&old_serialized),
+        Some(&new_serialized),
+    )?;
 
     Ok(updated)
 }
@@ -2290,7 +2736,13 @@ pub fn list_customers_filtered(
 
     if let Some(s) = search {
         if !s.trim().is_empty() {
-            query.push_str(&format!(" AND (name LIKE ?{} OR email LIKE ?{} OR phone LIKE ?{} OR address LIKE ?{})", param_index, param_index + 1, param_index + 2, param_index + 3));
+            query.push_str(&format!(
+                " AND (name LIKE ?{} OR email LIKE ?{} OR phone LIKE ?{} OR address LIKE ?{})",
+                param_index,
+                param_index + 1,
+                param_index + 2,
+                param_index + 3
+            ));
             let s_pattern = format!("%{}%", s);
             params_vec.push(Box::new(s_pattern.clone()));
             params_vec.push(Box::new(s_pattern.clone()));
@@ -2319,11 +2771,18 @@ pub fn list_customers_filtered(
 
     query.push_str(&format!(" ORDER BY {} {}", sort_col, order));
     let offset = (page - 1) * limit;
-    query.push_str(&format!(" LIMIT ?{} OFFSET ?{}", param_index, param_index + 1));
+    query.push_str(&format!(
+        " LIMIT ?{} OFFSET ?{}",
+        param_index,
+        param_index + 1
+    ));
     params_vec.push(Box::new(limit));
     params_vec.push(Box::new(offset));
 
-    let select_query = format!("SELECT id, name, email, phone, address, due_amount, created_at, updated_at {}", query);
+    let select_query = format!(
+        "SELECT id, name, email, phone, address, due_amount, created_at, updated_at {}",
+        query
+    );
     let mut stmt_select = conn.prepare(&select_query)?;
     let select_params: Vec<&dyn rusqlite::ToSql> = params_vec.iter().map(|p| p.as_ref()).collect();
 
@@ -2361,7 +2820,13 @@ pub fn list_suppliers_filtered(
 
     if let Some(s) = search {
         if !s.trim().is_empty() {
-            query.push_str(&format!(" AND (name LIKE ?{} OR email LIKE ?{} OR phone LIKE ?{} OR address LIKE ?{})", param_index, param_index + 1, param_index + 2, param_index + 3));
+            query.push_str(&format!(
+                " AND (name LIKE ?{} OR email LIKE ?{} OR phone LIKE ?{} OR address LIKE ?{})",
+                param_index,
+                param_index + 1,
+                param_index + 2,
+                param_index + 3
+            ));
             let s_pattern = format!("%{}%", s);
             params_vec.push(Box::new(s_pattern.clone()));
             params_vec.push(Box::new(s_pattern.clone()));
@@ -2390,11 +2855,18 @@ pub fn list_suppliers_filtered(
 
     query.push_str(&format!(" ORDER BY {} {}", sort_col, order));
     let offset = (page - 1) * limit;
-    query.push_str(&format!(" LIMIT ?{} OFFSET ?{}", param_index, param_index + 1));
+    query.push_str(&format!(
+        " LIMIT ?{} OFFSET ?{}",
+        param_index,
+        param_index + 1
+    ));
     params_vec.push(Box::new(limit));
     params_vec.push(Box::new(offset));
 
-    let select_query = format!("SELECT id, name, email, phone, address, balance, created_at, updated_at {}", query);
+    let select_query = format!(
+        "SELECT id, name, email, phone, address, balance, created_at, updated_at {}",
+        query
+    );
     let mut stmt_select = conn.prepare(&select_query)?;
     let select_params: Vec<&dyn rusqlite::ToSql> = params_vec.iter().map(|p| p.as_ref()).collect();
 
@@ -2471,7 +2943,11 @@ pub fn list_leads_filtered(
 
     query.push_str(&format!(" ORDER BY {} {}", sort_col, order));
     let offset = (page - 1) * limit;
-    query.push_str(&format!(" LIMIT ?{} OFFSET ?{}", param_index, param_index + 1));
+    query.push_str(&format!(
+        " LIMIT ?{} OFFSET ?{}",
+        param_index,
+        param_index + 1
+    ));
     params_vec.push(Box::new(limit));
     params_vec.push(Box::new(offset));
 
@@ -2513,14 +2989,18 @@ pub fn list_invoices_filtered(
     let mut query = String::from(
         "FROM invoices i
          JOIN customers c ON i.customer_id = c.id
-         WHERE i.is_deleted = 0"
+         WHERE i.is_deleted = 0",
     );
     let mut params_vec: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
     let mut param_index = 1;
 
     if let Some(s) = search {
         if !s.trim().is_empty() {
-            query.push_str(&format!(" AND (c.name LIKE ?{} OR i.invoice_number LIKE ?{})", param_index, param_index + 1));
+            query.push_str(&format!(
+                " AND (c.name LIKE ?{} OR i.invoice_number LIKE ?{})",
+                param_index,
+                param_index + 1
+            ));
             let s_pattern = format!("%{}%", s);
             params_vec.push(Box::new(s_pattern.clone()));
             params_vec.push(Box::new(s_pattern));
@@ -2555,7 +3035,11 @@ pub fn list_invoices_filtered(
 
     query.push_str(&format!(" ORDER BY {} {}", sort_col, order));
     let offset = (page - 1) * limit;
-    query.push_str(&format!(" LIMIT ?{} OFFSET ?{}", param_index, param_index + 1));
+    query.push_str(&format!(
+        " LIMIT ?{} OFFSET ?{}",
+        param_index,
+        param_index + 1
+    ));
     params_vec.push(Box::new(limit));
     params_vec.push(Box::new(offset));
 
@@ -2606,14 +3090,18 @@ pub fn list_quotations_filtered(
     let mut query = String::from(
         "FROM quotations q
          JOIN customers c ON q.customer_id = c.id
-         WHERE q.is_deleted = 0"
+         WHERE q.is_deleted = 0",
     );
     let mut params_vec: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
     let mut param_index = 1;
 
     if let Some(s) = search {
         if !s.trim().is_empty() {
-            query.push_str(&format!(" AND (c.name LIKE ?{} OR q.quotation_number LIKE ?{})", param_index, param_index + 1));
+            query.push_str(&format!(
+                " AND (c.name LIKE ?{} OR q.quotation_number LIKE ?{})",
+                param_index,
+                param_index + 1
+            ));
             let s_pattern = format!("%{}%", s);
             params_vec.push(Box::new(s_pattern.clone()));
             params_vec.push(Box::new(s_pattern));
@@ -2647,7 +3135,11 @@ pub fn list_quotations_filtered(
 
     query.push_str(&format!(" ORDER BY {} {}", sort_col, order));
     let offset = (page - 1) * limit;
-    query.push_str(&format!(" LIMIT ?{} OFFSET ?{}", param_index, param_index + 1));
+    query.push_str(&format!(
+        " LIMIT ?{} OFFSET ?{}",
+        param_index,
+        param_index + 1
+    ));
     params_vec.push(Box::new(limit));
     params_vec.push(Box::new(offset));
 
@@ -2691,14 +3183,18 @@ pub fn list_purchases_filtered(
     let mut query = String::from(
         "FROM purchases p
          JOIN suppliers s ON p.supplier_id = s.id
-         WHERE p.is_deleted = 0"
+         WHERE p.is_deleted = 0",
     );
     let mut params_vec: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
     let mut param_index = 1;
 
     if let Some(s) = search {
         if !s.trim().is_empty() {
-            query.push_str(&format!(" AND (s.name LIKE ?{} OR p.purchase_number LIKE ?{})", param_index, param_index + 1));
+            query.push_str(&format!(
+                " AND (s.name LIKE ?{} OR p.purchase_number LIKE ?{})",
+                param_index,
+                param_index + 1
+            ));
             let s_pattern = format!("%{}%", s);
             params_vec.push(Box::new(s_pattern.clone()));
             params_vec.push(Box::new(s_pattern));
@@ -2732,7 +3228,11 @@ pub fn list_purchases_filtered(
 
     query.push_str(&format!(" ORDER BY {} {}", sort_col, order));
     let offset = (page - 1) * limit;
-    query.push_str(&format!(" LIMIT ?{} OFFSET ?{}", param_index, param_index + 1));
+    query.push_str(&format!(
+        " LIMIT ?{} OFFSET ?{}",
+        param_index,
+        param_index + 1
+    ));
     params_vec.push(Box::new(limit));
     params_vec.push(Box::new(offset));
 
@@ -2779,7 +3279,11 @@ pub fn list_expenses_filtered(
 
     if let Some(s) = search {
         if !s.trim().is_empty() {
-            query.push_str(&format!(" AND (title LIKE ?{} OR description LIKE ?{})", param_index, param_index + 1));
+            query.push_str(&format!(
+                " AND (title LIKE ?{} OR description LIKE ?{})",
+                param_index,
+                param_index + 1
+            ));
             let s_pattern = format!("%{}%", s);
             params_vec.push(Box::new(s_pattern.clone()));
             params_vec.push(Box::new(s_pattern));
@@ -2813,11 +3317,18 @@ pub fn list_expenses_filtered(
 
     query.push_str(&format!(" ORDER BY {} {}", sort_col, order));
     let offset = (page - 1) * limit;
-    query.push_str(&format!(" LIMIT ?{} OFFSET ?{}", param_index, param_index + 1));
+    query.push_str(&format!(
+        " LIMIT ?{} OFFSET ?{}",
+        param_index,
+        param_index + 1
+    ));
     params_vec.push(Box::new(limit));
     params_vec.push(Box::new(offset));
 
-    let select_query = format!("SELECT id, title, category, amount, date, description, created_at {}", query);
+    let select_query = format!(
+        "SELECT id, title, category, amount, date, description, created_at {}",
+        query
+    );
     let mut stmt_select = conn.prepare(&select_query)?;
     let select_params: Vec<&dyn rusqlite::ToSql> = params_vec.iter().map(|p| p.as_ref()).collect();
 
@@ -2853,14 +3364,19 @@ pub fn list_payments_filtered(
         "FROM payments p
          LEFT JOIN customers c ON p.entity_id = c.id
          LEFT JOIN suppliers s ON p.entity_id = s.id
-         WHERE 1=1"
+         WHERE 1=1",
     );
     let mut params_vec: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
     let mut param_index = 1;
 
     if let Some(s) = search {
         if !s.trim().is_empty() {
-            query.push_str(&format!(" AND (c.name LIKE ?{} OR s.name LIKE ?{} OR p.reference_no LIKE ?{})", param_index, param_index + 1, param_index + 2));
+            query.push_str(&format!(
+                " AND (c.name LIKE ?{} OR s.name LIKE ?{} OR p.reference_no LIKE ?{})",
+                param_index,
+                param_index + 1,
+                param_index + 2
+            ));
             let s_pattern = format!("%{}%", s);
             params_vec.push(Box::new(s_pattern.clone()));
             params_vec.push(Box::new(s_pattern.clone()));
@@ -2895,7 +3411,11 @@ pub fn list_payments_filtered(
 
     query.push_str(&format!(" ORDER BY {} {}", sort_col, order));
     let offset = (page - 1) * limit;
-    query.push_str(&format!(" LIMIT ?{} OFFSET ?{}", param_index, param_index + 1));
+    query.push_str(&format!(
+        " LIMIT ?{} OFFSET ?{}",
+        param_index,
+        param_index + 1
+    ));
     params_vec.push(Box::new(limit));
     params_vec.push(Box::new(offset));
 
@@ -2928,7 +3448,12 @@ pub fn list_payments_filtered(
     Ok((payments, total_count))
 }
 
-pub fn create_unit(conn: &Connection, name: &str, short_name: &str, actor_id: Option<&str>) -> Result<Unit> {
+pub fn create_unit(
+    conn: &Connection,
+    name: &str,
+    short_name: &str,
+    actor_id: Option<&str>,
+) -> Result<Unit> {
     let id = Uuid::new_v4().to_string();
     let now = Utc::now().to_rfc3339();
 
@@ -2945,12 +3470,22 @@ pub fn create_unit(conn: &Connection, name: &str, short_name: &str, actor_id: Op
         created_at: now,
     };
     let serialized = serde_json::to_string(&u).unwrap_or_default();
-    log_audit(conn, actor_id, "CREATE", "units", Some(&id), None, Some(&serialized))?;
+    log_audit(
+        conn,
+        actor_id,
+        "CREATE",
+        "units",
+        Some(&id),
+        None,
+        Some(&serialized),
+    )?;
     Ok(u)
 }
 
 pub fn list_units(conn: &Connection) -> Result<Vec<Unit>> {
-    let mut stmt = conn.prepare("SELECT id, name, short_name, created_at FROM units WHERE is_deleted = 0 ORDER BY name ASC")?;
+    let mut stmt = conn.prepare(
+        "SELECT id, name, short_name, created_at FROM units WHERE is_deleted = 0 ORDER BY name ASC",
+    )?;
     let rows = stmt.query_map([], |row| {
         Ok(Unit {
             id: row.get(0)?,
@@ -2973,7 +3508,10 @@ pub fn delete_unit(conn: &Connection, id: &str, actor_id: Option<&str>) -> Resul
     Ok(())
 }
 
-pub fn get_product_transactions(conn: &Connection, product_id: &str) -> Result<Vec<ProductTransaction>> {
+pub fn get_product_transactions(
+    conn: &Connection,
+    product_id: &str,
+) -> Result<Vec<ProductTransaction>> {
     let mut stmt = conn.prepare(
         "SELECT 
             i.created_at as tx_date,
@@ -3015,7 +3553,7 @@ pub fn get_product_transactions(conn: &Connection, product_id: &str) -> Result<V
          LEFT JOIN users u ON s.adjusted_by = u.id
          WHERE s.product_id = ?1
 
-         ORDER BY tx_date DESC"
+         ORDER BY tx_date DESC",
     )?;
 
     let rows = stmt.query_map(params![product_id], |row| {

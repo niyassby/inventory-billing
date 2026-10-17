@@ -6,12 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { HugeiconsIcon } from "@hugeicons/react";
-import {
-  Add01Icon,
-  Search01Icon,
-  ShoppingBagIcon,
-  InvoiceIcon
-} from "@hugeicons/core-free-icons";
+import { Add01Icon, Search01Icon, ShoppingBagIcon, InvoiceIcon } from "@hugeicons/core-free-icons";
 
 export default function Bills() {
   const navigate = useNavigate();
@@ -54,10 +49,12 @@ export default function Bills() {
 
   return (
     <div className="space-y-6 pb-8 font-sans">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-border/40 pb-4">
+      <div className="flex flex-col items-start justify-between gap-4 border-b border-border/40 pb-4 md:flex-row md:items-center">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Purchases & Restocks</h1>
-          <p className="text-muted-foreground">Order restock inventory from suppliers, log bills, and track purchase expenses.</p>
+          <p className="text-muted-foreground">
+            Order restock inventory from suppliers, log bills, and track purchase expenses.
+          </p>
         </div>
         <div className="flex gap-2 print:hidden">
           <Button
@@ -85,14 +82,19 @@ export default function Bills() {
       </div>
 
       <div className="space-y-4">
-        <div className="flex justify-between items-center gap-3">
-          <div className="relative flex-1 max-w-sm">
-            <HugeiconsIcon icon={Search01Icon} size={18} strokeWidth={2} className="absolute left-3 top-2.5 text-muted-foreground" />
+        <div className="flex items-center justify-between gap-3">
+          <div className="relative max-w-sm flex-1">
+            <HugeiconsIcon
+              icon={Search01Icon}
+              size={18}
+              strokeWidth={2}
+              className="absolute top-2.5 left-3 text-muted-foreground"
+            />
             <Input
               placeholder="Search by supplier name or Bill ID..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 bg-card border-border/40"
+              className="border-border/40 bg-card pl-9"
             />
           </div>
         </div>
@@ -105,14 +107,14 @@ export default function Bills() {
           <Card className="border-border/40 bg-card/65 backdrop-blur-sm">
             <CardContent className="p-0">
               <div className="overflow-x-auto">
-                <table className="w-full text-sm text-left border-collapse">
+                <table className="w-full border-collapse text-left text-sm">
                   <thead>
-                    <tr className="border-b border-border/40 text-muted-foreground text-xs uppercase bg-muted/20">
+                    <tr className="border-b border-border/40 bg-muted/20 text-xs text-muted-foreground uppercase">
                       <th className="p-4 font-medium">Date Received</th>
                       <th className="p-4 font-medium">Bill ID / reference</th>
                       <th className="p-4 font-medium">Supplier Name</th>
-                      <th className="p-4 font-medium text-right">Bill Amount</th>
-                      <th className="p-4 font-medium text-center">Status</th>
+                      <th className="p-4 text-right font-medium">Bill Amount</th>
+                      <th className="p-4 text-center font-medium">Status</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border/20">
@@ -121,13 +123,16 @@ export default function Bills() {
                         <td className="p-4 font-mono text-xs text-muted-foreground">
                           {new Date(purchase.created_at).toLocaleString()}
                         </td>
-                        <td className="p-4 font-semibold font-mono text-xs text-primary">
+                        <td className="p-4 font-mono text-xs font-semibold text-primary">
                           #BILL-{purchase.id.substring(0, 8).toUpperCase()}
                         </td>
                         <td className="p-4 font-medium">{purchase.supplier_name}</td>
-                        <td className="p-4 text-right font-mono font-bold">{currencySymbol}{purchase.total.toFixed(2)}</td>
+                        <td className="p-4 text-right font-mono font-bold">
+                          {currencySymbol}
+                          {purchase.total.toFixed(2)}
+                        </td>
                         <td className="p-4 text-center">
-                          <span className="px-2 py-0.5 text-[10px] font-semibold bg-emerald-500/10 text-emerald-600 rounded-full border border-emerald-500/20">
+                          <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-600">
                             RECEIVED & LOGGED
                           </span>
                         </td>
@@ -135,8 +140,9 @@ export default function Bills() {
                     ))}
                     {filteredPurchases.length === 0 && (
                       <tr>
-                        <td colSpan={5} className="py-8 text-center text-muted-foreground text-xs">
-                          No supplier bills logged. Receive stock from Purchase Orders to generate bills automatically.
+                        <td colSpan={5} className="py-8 text-center text-xs text-muted-foreground">
+                          No supplier bills logged. Receive stock from Purchase Orders to generate
+                          bills automatically.
                         </td>
                       </tr>
                     )}

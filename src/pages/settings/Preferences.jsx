@@ -9,7 +9,7 @@ import {
   UserIcon,
   Database02Icon,
   Configuration02Icon,
-  BookOpen01Icon
+  BookOpen01Icon,
 } from "@hugeicons/core-free-icons";
 
 export default function Preferences() {
@@ -19,10 +19,12 @@ export default function Preferences() {
 
   return (
     <div className="space-y-6 pb-8 font-sans">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-border/40 pb-4">
+      <div className="flex flex-col items-start justify-between gap-4 border-b border-border/40 pb-4 md:flex-row md:items-center">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">System Settings</h1>
-          <p className="text-muted-foreground">Configure profile details, preferences, accounts control, and database maintenance.</p>
+          <p className="text-muted-foreground">
+            Configure profile details, preferences, accounts control, and database maintenance.
+          </p>
         </div>
         <div className="flex flex-wrap gap-2 print:hidden">
           <Button
@@ -56,7 +58,7 @@ export default function Preferences() {
         </div>
       </div>
 
-      <Card className="border-border/40 bg-card/65 backdrop-blur-sm max-w-lg">
+      <Card className="max-w-lg border-border/40 bg-card/65 backdrop-blur-sm">
         <CardHeader>
           <CardTitle>System Preferences</CardTitle>
           <CardDescription>Set layout tokens and local billing parameters.</CardDescription>
@@ -65,7 +67,7 @@ export default function Preferences() {
           <div className="space-y-2">
             <Label>Active Currency Symbol</Label>
             <select
-              className="w-full p-2 border rounded-md text-sm bg-card border-border/40 text-foreground"
+              className="w-full rounded-md border border-border/40 bg-card p-2 text-sm text-foreground"
               value={currencySymbol}
               onChange={(e) => setCurrencySymbol(e.target.value)}
             >
@@ -76,8 +78,9 @@ export default function Preferences() {
               <option value="¥">Japanese Yen (¥)</option>
             </select>
           </div>
-          <div className="p-3 bg-muted/10 border rounded text-xs text-muted-foreground">
-            These choices sync instantly to POS registers, product grids, billing calculations, and financial reports.
+          <div className="rounded border bg-muted/10 p-3 text-xs text-muted-foreground">
+            These choices sync instantly to POS registers, product grids, billing calculations, and
+            financial reports.
           </div>
         </CardContent>
       </Card>

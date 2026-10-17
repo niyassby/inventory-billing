@@ -5,15 +5,16 @@ import { useStore } from "@/hooks/use-store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { HugeiconsIcon } from "@hugeicons/react";
-import {
-  BarcodeIcon,
-  Tag01Icon,
-  ArchiveIcon,
-  ShuffleIcon
-} from "@hugeicons/core-free-icons";
+import { BarcodeIcon, Tag01Icon, ArchiveIcon, ShuffleIcon } from "@hugeicons/core-free-icons";
 
 export default function Adjustments() {
   const navigate = useNavigate();
@@ -34,7 +35,7 @@ export default function Adjustments() {
     product_id: "",
     type: "ADD",
     quantity: 1,
-    reason: ""
+    reason: "",
   });
 
   // Fetch Methods
@@ -65,7 +66,7 @@ export default function Adjustments() {
         productId: adjustmentForm.product_id,
         adjustmentType: adjustmentForm.type,
         quantity: parseFloat(adjustmentForm.quantity),
-        reason: adjustmentForm.reason || null
+        reason: adjustmentForm.reason || null,
       });
       setIsAdjustmentModalOpen(false);
       fetchData();
@@ -77,17 +78,19 @@ export default function Adjustments() {
 
   return (
     <div className="p-4">
-
       {loading ? (
         <div className="flex h-[40vh] items-center justify-center">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
         </div>
       ) : (
         <div className="space-y-4">
-          <div className="flex justify-between items-center">
+          <div className="flex items-center justify-between">
             <h3 className="text-lg font-semibold">Stock Adjustment History</h3>
             {!isReadOnly && (
-              <Button onClick={() => setIsAdjustmentModalOpen(true)} className="flex items-center gap-1">
+              <Button
+                onClick={() => setIsAdjustmentModalOpen(true)}
+                className="flex items-center gap-1"
+              >
                 <HugeiconsIcon icon={ShuffleIcon} size={16} /> Manual Stock Adjustment
               </Button>
             )}
@@ -96,13 +99,13 @@ export default function Adjustments() {
           <Card className="border-border/40 bg-card/65 backdrop-blur-sm">
             <CardContent className="p-0">
               <div className="overflow-x-auto">
-                <table className="w-full text-sm text-left border-collapse">
+                <table className="w-full border-collapse text-left text-sm">
                   <thead>
-                    <tr className="border-b border-border/40 text-muted-foreground text-xs uppercase bg-muted/20">
+                    <tr className="border-b border-border/40 bg-muted/20 text-xs text-muted-foreground uppercase">
                       <th className="p-4 font-medium">Timestamp</th>
                       <th className="p-4 font-medium">Product Name</th>
                       <th className="p-4 font-medium">Adjustment Type</th>
-                      <th className="p-4 font-medium text-center">Qty</th>
+                      <th className="p-4 text-center font-medium">Qty</th>
                       <th className="p-4 font-medium">Reason</th>
                       <th className="p-4 font-medium">Adjusted By</th>
                     </tr>
@@ -115,21 +118,26 @@ export default function Adjustments() {
                         </td>
                         <td className="p-4 font-medium">{a.product_name}</td>
                         <td className="p-4 text-xs font-semibold">
-                          <span className={`px-2 py-0.5 rounded-full ${a.adjustment_type === "ADD" ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20" :
-                            a.adjustment_type === "SUBTRACT" ? "bg-rose-500/10 text-rose-600 border border-rose-500/20" :
-                              "bg-amber-500/10 text-amber-600 border border-amber-500/20"
-                            }`}>
+                          <span
+                            className={`rounded-full px-2 py-0.5 ${
+                              a.adjustment_type === "ADD"
+                                ? "border border-emerald-500/20 bg-emerald-500/10 text-emerald-600"
+                                : a.adjustment_type === "SUBTRACT"
+                                  ? "border border-rose-500/20 bg-rose-500/10 text-rose-600"
+                                  : "border border-amber-500/20 bg-amber-500/10 text-amber-600"
+                            }`}
+                          >
                             {a.adjustment_type}
                           </span>
                         </td>
-                        <td className="p-4 text-center font-bold font-mono">{a.quantity}</td>
+                        <td className="p-4 text-center font-mono font-bold">{a.quantity}</td>
                         <td className="p-4 text-xs text-muted-foreground">{a.reason || "-"}</td>
                         <td className="p-4 font-medium">{a.adjusted_by_name || "Staff"}</td>
                       </tr>
                     ))}
                     {adjustments.length === 0 && (
                       <tr>
-                        <td colSpan={6} className="py-8 text-center text-muted-foreground text-xs">
+                        <td colSpan={6} className="py-8 text-center text-xs text-muted-foreground">
                           No adjustments logged.
                         </td>
                       </tr>
@@ -144,7 +152,7 @@ export default function Adjustments() {
 
       {/* Stock Adjustment Modal */}
       <Dialog open={isAdjustmentModalOpen} onOpenChange={setIsAdjustmentModalOpen}>
-        <DialogContent className="sm:max-w-md font-sans">
+        <DialogContent className="font-sans sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Manual Stock Adjustment</DialogTitle>
           </DialogHeader>
@@ -153,14 +161,20 @@ export default function Adjustments() {
               <Label htmlFor="adj_product">Product *</Label>
               <select
                 id="adj_product"
-                className="w-full p-2 border rounded-md text-sm bg-card border-border/40 text-foreground"
+                className="w-full rounded-md border border-border/40 bg-card p-2 text-sm text-foreground"
                 value={adjustmentForm.product_id}
-                onChange={(e) => setAdjustmentForm({ ...adjustmentForm, product_id: e.target.value })}
+                onChange={(e) =>
+                  setAdjustmentForm({ ...adjustmentForm, product_id: e.target.value })
+                }
                 required
               >
-                <option value="" disabled>Choose Product</option>
+                <option value="" disabled>
+                  Choose Product
+                </option>
                 {products.map((p) => (
-                  <option key={p.id} value={p.id}>{p.name} (In stock: {p.stock})</option>
+                  <option key={p.id} value={p.id}>
+                    {p.name} (In stock: {p.stock})
+                  </option>
                 ))}
               </select>
             </div>
@@ -168,7 +182,7 @@ export default function Adjustments() {
               <Label htmlFor="adj_type">Adjustment Type *</Label>
               <select
                 id="adj_type"
-                className="w-full p-2 border rounded-md text-sm bg-card border-border/40 text-foreground"
+                className="w-full rounded-md border border-border/40 bg-card p-2 text-sm text-foreground"
                 value={adjustmentForm.type}
                 onChange={(e) => setAdjustmentForm({ ...adjustmentForm, type: e.target.value })}
                 required
@@ -199,7 +213,13 @@ export default function Adjustments() {
               />
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsAdjustmentModalOpen(false)}>Cancel</Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsAdjustmentModalOpen(false)}
+              >
+                Cancel
+              </Button>
               <Button type="submit">Submit Adjustment</Button>
             </DialogFooter>
           </form>

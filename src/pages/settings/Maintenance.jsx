@@ -11,7 +11,7 @@ import {
   UserIcon,
   Database02Icon,
   Configuration02Icon,
-  BookOpen01Icon
+  BookOpen01Icon,
 } from "@hugeicons/core-free-icons";
 
 export default function Maintenance() {
@@ -34,7 +34,12 @@ export default function Maintenance() {
 
   // Database Restore import
   const handleRestoreImport = async () => {
-    if (!window.confirm("WARNING: Importing a database restore overrides the current active records. Proceed?")) return;
+    if (
+      !window.confirm(
+        "WARNING: Importing a database restore overrides the current active records. Proceed?",
+      )
+    )
+      return;
     try {
       await invoke("restore_database_cmd", { token, srcPath: restorePath });
       alert("Database restored successfully! The application will refresh.");
@@ -46,10 +51,12 @@ export default function Maintenance() {
 
   return (
     <div className="space-y-6 pb-8 font-sans">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-border/40 pb-4">
+      <div className="flex flex-col items-start justify-between gap-4 border-b border-border/40 pb-4 md:flex-row md:items-center">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">System Settings</h1>
-          <p className="text-muted-foreground">Configure profile details, preferences, accounts control, and database maintenance.</p>
+          <p className="text-muted-foreground">
+            Configure profile details, preferences, accounts control, and database maintenance.
+          </p>
         </div>
         <div className="flex flex-wrap gap-2 print:hidden">
           <Button
@@ -89,7 +96,8 @@ export default function Maintenance() {
           <CardHeader>
             <CardTitle>Export Database Backup</CardTitle>
             <CardDescription>
-              Back up your active inventory catalog, invoices ledger, and audit logs. Compiles using SQLite online backup.
+              Back up your active inventory catalog, invoices ledger, and audit logs. Compiles using
+              SQLite online backup.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -102,7 +110,10 @@ export default function Maintenance() {
                 required
               />
             </div>
-            <Button onClick={handleBackupExport} className="w-full flex items-center justify-center gap-1.5">
+            <Button
+              onClick={handleBackupExport}
+              className="flex w-full items-center justify-center gap-1.5"
+            >
               <HugeiconsIcon icon={Database02Icon} size={16} /> Export Backup File
             </Button>
           </CardContent>
@@ -113,7 +124,8 @@ export default function Maintenance() {
           <CardHeader>
             <CardTitle>Import Database Restore</CardTitle>
             <CardDescription>
-              Restore the database state from a compiled `.db` file. This overrides active ledger values.
+              Restore the database state from a compiled `.db` file. This overrides active ledger
+              values.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -126,7 +138,11 @@ export default function Maintenance() {
                 required
               />
             </div>
-            <Button onClick={handleRestoreImport} variant="destructive" className="w-full flex items-center justify-center gap-1.5">
+            <Button
+              onClick={handleRestoreImport}
+              variant="destructive"
+              className="flex w-full items-center justify-center gap-1.5"
+            >
               <HugeiconsIcon icon={Database02Icon} size={16} /> Import Database Restore
             </Button>
           </CardContent>

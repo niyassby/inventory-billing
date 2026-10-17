@@ -10,7 +10,7 @@ import {
   CalculatorIcon,
   ShoppingBagIcon,
   ArchiveIcon,
-  BadgePercentIcon
+  BadgePercentIcon,
 } from "@hugeicons/core-free-icons";
 
 export default function SalesSummary() {
@@ -20,7 +20,7 @@ export default function SalesSummary() {
 
   // Data States
   const [stats, setStats] = useState({
-    revenue: 0
+    revenue: 0,
   });
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -46,17 +46,25 @@ export default function SalesSummary() {
   }, [token]);
 
   // Compute metrics
-  const cashSales = invoices.filter(i => i.payment_method === "CASH").reduce((acc, i) => acc + i.amount_paid, 0);
-  const cardSales = invoices.filter(i => i.payment_method === "CARD").reduce((acc, i) => acc + i.amount_paid, 0);
-  const upiSales = invoices.filter(i => i.payment_method === "UPI").reduce((acc, i) => acc + i.amount_paid, 0);
+  const cashSales = invoices
+    .filter((i) => i.payment_method === "CASH")
+    .reduce((acc, i) => acc + i.amount_paid, 0);
+  const cardSales = invoices
+    .filter((i) => i.payment_method === "CARD")
+    .reduce((acc, i) => acc + i.amount_paid, 0);
+  const upiSales = invoices
+    .filter((i) => i.payment_method === "UPI")
+    .reduce((acc, i) => acc + i.amount_paid, 0);
   const debtSales = invoices.reduce((acc, i) => acc + (i.total - i.amount_paid), 0);
 
   return (
     <div className="space-y-6 pb-8 font-sans">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-border/40 pb-4">
+      <div className="flex flex-col items-start justify-between gap-4 border-b border-border/40 pb-4 md:flex-row md:items-center">
         <div className="print:hidden">
           <h1 className="text-3xl font-bold tracking-tight">Reports Ledger</h1>
-          <p className="text-muted-foreground">Generate commercial financial statements, check taxes, and value inventory assets.</p>
+          <p className="text-muted-foreground">
+            Generate commercial financial statements, check taxes, and value inventory assets.
+          </p>
         </div>
         <div className="flex flex-wrap gap-2 print:hidden">
           <Button
@@ -96,18 +104,26 @@ export default function SalesSummary() {
         </div>
       ) : (
         <div className="space-y-4">
-          <div className="flex justify-between items-center print:hidden">
+          <div className="flex items-center justify-between print:hidden">
             <h3 className="text-lg font-semibold capitalize">Sales Summary Statement</h3>
-            <Button variant="outline" className="flex items-center gap-1 border-border/40" onClick={() => window.print()}>
+            <Button
+              variant="outline"
+              className="flex items-center gap-1 border-border/40"
+              onClick={() => window.print()}
+            >
               <HugeiconsIcon icon={PrinterIcon} size={14} /> Print Statement
             </Button>
           </div>
 
           {/* PRINT HEADER */}
-          <div className="hidden print:block text-center border-b pb-6 mb-6">
-            <h1 className="text-2xl font-bold uppercase tracking-wider">Business Audit Report Sheet</h1>
-            <p className="text-xs text-muted-foreground mt-1">Generated: {new Date().toLocaleString()}</p>
-            <h3 className="text-sm font-semibold capitalize mt-4 bg-muted p-2 rounded">
+          <div className="mb-6 hidden border-b pb-6 text-center print:block">
+            <h1 className="text-2xl font-bold tracking-wider uppercase">
+              Business Audit Report Sheet
+            </h1>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Generated: {new Date().toLocaleString()}
+            </p>
+            <h3 className="mt-4 rounded bg-muted p-2 text-sm font-semibold capitalize">
               Report Section: SALES SUMMARY STATEMENT
             </h3>
           </div>
@@ -119,25 +135,40 @@ export default function SalesSummary() {
                 <CardDescription>Breakdown of payments logged at the POS checkout.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
-                <div className="flex justify-between text-sm py-2 border-b">
+                <div className="flex justify-between border-b py-2 text-sm">
                   <span className="font-medium">Cash Register Sales</span>
-                  <span className="font-mono font-bold text-emerald-600">{currencySymbol}{cashSales.toFixed(2)}</span>
+                  <span className="font-mono font-bold text-emerald-600">
+                    {currencySymbol}
+                    {cashSales.toFixed(2)}
+                  </span>
                 </div>
-                <div className="flex justify-between text-sm py-2 border-b">
+                <div className="flex justify-between border-b py-2 text-sm">
                   <span className="font-medium">Card Swipe Terminals</span>
-                  <span className="font-mono font-bold text-primary">{currencySymbol}{cardSales.toFixed(2)}</span>
+                  <span className="font-mono font-bold text-primary">
+                    {currencySymbol}
+                    {cardSales.toFixed(2)}
+                  </span>
                 </div>
-                <div className="flex justify-between text-sm py-2 border-b">
+                <div className="flex justify-between border-b py-2 text-sm">
                   <span className="font-medium">UPI / QR Code Scans</span>
-                  <span className="font-mono font-bold text-violet-600">{currencySymbol}{upiSales.toFixed(2)}</span>
+                  <span className="font-mono font-bold text-violet-600">
+                    {currencySymbol}
+                    {upiSales.toFixed(2)}
+                  </span>
                 </div>
-                <div className="flex justify-between text-sm py-2 border-b">
+                <div className="flex justify-between border-b py-2 text-sm">
                   <span className="font-medium">Customer Credit Account Debt</span>
-                  <span className="font-mono font-bold text-rose-600">{currencySymbol}{debtSales.toFixed(2)}</span>
+                  <span className="font-mono font-bold text-rose-600">
+                    {currencySymbol}
+                    {debtSales.toFixed(2)}
+                  </span>
                 </div>
-                <div className="flex justify-between text-sm pt-2 font-extrabold">
+                <div className="flex justify-between pt-2 text-sm font-extrabold">
                   <span>Cumulative Total Sales Value</span>
-                  <span className="font-mono">{currencySymbol}{stats.revenue.toFixed(2)}</span>
+                  <span className="font-mono">
+                    {currencySymbol}
+                    {stats.revenue.toFixed(2)}
+                  </span>
                 </div>
               </CardContent>
             </Card>
@@ -145,18 +176,27 @@ export default function SalesSummary() {
             <Card className="border-border/40 bg-card/65 backdrop-blur-sm print:hidden">
               <CardHeader>
                 <CardTitle>General Invoicing Stats</CardTitle>
-                <CardDescription>Overall counts and sizes of client billing tickets.</CardDescription>
+                <CardDescription>
+                  Overall counts and sizes of client billing tickets.
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="p-4 rounded-lg bg-muted/15 border text-center">
-                  <div className="text-3xl font-extrabold font-mono text-primary">{invoices.length}</div>
-                  <p className="text-xs text-muted-foreground mt-1">Total completed billing orders</p>
-                </div>
-                <div className="p-4 rounded-lg bg-muted/15 border text-center">
-                  <div className="text-xl font-bold font-mono">
-                    {currencySymbol}{invoices.length > 0 ? (stats.revenue / invoices.length).toFixed(2) : "0.00"}
+                <div className="rounded-lg border bg-muted/15 p-4 text-center">
+                  <div className="font-mono text-3xl font-extrabold text-primary">
+                    {invoices.length}
                   </div>
-                  <p className="text-xs text-muted-foreground mt-1">Average sale ticket basket value</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Total completed billing orders
+                  </p>
+                </div>
+                <div className="rounded-lg border bg-muted/15 p-4 text-center">
+                  <div className="font-mono text-xl font-bold">
+                    {currencySymbol}
+                    {invoices.length > 0 ? (stats.revenue / invoices.length).toFixed(2) : "0.00"}
+                  </div>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Average sale ticket basket value
+                  </p>
                 </div>
               </CardContent>
             </Card>
