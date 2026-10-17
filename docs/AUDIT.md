@@ -138,6 +138,7 @@ flowchart LR
 | B-22 | Medium | Purchases: `create_purchase` checks `status == "RECEIVED"`, but the UI always sends `"PENDING"`. There is no partial receipt, no landed cost, and receipt can't be undone. | `repositories/mod.rs:1356`; `Orders.jsx:145` | Limited, though consistent. |
 | B-23 | Medium | `create_journal_entry` returns `InvalidQuery` for unbalanced entries (an opaque error message). The float tolerance is 0.001. | `repositories/mod.rs:1787-1789` | Confusing error, and float-based balance checks. |
 | B-24 | Low | Restore runs the SQLite backup API into the live connection with no schema or version check, and the app then calls `window.location.reload()`. | `commands/mod.rs:795-825`; `Maintenance.jsx:36-44` | Restoring an incompatible or foreign file corrupts the app state. |
+| B-25 | High | *(Found in Phase 1 by ESLint.)* The Quotations table headers call `toggleSort`, which was never defined, so clicking a column header crashes the page. **Fixed in Phase 1.** | `src/pages/sales/Quotations.jsx:237-249` | The page fails as soon as a column header is clicked. |
 
 ---
 
@@ -228,7 +229,7 @@ Effort: **S** ≤ 0.5 day · **M** 1–3 days · **L** 1–2 weeks. Most Critica
 | 8 | A permission-based RBAC (roles → permissions table) checked in services. Enum-typed roles. Last-owner protection. | B-12, S-6 | M | 3 |
 | 9 | Server-side validation of every input (typed DTOs) | S-7 | M | 3 |
 | 10 | Backup and restore: fixed backup directory, schedule, encryption, rotation, integrity and schema-version checks, restore into a staging file followed by a restart | S-3, B-24 | M | 4 |
-| 11 | Strict CSP. Remove the remote assets. | S-4, S-12 | S | 1 |
+| 11 | Strict CSP. Remove the remote assets. | S-4, S-12 | S | 1 (assets, done) · 8 (CSP, see A-25) |
 | 12 | Quotation → sales order / invoice conversion with status tracking | B-9 | S | 5 |
 | 13 | Ledger-derived party balances (no manual edit). Opening balances as entries. | B-14 | M | 2, 5 |
 | 14 | Held bills persisted server-side and removed on recall | B-16 | S | 5 |

@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { APP_NAME } from "@inventory/shared";
 
 import { NavMain } from "@/components/sidebar/nav-main";
 import { NavProjects } from "@/components/sidebar/nav-projects";
@@ -38,28 +39,13 @@ import {
   Wallet01Icon,
 } from "@hugeicons/core-free-icons/index";
 
-// This is sample data.
+// Navigation and branding. Phase 7 replaces this with role-aware navigation.
 const data = {
-  user: {
-    name: "shadcn",
-    email: "m@example.com",
-    avatar: "/avatars/shadcn.jpg",
-  },
   teams: [
     {
-      name: "Acme Inc",
+      name: APP_NAME,
       logo: <HugeiconsIcon icon={LayoutBottomIcon} strokeWidth={2} />,
-      plan: "Enterprise",
-    },
-    {
-      name: "Acme Corp.",
-      logo: <HugeiconsIcon icon={AudioWave01Icon} strokeWidth={2} />,
-      plan: "Startup",
-    },
-    {
-      name: "Evil Corp.",
-      logo: <HugeiconsIcon icon={CommandIcon} strokeWidth={2} />,
-      plan: "Free",
+      plan: "Standalone",
     },
   ],
   navMain: [
