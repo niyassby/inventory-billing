@@ -5,9 +5,10 @@ products and stock, purchases, customers and suppliers, accounting-lite and repo
 offline. Multi-counter shops connect their devices to one **hub** PC over the local network
 (see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)).
 
-> **Status:** under active rebuild. Phase 0 (audit) and Phase 1 (tooling, TypeScript, shared
-> package) are done. The current app is the legacy single-device version. Read
-> [docs/AUDIT.md](docs/AUDIT.md) for its known issues before using it with real data.
+> **Status:** under active rebuild. Phase 0 (audit), Phase 1 (tooling, TypeScript, shared
+> package) and Phase 2 (v2 database schema and the v1 data migration) are done. The running app
+> is still the legacy single-device version. Read [docs/AUDIT.md](docs/AUDIT.md) for its known
+> issues before using it with real data.
 
 ## Stack
 
@@ -45,6 +46,7 @@ The first run creates the database in `%LOCALAPPDATA%\com.niyas.tauri-app\invent
 
 - [docs/AUDIT.md](docs/AUDIT.md): Phase 0 review of the legacy code
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): offline and multi-user design (LAN hub)
+- [docs/DATABASE.md](docs/DATABASE.md): schema, ER diagrams, invariants, v1 migration
 - [docs/ASSUMPTIONS.md](docs/ASSUMPTIONS.md): decisions and defaults
 - [docs/DEVELOPER.md](docs/DEVELOPER.md): project layout, conventions and workflow
 - [CHANGELOG.md](CHANGELOG.md)

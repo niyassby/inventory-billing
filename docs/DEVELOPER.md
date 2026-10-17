@@ -21,7 +21,13 @@ src/
   app/                     shell: layout, auth page, RequireAuth guard
   components/ui/           shadcn primitives (TSX; the rest are converted as they are touched)
   pages/**                 legacy pages (.jsx), rebuilt module by module in Phases 5–7
-src-tauri/                 Rust backend (restructured into domain/db/repo/services/api in Phases 2–3)
+src-tauri/src/
+  db/                      v2 database: connection settings, migration runner, migrations/*.sql, schema tests
+  domain/                  pure logic shared by services and migrations (money, ids); mirrors packages/shared
+  legacy_migration/        v1 → v2 data migration (reader, transform, report, end-to-end tests)
+  bin/migrate_legacy.rs    command-line front end for the migration
+  commands/, repositories/, database/   v1 backend, still serving the app until Phase 3
+packages/shared/test-vectors/  JSON vectors both the TS and Rust money code must pass
 docs/                      audit, architecture, assumptions, this guide
 ```
 
@@ -58,6 +64,15 @@ npm run rust:fmt && npm run rust:lint && npm run rust:test
   Ubuntu and Rust runs on Windows, the primary target.
 - Commits follow Conventional Commits (`feat:`, `fix:`, `refactor:`, `chore:`, `docs:`, `test:`).
   Every commit should build.
+
+## Database
+
+The schema and its rules are in [DATABASE.md](DATABASE.md). To change it, add a new migration
+file (never edit a released one) and extend `src-tauri/src/db/tests.rs`.
+
+```bash
+cargo run --manifest-path src-tauri/Cargo.toml --bin migrate-legacy -- --dry-run
+```
 
 ## Previewing the UI without Tauri
 

@@ -5,6 +5,32 @@ All notable changes to this project. The format follows
 
 ## [Unreleased]
 
+### Phase 2: database schema and migration (2026-10-17)
+
+#### Added
+- v2 schema in 6 versioned, checksummed migrations (`src-tauri/src/db/migrations`): STRICT
+  tables, integer money, quantities and rates, UUIDv7 ids, audit columns, soft delete.
+- Stock ledger (`stock_movements`) and party ledger, each with a trigger-maintained cache and a
+  mismatch view. Append-only journal, allocations and audit log.
+- Immutable finalized documents (triggers), status transition rules, line snapshots.
+- Payments with allocations to invoices, bills, returns and expenses. Paid amounts are maintained
+  and validated by triggers; tendered and change are recorded separately.
+- Product variants, unit conversions, price lists, batches and expiry, warehouses, transfers,
+  adjustments and stock counts, purchase orders, goods receipts, bills with landed costs, returns,
+  cash registers, register sessions, day close, number series with offline leases, devices, sync
+  outbox and log, idempotency keys.
+- FTS5 product search. Indexes designed from query patterns (docs/DATABASE.md §6).
+- Migration runner: one transaction per migration, checksum verification, refuses newer schemas.
+- `migrate-legacy` tool: backup → integrity check → new v2 database in one verified transaction
+  → JSON report. Dry-run mode. Every v1 row archived.
+- `domain::money` in Rust, tested against the same vectors as the TypeScript package.
+- docs/DATABASE.md with ER diagrams. 33 Rust tests; 141 TypeScript tests in total.
+
+#### Notes
+- The app still runs on the v1 database. Phase 3 moves the services to v2.
+- Dry run against the real v1 database: totals match exactly. One supplier balance difference
+  (₹500) and one cancelled invoice with ₹17,700 recorded as paid are flagged for review.
+
 ### Phase 1: tooling, TypeScript, shared package (2026-10-17)
 
 #### Added
