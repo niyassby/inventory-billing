@@ -54,6 +54,8 @@ export const PERMISSIONS = [
   "backup.manage",
   "audit.view",
   "approvals.grant",
+  "devices.manage",
+  "sync.review",
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
 

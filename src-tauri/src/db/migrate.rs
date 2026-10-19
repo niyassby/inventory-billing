@@ -58,6 +58,11 @@ pub const MIGRATIONS: &[Migration] = &[
         name: "grni_account",
         sql: include_str!("migrations/0008_grni_account.sql"),
     },
+    Migration {
+        version: 9,
+        name: "hub_sync_backup",
+        sql: include_str!("migrations/0009_hub_sync_backup.sql"),
+    },
 ];
 
 pub fn latest_version() -> i64 {

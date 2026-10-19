@@ -523,11 +523,11 @@ pub(crate) fn void_payment(
     )
 }
 
-struct Priced {
-    lines: Vec<ResolvedLine>,
-    result: DocumentResult,
-    inter_state: bool,
-    prices_include_tax: bool,
+pub(crate) struct Priced {
+    pub lines: Vec<ResolvedLine>,
+    pub result: DocumentResult,
+    pub inter_state: bool,
+    pub prices_include_tax: bool,
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -539,6 +539,38 @@ fn price(
     prices_include_tax: Option<bool>,
     place_of_supply: Option<&str>,
     branch_state: Option<&str>,
+) -> AppResult<Priced> {
+    price_lines(
+        settings,
+        lines,
+        bill_discount,
+        prices_include_tax,
+        place_of_supply,
+        branch_state,
+        |index, line| {
+            resolve_line(
+                conn,
+                index,
+                &line.variant_id,
+                line.unit_id.as_deref(),
+                line.qty,
+                line.batch_id.as_deref(),
+            )
+        },
+    )
+}
+
+/// Prices a bill from resolved catalogue lines. The hub resolves lines from its database; an
+/// offline counter resolves them from its cached catalogue. Both then run exactly this code, so a
+/// bill made offline has the same totals the hub computes when it syncs.
+pub(crate) fn price_lines(
+    settings: &Settings,
+    lines: &[SaleLineInput],
+    bill_discount: Option<&Discount>,
+    prices_include_tax: Option<bool>,
+    place_of_supply: Option<&str>,
+    branch_state: Option<&str>,
+    mut resolve: impl FnMut(usize, &SaleLineInput) -> AppResult<ResolvedLine>,
 ) -> AppResult<Priced> {
     if lines.is_empty() {
         return Err(AppError::field("lines", "Add at least one item."));
@@ -554,14 +586,7 @@ fn price(
     let mut resolved = Vec::with_capacity(lines.len());
     let mut inputs = Vec::with_capacity(lines.len());
     for (index, line) in lines.iter().enumerate() {
-        let mut r = resolve_line(
-            conn,
-            index,
-            &line.variant_id,
-            line.unit_id.as_deref(),
-            line.qty,
-            line.batch_id.as_deref(),
-        )?;
+        let mut r = resolve(index, line)?;
         if let Some(price) = line.unit_price {
             if price < 0 {
                 return Err(AppError::field(
@@ -729,6 +754,9 @@ pub struct InvoiceDetail {
     pub voided_at: Option<String>,
     pub void_reason: Option<String>,
     pub snapshot_source: String,
+    /// "online", or "offline" for a bill a counter made while the hub was unreachable.
+    #[serde(default = "online")]
+    pub origin: String,
     pub lines: Vec<InvoiceLine>,
     pub payments: Vec<PaymentSummary>,
     pub tax_summary: Vec<TaxSummaryRow>,
@@ -737,13 +765,47 @@ pub struct InvoiceDetail {
     pub warnings: Vec<StockWarning>,
 }
 
+fn online() -> String {
+    "online".into()
+}
+
+/// Taxable value and tax per rate, for the invoice footer and GST returns.
+pub(crate) fn tax_summary(lines: &[InvoiceLine]) -> Vec<TaxSummaryRow> {
+    let mut summary: Vec<TaxSummaryRow> = Vec::new();
+    for l in lines {
+        let row = match summary.iter_mut().find(|s| s.tax_rate == l.tax_rate) {
+            Some(row) => row,
+            None => {
+                summary.push(TaxSummaryRow {
+                    tax_rate: l.tax_rate,
+                    taxable: 0,
+                    cgst: 0,
+                    sgst: 0,
+                    igst: 0,
+                    cess: 0,
+                    other_tax: 0,
+                });
+                summary.last_mut().expect("just pushed")
+            }
+        };
+        row.taxable += l.taxable;
+        row.cgst += l.cgst;
+        row.sgst += l.sgst;
+        row.igst += l.igst;
+        row.cess += l.cess;
+        row.other_tax += l.other_tax;
+    }
+    summary.sort_by_key(|s| s.tax_rate);
+    summary
+}
+
 pub fn invoice_detail(conn: &Connection, id: &str) -> AppResult<InvoiceDetail> {
     let mut detail = conn
         .query_row(
             "SELECT i.id, i.doc_no, i.business_date, i.status, i.payment_status, i.party_id, i.customer_name, i.customer_phone, i.customer_gstin,
                     i.billing_address, i.place_of_supply, i.is_inter_state, i.prices_include_tax, i.gross, i.line_discount, i.bill_discount,
                     i.taxable, i.tax_total, i.round_off, i.total, i.amount_paid, i.balance_due, i.notes, u.name, i.finalized_at, i.voided_at,
-                    i.void_reason, i.snapshot_source
+                    i.void_reason, i.snapshot_source, i.origin
              FROM sales_invoices i LEFT JOIN users u ON u.id = i.created_by WHERE i.id = ?1 AND i.status <> 'draft'",
             [id],
             |r| {
@@ -776,6 +838,7 @@ pub fn invoice_detail(conn: &Connection, id: &str) -> AppResult<InvoiceDetail> {
                     voided_at: r.get(25)?,
                     void_reason: r.get(26)?,
                     snapshot_source: r.get(27)?,
+                    origin: r.get(28)?,
                     lines: Vec::new(),
                     payments: Vec::new(),
                     tax_summary: Vec::new(),
@@ -839,32 +902,7 @@ pub fn invoice_detail(conn: &Connection, id: &str) -> AppResult<InvoiceDetail> {
             })
         })?
         .collect::<Result<_, _>>()?;
-    let mut summary: Vec<TaxSummaryRow> = Vec::new();
-    for l in &detail.lines {
-        let row = match summary.iter_mut().find(|s| s.tax_rate == l.tax_rate) {
-            Some(row) => row,
-            None => {
-                summary.push(TaxSummaryRow {
-                    tax_rate: l.tax_rate,
-                    taxable: 0,
-                    cgst: 0,
-                    sgst: 0,
-                    igst: 0,
-                    cess: 0,
-                    other_tax: 0,
-                });
-                summary.last_mut().expect("just pushed")
-            }
-        };
-        row.taxable += l.taxable;
-        row.cgst += l.cgst;
-        row.sgst += l.sgst;
-        row.igst += l.igst;
-        row.cess += l.cess;
-        row.other_tax += l.other_tax;
-    }
-    summary.sort_by_key(|s| s.tax_rate);
-    detail.tax_summary = summary;
+    detail.tax_summary = tax_summary(&detail.lines);
     Ok(detail)
 }
 
@@ -1077,32 +1115,83 @@ pub fn preview(ctx: &Ctx<'_>, input: &PreviewInput) -> AppResult<Preview> {
 // ------------------------------------------------------------------ create invoice
 
 pub fn create_invoice(ctx: &mut Ctx<'_>, input: &SaleInput) -> AppResult<InvoiceDetail> {
-    create_invoice_inner(ctx, input, false)
+    create_invoice_inner(ctx, input, false, None)
 }
 
-fn create_invoice_inner(
+/// An invoice a client counter made while the hub was offline (services::sync applies it).
+pub(crate) struct OfflineOrigin {
+    /// Id the counter gave the invoice (so its receipt and later look-ups match).
+    pub invoice_id: String,
+    pub device_id: String,
+    /// The counter's clock when the bill was made, and that time corrected by the measured skew.
+    pub client_created_at: String,
+    pub corrected_at: chrono::DateTime<chrono::Utc>,
+    /// Number from a block leased to the device.
+    pub series_id: String,
+    pub period: String,
+    pub seq: i64,
+}
+
+/// Checks that an offline invoice number lies in a block leased to that device and formats it
+/// exactly as the counter did.
+fn leased_number(
+    conn: &Connection,
+    settings: &Settings,
+    origin: &OfflineOrigin,
+    business_date: &str,
+) -> AppResult<numbering::Assigned> {
+    let leased: i64 = conn.query_row(
+        "SELECT count(*) FROM number_series_leases
+         WHERE device_id = ?1 AND series_id = ?2 AND period = ?3 AND ?4 BETWEEN from_seq AND to_seq",
+        params![origin.device_id, origin.series_id, origin.period, origin.seq],
+        |r| r.get(0),
+    )?;
+    if leased == 0 {
+        return Err(AppError::validation(
+            "This offline invoice number was not leased to this counter.",
+        ));
+    }
+    let fy = settings.fy_label(business_date);
+    numbering::format_assigned(conn, &origin.series_id, &origin.period, &fy, origin.seq)
+}
+
+pub(crate) fn create_invoice_inner(
     ctx: &mut Ctx<'_>,
     input: &SaleInput,
     prices_preapproved: bool,
+    offline: Option<&OfflineOrigin>,
 ) -> AppResult<InvoiceDetail> {
     ctx.require("sales.create")?;
     idempotency::validate_key(&input.idempotency_key)?;
     let settings = settings::load(ctx.conn)?;
     let today = settings.business_date(ctx.now);
-    let business_date = match &input.business_date {
-        Some(d) => date("businessDate", d)?,
-        None => today.clone(),
-    };
-    if business_date > today {
-        return Err(AppError::field(
-            "businessDate",
-            "An invoice can't be dated in the future.",
-        ));
-    }
     let mut approved_by = None;
-    if business_date != today {
-        approved_by = ctx.approve("sales.backdate", "date a bill in the past")?;
-    }
+    let business_date = if let Some(origin) = offline {
+        // The bill's date is the counter's, corrected for its clock error. It was a real sale at
+        // that time, so no back-dating approval applies.
+        if origin.corrected_at > ctx.now + chrono::Duration::minutes(5) {
+            return Err(AppError::field(
+                "clientCreatedAt",
+                "An offline invoice can't be dated in the future.",
+            ));
+        }
+        settings.business_date(origin.corrected_at)
+    } else {
+        let business_date = match &input.business_date {
+            Some(d) => date("businessDate", d)?,
+            None => today.clone(),
+        };
+        if business_date > today {
+            return Err(AppError::field(
+                "businessDate",
+                "An invoice can't be dated in the future.",
+            ));
+        }
+        if business_date != today {
+            approved_by = ctx.approve("sales.backdate", "date a bill in the past")?;
+        }
+        business_date
+    };
     let (branch_id, warehouse_id, branch_state) =
         branch_of(ctx.conn, input.warehouse_id.as_deref())?;
     let party: Option<PartyRef> = input
@@ -1136,8 +1225,15 @@ fn create_invoice_inner(
             .with_details(json!({ "expected": expected, "actual": priced.result.total })));
         }
     }
-    approved_by = check_pricing_approvals(ctx.actor, ctx.approver, &priced, prices_preapproved)?
-        .or(approved_by);
+    // Offline prices come from the counter's cached catalogue (no overrides are possible
+    // offline); a price that changed on the hub meanwhile is reported, not refused.
+    approved_by = check_pricing_approvals(
+        ctx.actor,
+        ctx.approver,
+        &priced,
+        prices_preapproved || offline.is_some(),
+    )?
+    .or(approved_by);
 
     let payments = validate_payments(ctx.conn, &input.payments)?;
     let paid: i64 = payments.iter().map(|p| p.amount).sum();
@@ -1149,6 +1245,12 @@ fn create_invoice_inner(
         ));
     }
     let due = total - paid;
+    if due > 0 && offline.is_some() {
+        return Err(AppError::field(
+            "payments",
+            "Offline sales must be paid in full.",
+        ));
+    }
     if due > 0 {
         let Some(p) = &party else {
             return Err(AppError::field(
@@ -1165,7 +1267,12 @@ fn create_invoice_inner(
                 .or(approved_by);
         }
     }
-    if let Some(session) = &input.register_session_id {
+    // An offline sale happened while its till was open; the till may have closed since.
+    if let Some(session) = input
+        .register_session_id
+        .as_ref()
+        .filter(|_| offline.is_none())
+    {
         let open: i64 = ctx.conn.query_row(
             "SELECT count(*) FROM register_sessions WHERE id = ?1 AND status = 'open'",
             [session],
@@ -1204,15 +1311,18 @@ fn create_invoice_inner(
             input,
             &now,
             || {
-                let number = numbering::next(
-                    tx,
-                    &settings,
-                    &branch_id,
-                    "sales_invoice",
-                    &business_date,
-                    &now,
-                )?;
-                let id = new_id();
+                let number = match offline {
+                    Some(origin) => leased_number(tx, &settings, origin, &business_date)?,
+                    None => numbering::next(
+                        tx,
+                        &settings,
+                        &branch_id,
+                        "sales_invoice",
+                        &business_date,
+                        &now,
+                    )?,
+                };
+                let id = offline.map_or_else(new_id, |o| o.invoice_id.clone());
                 let r = &priced.result;
                 tx.execute(
                 "INSERT INTO sales_invoices (id, branch_id, warehouse_id, register_session_id, series_id, number_period, doc_seq, doc_no,
@@ -1230,6 +1340,17 @@ fn create_invoice_inner(
                     actor.user_id
                 ],
             )?;
+                if let Some(origin) = offline {
+                    tx.execute(
+                        "UPDATE sales_invoices SET origin = 'offline', device_id = ?1, client_created_at = ?2 WHERE id = ?3",
+                        params![origin.device_id, origin.client_created_at, id],
+                    )?;
+                } else if actor.device_id.is_some() {
+                    tx.execute(
+                        "UPDATE sales_invoices SET device_id = ?1 WHERE id = ?2",
+                        params![actor.device_id, id],
+                    )?;
+                }
                 let mut warnings = Vec::new();
                 let mut cogs = 0;
                 for (index, (line, lr)) in priced.lines.iter().zip(&r.lines).enumerate() {
@@ -1248,10 +1369,33 @@ fn create_invoice_inner(
                         cols.other, cols.cess, lr.tax, lr.total, line.cost, now
                     ],
                 )?;
-                    if !line.is_service {
-                        warnings.extend(stock_posting::post(
+                    if let Some(origin) = offline.filter(|_| line.unit_price != line.catalog_price)
+                    {
+                        super::sync::record_exception(
                             tx,
-                            settings.inventory.negative_stock_policy,
+                            &super::sync::Exception {
+                                kind: "offline_price_changed",
+                                device_id: &origin.device_id,
+                                source: ("sales_invoice", &id),
+                                variant_id: Some(&line.variant_id),
+                                warehouse_id: Some(&warehouse_id),
+                                amount: line.unit_price - line.catalog_price,
+                                details: json!({ "docNo": number.doc_no, "soldAt": line.unit_price, "catalogue": line.catalog_price }),
+                            },
+                            &now,
+                        )?;
+                    }
+                    if !line.is_service {
+                        // A sale made offline already happened: it is posted even if stock goes
+                        // below zero, and the shortfall is reported for a manager.
+                        let policy = if offline.is_some() {
+                            settings::NegativeStockPolicy::Warn
+                        } else {
+                            settings.inventory.negative_stock_policy
+                        };
+                        let warning = stock_posting::post(
+                            tx,
+                            policy,
                             &business_date,
                             &now,
                             Some(&actor.user_id),
@@ -1269,7 +1413,23 @@ fn create_invoice_inner(
                                 note: None,
                                 update_average_cost: false,
                             },
-                        )?);
+                        )?;
+                        if let (Some(origin), Some(w)) = (offline, &warning) {
+                            super::sync::record_exception(
+                                tx,
+                                &super::sync::Exception {
+                                    kind: "offline_oversell",
+                                    device_id: &origin.device_id,
+                                    source: ("sales_invoice", &id),
+                                    variant_id: Some(&line.variant_id),
+                                    warehouse_id: Some(&warehouse_id),
+                                    amount: w.requested - w.available.max(0),
+                                    details: json!({ "docNo": number.doc_no, "available": w.available, "requested": w.requested }),
+                                },
+                                &now,
+                            )?;
+                        }
+                        warnings.extend(warning);
                         cogs +=
                             money::multiply_by_qty(line.cost, line.base_qty, RoundingMode::HalfUp);
                     }
@@ -2297,7 +2457,7 @@ pub fn convert_sales_doc(ctx: &mut Ctx<'_>, input: &ConvertInput) -> AppResult<I
         register_session_id: input.register_session_id.clone(),
     };
     // The quoted prices were approved when the quotation was saved.
-    create_invoice_inner(ctx, &sale, true)
+    create_invoice_inner(ctx, &sale, true, None)
 }
 
 #[derive(Debug, Clone, Default, Deserialize, JsonSchema)]

@@ -7,11 +7,18 @@
 //! Every command takes the same arguments: `{ token, input, approval? }` (public ones ignore the
 //! token). The list below is also the API contract: `contract::schema()` turns it into the JSON
 //! schema that generates the TypeScript types (packages/shared/src/generated/api.ts).
+//!
+//! The same list serves three doors: Tauri IPC on this PC, `dispatch` for counters calling the
+//! hub over the LAN (crate::hub), and — in client mode — the counter's proxy (crate::client),
+//! which forwards IPC calls to the hub and answers a few of them offline.
 
 pub mod contract;
+pub mod local;
 
 use std::time::Instant;
 
+use serde::de::DeserializeOwned;
+use serde_json::Value;
 use tauri::State;
 
 use crate::app::{AppState, Conn};
@@ -50,21 +57,41 @@ async fn public<T: Send + 'static>(
     .await
 }
 
+/// Who is calling: this PC's own window, or a paired device over the LAN.
+#[derive(Debug, Clone)]
+pub enum Caller {
+    Local,
+    Device(String),
+}
+
 /// Commands that run as the signed-in user. `allow_pending_password` lets a user whose password
-/// must be changed reach only the commands needed to change it.
+/// must be changed reach only the commands needed to change it. A session works only where it was
+/// created: sessions of LAN devices are refused locally and on every other device.
 async fn authed<T: Send + 'static>(
     state: &AppState,
     name: &'static str,
+    caller: Caller,
     token: String,
     approval: Option<ApprovalInput>,
     allow_pending_password: bool,
-    f: impl FnOnce(&mut Ctx<'_>) -> AppResult<T> + Send + 'static,
+    f: impl FnOnce(&AppState, &mut Ctx<'_>) -> AppResult<T> + Send + 'static,
 ) -> AppResult<T> {
     let state = state.clone();
     run(name, move || {
         let mut conn = state.conn()?;
         let now = state.now();
-        let session = auth::authenticate(&conn, &token, now)?;
+        let session = match &caller {
+            Caller::Local => {
+                let session = auth::authenticate(&conn, &token, now)?;
+                if session.actor.device_id.is_some() {
+                    return Err(AppError::unauthorized());
+                }
+                session
+            }
+            Caller::Device(device_id) => {
+                auth::authenticate_on_device(&conn, &token, now, device_id)?
+            }
+        };
         if session.must_change_password && !allow_pending_password {
             return Err(AppError::new(
                 ErrorCode::PasswordChangeRequired,
@@ -80,17 +107,37 @@ async fn authed<T: Send + 'static>(
             approver: approver.as_ref(),
             now,
         };
-        f(&mut ctx)
+        f(&state, &mut ctx)
     })
     .await
 }
 
+/// Commands that only make sense on the hub PC itself (they touch its files or create the
+/// business); a LAN device gets FORBIDDEN.
+pub const LOCAL_ONLY: &[&str] = &[
+    "setup_create_business",
+    "backup_restore",
+    "backup_set_passphrase",
+    "backup_verify",
+];
+
+fn decode<T: DeserializeOwned>(input: Value) -> AppResult<T> {
+    // A missing input is the same as `{}` (commands without input).
+    let input = if input.is_null() {
+        Value::Object(serde_json::Map::new())
+    } else {
+        input
+    };
+    serde_json::from_value(input).map_err(|e| AppError::validation(format!("Invalid input: {e}")))
+}
+
 /// Declares commands once: generates the `#[tauri::command]` functions, the list of names, the
-/// invoke handler and the contract entries.
+/// invoke handler, the LAN dispatcher and the contract entries.
 macro_rules! commands {
     (
         $( public $pname:ident ( $pin:ty ) -> $pout:ty = $pcall:expr ; )*
         $( authed $aname:ident ( $ain:ty ) -> $aout:ty = $acall:expr ; )*
+        $( stateful $sname:ident ( $sin:ty ) -> $sout:ty = $scall:expr ; )*
     ) => {
         $(
             #[tauri::command]
@@ -101,15 +148,71 @@ macro_rules! commands {
         $(
             #[tauri::command]
             pub async fn $aname(state: State<'_, AppState>, token: String, input: $ain, approval: Option<ApprovalInput>) -> AppResult<$aout> {
-                authed(&state, stringify!($aname), token, approval, false, move |ctx| ($acall)(ctx, &input)).await
+                authed(&state, stringify!($aname), Caller::Local, token, approval, false, move |_, ctx| ($acall)(ctx, &input)).await
+            }
+        )*
+        $(
+            #[tauri::command]
+            pub async fn $sname(state: State<'_, AppState>, token: String, input: $sin, approval: Option<ApprovalInput>) -> AppResult<$sout> {
+                authed(&state, stringify!($sname), Caller::Local, token, approval, false, move |state, ctx| ($scall)(state, ctx, &input)).await
             }
         )*
 
         /// Every v2 command name (used to route invokes between v1 and v2 handlers).
-        pub const NAMES: &[&str] = &[ $( stringify!($pname), )* $( stringify!($aname), )* "auth_logout", "auth_me", "auth_change_password" ];
+        pub const NAMES: &[&str] = &[ $( stringify!($pname), )* $( stringify!($aname), )* $( stringify!($sname), )* "auth_logout", "auth_me", "auth_change_password" ];
 
         pub fn handler<R: tauri::Runtime>() -> impl Fn(tauri::ipc::Invoke<R>) -> bool + Send + Sync + 'static {
-            tauri::generate_handler![ $( $pname, )* $( $aname, )* auth_logout, auth_me, auth_change_password ]
+            tauri::generate_handler![ $( $pname, )* $( $aname, )* $( $sname, )* auth_logout, auth_me, auth_change_password ]
+        }
+
+        /// A command sent by a paired device over the LAN (crate::hub). Same commands, same
+        /// checks; the session must belong to that device.
+        pub async fn dispatch(
+            state: &AppState,
+            device_id: &str,
+            name: &str,
+            token: String,
+            input: Value,
+            approval: Option<ApprovalInput>,
+        ) -> AppResult<Value> {
+            if LOCAL_ONLY.contains(&name) {
+                return Err(AppError::new(ErrorCode::Forbidden, "This can only be done on the hub PC itself."));
+            }
+            let caller = Caller::Device(device_id.to_string());
+            let value = match name {
+                $(
+                    stringify!($pname) => {
+                        let input: $pin = decode(input)?;
+                        serde_json::to_value(public(state, stringify!($pname), move |state, conn| ($pcall)(state, conn, &input)).await?)?
+                    }
+                )*
+                $(
+                    stringify!($aname) => {
+                        let input: $ain = decode(input)?;
+                        serde_json::to_value(authed(state, stringify!($aname), caller, token, approval, false, move |_, ctx| ($acall)(ctx, &input)).await?)?
+                    }
+                )*
+                $(
+                    stringify!($sname) => {
+                        let input: $sin = decode(input)?;
+                        serde_json::to_value(authed(state, stringify!($sname), caller, token, approval, false, move |state, ctx| ($scall)(state, ctx, &input)).await?)?
+                    }
+                )*
+                "auth_logout" => serde_json::to_value(logout(state, token).await?)?,
+                "auth_me" => serde_json::to_value(me(state, caller, token).await?)?,
+                "auth_change_password" => {
+                    let input: auth::ChangePasswordInput = decode(input)?;
+                    serde_json::to_value(change_password(state, caller, token, input).await?)?
+                }
+                _ => return Err(AppError::not_found("That command")),
+            };
+            // A session started over the LAN belongs to the device that started it.
+            if matches!(name, "auth_login" | "auth_pin_login") {
+                if let Some(session_token) = value.get("token").and_then(Value::as_str) {
+                    auth::bind_session_to_device(&*state.conn()?, session_token, device_id)?;
+                }
+            }
+            Ok(value)
         }
 
         /// (name, needs a session, input schema, output schema) for the contract.
@@ -117,6 +220,7 @@ macro_rules! commands {
             let mut specs = vec![
                 $( contract::Spec::new::<$pin, $pout>(gen, stringify!($pname), false), )*
                 $( contract::Spec::new::<$ain, $aout>(gen, stringify!($aname), true), )*
+                $( contract::Spec::new::<$sin, $sout>(gen, stringify!($sname), true), )*
             ];
             specs.push(contract::Spec::new::<NoInput, ()>(gen, "auth_logout", true));
             specs.push(contract::Spec::new::<NoInput, auth::SessionUser>(gen, "auth_me", true));
@@ -127,8 +231,8 @@ macro_rules! commands {
 }
 
 use crate::services::{
-    catalog, common::Page, expenses, parties, payments, purchases, sales, settings, setup, stock,
-    users,
+    backup, catalog, common::Page, devices, expenses, notifications, parties, payments, purchases,
+    sales, settings, setup, stock, sync, users,
 };
 
 fn legacy_database_found(state: &AppState) -> bool {
@@ -237,26 +341,73 @@ commands! {
     authed expenses_create(expenses::ExpenseInput) -> expenses::ExpenseDetail = expenses::create;
     authed expenses_void(expenses::VoidExpenseInput) -> expenses::ExpenseDetail = expenses::void;
     authed expenses_list(expenses::ExpenseListQuery) -> Page<expenses::ExpenseDetail> = |ctx: &mut Ctx<'_>, q: &expenses::ExpenseListQuery| expenses::list(ctx, q);
+
+    authed devices_pairing_code(NoInput) -> devices::PairingCode = |ctx: &mut Ctx<'_>, _: &NoInput| devices::create_pairing_code(ctx);
+    authed devices_list(NoInput) -> Vec<devices::DeviceSummary> = |ctx: &mut Ctx<'_>, _: &NoInput| devices::list(ctx);
+    authed devices_revoke(users::IdInput) -> () = devices::revoke;
+    authed sync_exceptions(sync::ExceptionQuery) -> Page<sync::SyncException> = |ctx: &mut Ctx<'_>, q: &sync::ExceptionQuery| sync::list_exceptions(ctx, q);
+    authed sync_resolve_exception(sync::ResolveExceptionInput) -> () = sync::resolve_exception;
+    authed notifications_list(notifications::NotificationQuery) -> Vec<notifications::Notification> = |ctx: &mut Ctx<'_>, q: &notifications::NotificationQuery| notifications::list(ctx, q);
+    authed notifications_mark_read(users::IdInput) -> () = notifications::mark_read;
+
+    stateful hub_status(NoInput) -> crate::node::HubInfo = |state: &AppState, ctx: &mut Ctx<'_>, _: &NoInput| {
+        ctx.require("devices.manage")?;
+        Ok(state.hub.read().map_err(AppError::internal_lock)?.clone())
+    };
+    stateful backup_status(NoInput) -> backup::BackupStatus = |state: &AppState, ctx: &mut Ctx<'_>, _: &NoInput| backup::status(state, ctx);
+    stateful backup_now(NoInput) -> backup::BackupRun = |state: &AppState, ctx: &mut Ctx<'_>, _: &NoInput| {
+        ctx.require("backup.manage")?;
+        backup::create(state, "manual", Some(&ctx.actor.user_id))
+    };
+    stateful backup_verify(backup::RestoreInput) -> backup::VerifiedBackup = |state: &AppState, ctx: &mut Ctx<'_>, input: &backup::RestoreInput| backup::verify(state, ctx, input);
+    stateful backup_restore(backup::RestoreInput) -> backup::RestoreResult = backup::restore;
+    stateful backup_set_passphrase(backup::SetPassphraseInput) -> () = backup::set_passphrase;
 }
 
 // Commands with special session handling.
 
-/// Ends the session. Always succeeds, even for an expired token.
-#[tauri::command]
-pub async fn auth_logout(state: State<'_, AppState>, token: String) -> AppResult<()> {
-    public(&state, "auth_logout", move |state, conn| {
+async fn logout(state: &AppState, token: String) -> AppResult<()> {
+    public(state, "auth_logout", move |state, conn| {
         auth::logout(conn, &token, state.now())
     })
     .await
 }
 
-/// The signed-in user (reachable while a password change is pending).
-#[tauri::command]
-pub async fn auth_me(state: State<'_, AppState>, token: String) -> AppResult<auth::SessionUser> {
-    authed(&state, "auth_me", token, None, true, |ctx| {
+async fn me(state: &AppState, caller: Caller, token: String) -> AppResult<auth::SessionUser> {
+    authed(state, "auth_me", caller, token, None, true, |_, ctx| {
         auth::session_user(ctx.conn, &ctx.actor.user_id)
     })
     .await
+}
+
+async fn change_password(
+    state: &AppState,
+    caller: Caller,
+    token: String,
+    input: auth::ChangePasswordInput,
+) -> AppResult<()> {
+    authed(
+        state,
+        "auth_change_password",
+        caller,
+        token,
+        None,
+        true,
+        move |_, ctx| auth::change_password(ctx.conn, ctx.actor, ctx.now, &input),
+    )
+    .await
+}
+
+/// Ends the session. Always succeeds, even for an expired token.
+#[tauri::command]
+pub async fn auth_logout(state: State<'_, AppState>, token: String) -> AppResult<()> {
+    logout(&state, token).await
+}
+
+/// The signed-in user (reachable while a password change is pending).
+#[tauri::command]
+pub async fn auth_me(state: State<'_, AppState>, token: String) -> AppResult<auth::SessionUser> {
+    me(&state, Caller::Local, token).await
 }
 
 #[tauri::command]
@@ -265,13 +416,5 @@ pub async fn auth_change_password(
     token: String,
     input: auth::ChangePasswordInput,
 ) -> AppResult<()> {
-    authed(
-        &state,
-        "auth_change_password",
-        token,
-        None,
-        true,
-        move |ctx| auth::change_password(ctx.conn, ctx.actor, ctx.now, &input),
-    )
-    .await
+    change_password(&state, Caller::Local, token, input).await
 }

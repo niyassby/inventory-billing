@@ -17,6 +17,9 @@ const schema = JSON.parse(readFileSync(schemaPath, "utf8")) as JSONSchema4;
 const items = schema.properties?.publicCommands?.items;
 const publicCommands = items && !Array.isArray(items) ? items.enum : undefined;
 if (!Array.isArray(publicCommands)) throw new Error("api-schema.json: publicCommands missing");
+const localItems = schema.properties?.localCommands?.items;
+const localCommands = localItems && !Array.isArray(localItems) ? localItems.enum : undefined;
+if (!Array.isArray(localCommands)) throw new Error("api-schema.json: localCommands missing");
 
 const types = await compile(schema, "ApiContract", {
   bannerComment: "",
@@ -37,6 +40,9 @@ export type Approval = ApiContract["approval"];
 
 /** Commands that work without a session (setup and sign-in). */
 export const PUBLIC_COMMANDS = ${JSON.stringify(publicCommands)} as const satisfies readonly CommandName[];
+
+/** Commands about this PC itself; never forwarded to the hub. */
+export const LOCAL_COMMANDS = ${JSON.stringify(localCommands)} as const satisfies readonly CommandName[];
 `;
 
 if (process.argv.includes("--check")) {

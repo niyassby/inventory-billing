@@ -1306,3 +1306,55 @@ pub fn search(ctx: &Ctx<'_>, query: &SearchQuery) -> AppResult<Vec<SearchItem>> 
     results.truncate(usize::try_from(limit).unwrap_or(20));
     Ok(results)
 }
+
+/// Everything a counter needs to bill while the hub is offline: one entry per sellable variant
+/// in its base unit, plus one per product pack size (with the pack price and pack barcode).
+pub(crate) fn offline_catalogue(
+    conn: &Connection,
+    warehouse_id: &str,
+) -> AppResult<Vec<SearchItem>> {
+    let mut items = conn
+        .prepare(&format!("{SEARCH_SELECT} ORDER BY lower(p.name), v.sku"))?
+        .query_map([warehouse_id], map_search)?
+        .collect::<Result<Vec<_>, _>>()?;
+    let packs = conn
+        .prepare(
+            "SELECT v.id, c.from_unit_id, u.code, c.factor_num, c.factor_den, c.barcode FROM unit_conversions c
+             JOIN product_variants v ON v.product_id = c.product_id AND v.deleted_at IS NULL
+             JOIN units u ON u.id = c.from_unit_id
+             WHERE c.product_id IS NOT NULL AND c.deleted_at IS NULL ORDER BY c.created_at",
+        )?
+        .query_map([], |r| {
+            Ok((
+                r.get::<_, String>(0)?,
+                r.get::<_, String>(1)?,
+                r.get::<_, String>(2)?,
+                r.get::<_, i64>(3)?,
+                r.get::<_, i64>(4)?,
+                r.get::<_, Option<String>>(5)?,
+            ))
+        })?
+        .collect::<Result<Vec<_>, _>>()?;
+    let mut pack_items = Vec::with_capacity(packs.len());
+    for (variant_id, unit_id, unit_code, num, den, barcode) in packs {
+        let Some(base) = items.iter().find(|i| i.variant_id == variant_id) else {
+            continue;
+        };
+        let mut item = base.clone();
+        item.unit_id = unit_id;
+        item.unit_code = unit_code;
+        item.factor_num = num;
+        item.factor_den = den;
+        item.barcode = barcode;
+        item.sale_price = i64::try_from(money::div_round(
+            i128::from(item.sale_price) * i128::from(num),
+            i128::from(den),
+            RoundingMode::HalfUp,
+        ))
+        .map_err(AppError::internal)?;
+        item.mrp = item.mrp.map(|m| m * num / den);
+        pack_items.push(item);
+    }
+    items.extend(pack_items);
+    Ok(items)
+}

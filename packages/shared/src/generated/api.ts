@@ -3,22 +3,14 @@
 
 /**
  * This interface was referenced by `ApiContract`'s JSON-Schema
- * via the `definition` "Discount".
+ * via the `definition` "Link".
  */
-export type Discount =
-  | {
-      amount: number;
-      kind: "amount";
-    }
-  | {
-      kind: "percent";
-      rate: number;
-    };
+export type Link = ("connected" | "hub_offline") | "degraded" | "syncing";
 /**
  * This interface was referenced by `ApiContract`'s JSON-Schema
- * via the `definition` "TaxRegime".
+ * via the `definition` "DeviceMode".
  */
-export type TaxRegime = "gst" | "vat" | "none";
+export type DeviceMode = "standalone" | "hub" | "client";
 /**
  * This interface was referenced by `ApiContract`'s JSON-Schema
  * via the `definition` "ErrorCode".
@@ -41,9 +33,34 @@ export type ErrorCode =
   | "INTERNAL";
 /**
  * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "Discount".
+ */
+export type Discount =
+  | {
+      amount: number;
+      kind: "amount";
+    }
+  | {
+      kind: "percent";
+      rate: number;
+    };
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "TaxRegime".
+ */
+export type TaxRegime = "gst" | "vat" | "none";
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
  * via the `definition` "NegativeStockPolicy".
  */
 export type NegativeStockPolicy = "allow" | "block" | "warn";
+/**
+ * What a client counter may do while the hub can't be reached (docs/ARCHITECTURE.md §6).
+ *
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "OfflineSalesPolicy".
+ */
+export type OfflineSalesPolicy = "block" | "allow_reserved_numbers" | "allow_restricted";
 /**
  * This interface was referenced by `ApiContract`'s JSON-Schema
  * via the `definition` "Rounding".
@@ -80,6 +97,26 @@ export interface ApiContract {
       input: SetPinInput;
       output: null;
     };
+    backup_now: {
+      input: NoInput;
+      output: BackupRun;
+    };
+    backup_restore: {
+      input: RestoreInput;
+      output: RestoreResult;
+    };
+    backup_set_passphrase: {
+      input: SetPassphraseInput;
+      output: null;
+    };
+    backup_status: {
+      input: NoInput;
+      output: BackupStatus;
+    };
+    backup_verify: {
+      input: RestoreInput;
+      output: VerifiedBackup;
+    };
     brands_list: {
       input: NoInput;
       output: Brand[];
@@ -100,6 +137,50 @@ export interface ApiContract {
       input: CategoryInput;
       output: IdOut;
     };
+    client_cached_customers: {
+      input: CustomerSearch;
+      output: CachedCustomer[];
+    };
+    client_sync_now: {
+      input: NoInput;
+      output: ClientStatus;
+    };
+    device_discover_hubs: {
+      input: NoInput;
+      output: FoundHub[];
+    };
+    device_pair: {
+      input: PairDeviceInput;
+      output: DeviceStatus;
+    };
+    device_probe_hub: {
+      input: ProbeInput;
+      output: ProbeResult;
+    };
+    device_restart: {
+      input: NoInput;
+      output: null;
+    };
+    device_set_mode: {
+      input: SetModeInput;
+      output: DeviceStatus;
+    };
+    device_status: {
+      input: NoInput;
+      output: DeviceStatus;
+    };
+    devices_list: {
+      input: NoInput;
+      output: DeviceSummary[];
+    };
+    devices_pairing_code: {
+      input: NoInput;
+      output: PairingCode;
+    };
+    devices_revoke: {
+      input: IdInput;
+      output: null;
+    };
     expenses_categories: {
       input: NoInput;
       output: ExpenseCategory[];
@@ -119,6 +200,30 @@ export interface ApiContract {
     expenses_void: {
       input: VoidExpenseInput;
       output: ExpenseDetail;
+    };
+    hub_status: {
+      input: NoInput;
+      output: HubInfo;
+    };
+    notifications_list: {
+      input: NotificationQuery;
+      output: Notification[];
+    };
+    notifications_mark_read: {
+      input: IdInput;
+      output: null;
+    };
+    outbox_discard: {
+      input: IdInput;
+      output: ClientStatus;
+    };
+    outbox_list: {
+      input: OutboxQuery;
+      output: OutboxEntry[];
+    };
+    outbox_retry: {
+      input: OutboxRetryInput;
+      output: ClientStatus;
     };
     parties_delete: {
       input: IdInput;
@@ -368,6 +473,14 @@ export interface ApiContract {
       input: NoInput;
       output: Warehouse[];
     };
+    sync_exceptions: {
+      input: ExceptionQuery;
+      output: PageFor_SyncException;
+    };
+    sync_resolve_exception: {
+      input: ResolveExceptionInput;
+      output: null;
+    };
     tax_rates_list: {
       input: NoInput;
       output: TaxRate[];
@@ -406,7 +519,32 @@ export interface ApiContract {
     };
   };
   error: AppError;
-  publicCommands: ("auth_login" | "auth_pin_login" | "setup_create_business" | "setup_status")[];
+  localCommands: (
+    | "device_status"
+    | "device_discover_hubs"
+    | "device_probe_hub"
+    | "device_pair"
+    | "device_set_mode"
+    | "device_restart"
+    | "client_sync_now"
+    | "outbox_list"
+    | "outbox_retry"
+    | "outbox_discard"
+    | "client_cached_customers"
+  )[];
+  publicCommands: (
+    | "auth_login"
+    | "auth_pin_login"
+    | "client_sync_now"
+    | "device_discover_hubs"
+    | "device_pair"
+    | "device_probe_hub"
+    | "device_restart"
+    | "device_set_mode"
+    | "device_status"
+    | "setup_create_business"
+    | "setup_status"
+  )[];
 }
 /**
  * A manager's credentials typed on the cashier's screen to approve one action.
@@ -487,6 +625,145 @@ export interface SetPinInput {
 }
 /**
  * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "BackupRun".
+ */
+export interface BackupRun {
+  encrypted: boolean;
+  error?: string | null;
+  /**
+   * The file is still in the backup folder.
+   */
+  fileExists: boolean;
+  fileName?: string | null;
+  finishedAt: string;
+  id: string;
+  kind: string;
+  mirrored: boolean;
+  schemaVersion?: number | null;
+  sha256?: string | null;
+  sizeBytes?: number | null;
+  startedAt: string;
+  status: string;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "RestoreInput".
+ */
+export interface RestoreInput {
+  /**
+   * Needed for encrypted backups made with a different passphrase than the current one.
+   */
+  passphrase?: string | null;
+  /**
+   * Full path of a .invbak file.
+   */
+  path: string;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "RestoreResult".
+ */
+export interface RestoreResult {
+  restored: VerifiedBackup;
+  safetyBackup: BackupRun1;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "VerifiedBackup".
+ */
+export interface VerifiedBackup {
+  header: BackupHeader;
+  invoices: number;
+  lastInvoiceDate?: string | null;
+  products: number;
+  users: number;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "BackupHeader".
+ */
+export interface BackupHeader {
+  appVersion: string;
+  createdAt: string;
+  dbBytes: number;
+  encrypted: boolean;
+  format: number;
+  kdfSalt?: string | null;
+  kind: string;
+  nonce?: string | null;
+  schemaVersion: number;
+  /**
+   * SHA-256 of the database file inside.
+   */
+  sha256: string;
+}
+/**
+ * Backup of the database as it was just before the restore.
+ */
+export interface BackupRun1 {
+  encrypted: boolean;
+  error?: string | null;
+  /**
+   * The file is still in the backup folder.
+   */
+  fileExists: boolean;
+  fileName?: string | null;
+  finishedAt: string;
+  id: string;
+  kind: string;
+  mirrored: boolean;
+  schemaVersion?: number | null;
+  sha256?: string | null;
+  sizeBytes?: number | null;
+  startedAt: string;
+  status: string;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "SetPassphraseInput".
+ */
+export interface SetPassphraseInput {
+  passphrase: string;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "BackupStatus".
+ */
+export interface BackupStatus {
+  directory: string;
+  encrypted: boolean;
+  lastSuccess?: BackupRun | null;
+  runs: BackupRun[];
+  settings: BackupSettings;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "BackupSettings".
+ */
+export interface BackupSettings {
+  /**
+   * Daily backup time, business timezone ("HH:MM").
+   */
+  dailyAt?: string;
+  /**
+   * Backup folder; default: "backups" next to the database.
+   */
+  directory?: string | null;
+  enabled?: boolean;
+  /**
+   * Extra backups every N hours while the app runs (0 = daily only).
+   */
+  intervalHours?: number;
+  keepDaily?: number;
+  keepMonthly?: number;
+  keepWeekly?: number;
+  /**
+   * Optional second copy (USB drive, NAS share).
+   */
+  mirrorDirectory?: string | null;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
  * via the `definition` "Brand".
  */
 export interface Brand {
@@ -538,6 +815,198 @@ export interface CategoryInput {
   id?: string | null;
   name: string;
   parentId?: string | null;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "CustomerSearch".
+ */
+export interface CustomerSearch {
+  term?: string;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "CachedCustomer".
+ */
+export interface CachedCustomer {
+  gstin?: string | null;
+  id: string;
+  name: string;
+  phone?: string | null;
+  stateCode?: string | null;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "ClientStatus".
+ */
+export interface ClientStatus {
+  businessName: string;
+  catalogueAt?: string | null;
+  clockSkewSeconds?: number | null;
+  hubUrl: string;
+  lastContactAt?: string | null;
+  lastError?: string | null;
+  link: Link;
+  offlineNumbersLeft: number;
+  /**
+   * Offline sales waiting to be sent.
+   */
+  pending: number;
+  /**
+   * Offline sales the hub refused (a manager must retry or discard them).
+   */
+  rejected: number;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "FoundHub".
+ */
+export interface FoundHub {
+  fingerprintShort?: string | null;
+  name: string;
+  urls: string[];
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "PairDeviceInput".
+ */
+export interface PairDeviceInput {
+  code: string;
+  deviceName: string;
+  /**
+   * The fingerprint from `device_probe_hub` that the person confirmed.
+   */
+  fingerprint: string;
+  url: string;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "DeviceStatus".
+ */
+export interface DeviceStatus {
+  /**
+   * Client mode: the connection to the hub.
+   */
+  client?: ClientStatus | null;
+  deviceName: string;
+  /**
+   * Hub mode: the LAN server.
+   */
+  hub?: HubInfo | null;
+  hubLink?: HubLink | null;
+  mode: DeviceMode;
+  /**
+   * The saved mode differs from the running one: restart the app.
+   */
+  restartRequired: boolean;
+  runningMode: DeviceMode;
+}
+/**
+ * What the hub tells its own window about the LAN server.
+ *
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "HubInfo".
+ */
+export interface HubInfo {
+  error?: string | null;
+  /**
+   * Full certificate fingerprint; counters show the short form when pairing.
+   */
+  fingerprint: string;
+  fingerprintShort: string;
+  port: number;
+  running: boolean;
+  /**
+   * Addresses counters can use ("https://192.168.1.20:47900").
+   */
+  urls: string[];
+}
+/**
+ * The hub a client counter is paired with.
+ *
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "HubLink".
+ */
+export interface HubLink {
+  businessName: string;
+  deviceId: string;
+  /**
+   * SHA-256 of the hub's certificate, pinned at pairing.
+   */
+  fingerprint: string;
+  pairedAt: string;
+  shortCode: string;
+  /**
+   * For example "https://192.168.1.20:47900".
+   */
+  url: string;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "ProbeInput".
+ */
+export interface ProbeInput {
+  /**
+   * "192.168.1.20", "192.168.1.20:47900" or a full https URL.
+   */
+  url: string;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "ProbeResult".
+ */
+export interface ProbeResult {
+  appVersion: string;
+  businessName: string;
+  fingerprint: string;
+  /**
+   * Compare with the code shown on the hub's screen before pairing.
+   */
+  fingerprintShort: string;
+  url: string;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "SetModeInput".
+ */
+export interface SetModeInput {
+  deviceName?: string | null;
+  /**
+   * "standalone" or "hub" (a counter is set up by pairing).
+   */
+  mode: "standalone" | "hub" | "client";
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "DeviceSummary".
+ */
+export interface DeviceSummary {
+  appVersion?: string | null;
+  id: string;
+  lastSeenAt?: string | null;
+  mode: string;
+  name: string;
+  /**
+   * Offline sales waiting for review (oversells, changed prices).
+   */
+  openExceptions: number;
+  pairedAt?: string | null;
+  revokedAt?: string | null;
+  shortCode?: string | null;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "PairingCode".
+ */
+export interface PairingCode {
+  code: string;
+  expiresAt: string;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "IdInput".
+ */
+export interface IdInput {
+  id: string;
 }
 /**
  * This interface was referenced by `ApiContract`'s JSON-Schema
@@ -663,9 +1132,68 @@ export interface VoidExpenseInput {
 }
 /**
  * This interface was referenced by `ApiContract`'s JSON-Schema
- * via the `definition` "IdInput".
+ * via the `definition` "NotificationQuery".
  */
-export interface IdInput {
+export interface NotificationQuery {
+  includeRead?: boolean;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "Notification".
+ */
+export interface Notification {
+  body?: string | null;
+  createdAt: string;
+  entityId?: string | null;
+  entityType?: string | null;
+  id: string;
+  kind: string;
+  readAt?: string | null;
+  /**
+   * "info", "warning" or "error".
+   */
+  severity: string;
+  title: string;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "OutboxQuery".
+ */
+export interface OutboxQuery {
+  includeDone?: boolean;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "OutboxEntry".
+ */
+export interface OutboxEntry {
+  attempts: number;
+  clientCreatedAt: string;
+  command: string;
+  deviceSeq: number;
+  docNo?: string | null;
+  id: string;
+  lastError?: AppError | null;
+  /**
+   * "pending", "done", "rejected" or "discarded".
+   */
+  status: string;
+  total: number;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "AppError".
+ */
+export interface AppError {
+  code: ErrorCode;
+  details?: unknown;
+  message: string;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "OutboxRetryInput".
+ */
+export interface OutboxRetryInput {
   id: string;
 }
 /**
@@ -1545,6 +2073,10 @@ export interface InvoiceDetail {
   lineDiscount: number;
   lines: InvoiceLine[];
   notes?: string | null;
+  /**
+   * "online", or "offline" for a bill a counter made while the hub was unreachable.
+   */
+  origin?: string;
   partyId?: string | null;
   paymentStatus: string;
   payments: PaymentSummary[];
@@ -1934,9 +2466,11 @@ export interface VoidInput {
  * via the `definition` "Settings".
  */
 export interface Settings {
+  backup: BackupSettings;
   business: BusinessSettings;
   inventory: InventorySettings;
   invoice: InvoiceSettings;
+  network: NetworkSettings;
   security: SecuritySettings;
   tax: TaxSettings;
 }
@@ -1993,6 +2527,40 @@ export interface InvoiceSettings {
 }
 /**
  * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "NetworkSettings".
+ */
+export interface NetworkSettings {
+  /**
+   * Extra subnets allowed to reach the hub (CIDR). Private ranges are always allowed.
+   */
+  allowedSubnets?: string[];
+  /**
+   * How often counters refresh their offline catalogue.
+   */
+  catalogRefreshMinutes?: number;
+  /**
+   * Invoice numbers leased to a counter at a time.
+   */
+  leaseSize?: number;
+  /**
+   * An offline invoice whose counter clock differs from the hub's by more than this is held for review instead of being posted.
+   */
+  maxClockSkewHours?: number;
+  /**
+   * What a client counter may do while the hub can't be reached (docs/ARCHITECTURE.md §6).
+   */
+  offlineSalesPolicy?: "block" | "allow_reserved_numbers" | "allow_restricted";
+  /**
+   * TCP port of the hub's HTTPS API.
+   */
+  port?: number;
+  /**
+   * Under `allow_restricted`: items with cached stock at or below this (thousandths) can't be sold offline.
+   */
+  restrictedMinStock?: number;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
  * via the `definition` "SecuritySettings".
  */
 export interface SecuritySettings {
@@ -2025,7 +2593,7 @@ export interface TaxSettings {
  */
 export interface UpdateSettingsInput {
   /**
-   * "business", "tax", "inventory", "security" or "invoice".
+   * "business", "tax", "inventory", "security", "invoice", "network" or "backup".
    */
   section: string;
   /**
@@ -2265,6 +2833,54 @@ export interface Warehouse {
 }
 /**
  * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "ExceptionQuery".
+ */
+export interface ExceptionQuery {
+  includeResolved?: boolean;
+  page?: number | null;
+  pageSize?: number | null;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "Page_for_SyncException".
+ */
+export interface PageFor_SyncException {
+  items: SyncException[];
+  page: number;
+  pageSize: number;
+  total: number;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "SyncException".
+ */
+export interface SyncException {
+  amount: number;
+  createdAt: string;
+  details?: unknown;
+  deviceName?: string | null;
+  docNo?: string | null;
+  id: string;
+  itemName?: string | null;
+  kind: string;
+  resolutionNote?: string | null;
+  resolvedAt?: string | null;
+  sourceId: string;
+  sourceType: string;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "ResolveExceptionInput".
+ */
+export interface ResolveExceptionInput {
+  id: string;
+  /**
+   * What was done about it (a stock count, a price correction, nothing needed…).
+   */
+  note: string;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
  * via the `definition` "TaxRate".
  */
 export interface TaxRate {
@@ -2365,15 +2981,6 @@ export interface UpdateUserInput {
   phone?: string | null;
   roleId: string;
 }
-/**
- * This interface was referenced by `ApiContract`'s JSON-Schema
- * via the `definition` "AppError".
- */
-export interface AppError {
-  code: ErrorCode;
-  details?: unknown;
-  message: string;
-}
 
 export type CommandName = keyof ApiContract["commands"];
 export type CommandInput<K extends CommandName> = ApiContract["commands"][K]["input"];
@@ -2382,4 +2989,7 @@ export type ApiErrorPayload = ApiContract["error"];
 export type Approval = ApiContract["approval"];
 
 /** Commands that work without a session (setup and sign-in). */
-export const PUBLIC_COMMANDS = ["auth_login","auth_pin_login","setup_create_business","setup_status"] as const satisfies readonly CommandName[];
+export const PUBLIC_COMMANDS = ["auth_login","auth_pin_login","client_sync_now","device_discover_hubs","device_pair","device_probe_hub","device_restart","device_set_mode","device_status","setup_create_business","setup_status"] as const satisfies readonly CommandName[];
+
+/** Commands about this PC itself; never forwarded to the hub. */
+export const LOCAL_COMMANDS = ["device_status","device_discover_hubs","device_probe_hub","device_pair","device_set_mode","device_restart","client_sync_now","outbox_list","outbox_retry","outbox_discard","client_cached_customers"] as const satisfies readonly CommandName[];

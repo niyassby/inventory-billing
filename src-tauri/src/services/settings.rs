@@ -170,6 +170,84 @@ impl Default for InvoiceSettings {
     }
 }
 
+/// What a client counter may do while the hub can't be reached (docs/ARCHITECTURE.md §6).
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum OfflineSalesPolicy {
+    /// No sales while the hub is offline.
+    Block,
+    /// Sell with invoice numbers leased in advance; oversells are recorded, not refused.
+    AllowReservedNumbers,
+    /// As above, but not items with little cached stock or batch tracking.
+    AllowRestricted,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
+#[serde(rename_all = "camelCase", default)]
+pub struct NetworkSettings {
+    pub offline_sales_policy: OfflineSalesPolicy,
+    /// Invoice numbers leased to a counter at a time.
+    pub lease_size: i64,
+    /// Under `allow_restricted`: items with cached stock at or below this (thousandths) can't be
+    /// sold offline.
+    pub restricted_min_stock: i64,
+    /// An offline invoice whose counter clock differs from the hub's by more than this is held
+    /// for review instead of being posted.
+    pub max_clock_skew_hours: i64,
+    /// TCP port of the hub's HTTPS API.
+    pub port: u16,
+    /// Extra subnets allowed to reach the hub (CIDR). Private ranges are always allowed.
+    pub allowed_subnets: Vec<String>,
+    /// How often counters refresh their offline catalogue.
+    pub catalog_refresh_minutes: i64,
+}
+
+impl Default for NetworkSettings {
+    fn default() -> Self {
+        Self {
+            offline_sales_policy: OfflineSalesPolicy::AllowReservedNumbers,
+            lease_size: 50,
+            restricted_min_stock: 5_000,
+            max_clock_skew_hours: 24,
+            port: 47900,
+            allowed_subnets: Vec::new(),
+            catalog_refresh_minutes: 15,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
+#[serde(rename_all = "camelCase", default)]
+pub struct BackupSettings {
+    pub enabled: bool,
+    /// Daily backup time, business timezone ("HH:MM").
+    pub daily_at: String,
+    /// Extra backups every N hours while the app runs (0 = daily only).
+    pub interval_hours: i64,
+    pub keep_daily: i64,
+    pub keep_weekly: i64,
+    pub keep_monthly: i64,
+    /// Backup folder; default: "backups" next to the database.
+    pub directory: Option<String>,
+    /// Optional second copy (USB drive, NAS share).
+    pub mirror_directory: Option<String>,
+}
+
+impl Default for BackupSettings {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            daily_at: "21:00".into(),
+            interval_hours: 4,
+            keep_daily: 7,
+            keep_weekly: 4,
+            keep_monthly: 12,
+            directory: None,
+            mirror_directory: None,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Default, Serialize, Deserialize, JsonSchema, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct Settings {
@@ -178,6 +256,8 @@ pub struct Settings {
     pub inventory: InventorySettings,
     pub security: SecuritySettings,
     pub invoice: InvoiceSettings,
+    pub network: NetworkSettings,
+    pub backup: BackupSettings,
 }
 
 impl Settings {
@@ -201,7 +281,15 @@ impl Settings {
     }
 }
 
-const SECTIONS: [&str; 5] = ["business", "tax", "inventory", "security", "invoice"];
+const SECTIONS: [&str; 7] = [
+    "business",
+    "tax",
+    "inventory",
+    "security",
+    "invoice",
+    "network",
+    "backup",
+];
 
 fn section<T: for<'de> Deserialize<'de> + Default>(conn: &Connection, key: &str) -> AppResult<T> {
     let raw: Option<String> = conn
@@ -229,6 +317,8 @@ pub fn load(conn: &Connection) -> AppResult<Settings> {
         inventory: section(conn, "inventory")?,
         security: section(conn, "security")?,
         invoice: section(conn, "invoice")?,
+        network: section(conn, "network")?,
+        backup: section(conn, "backup")?,
     })
 }
 
@@ -306,6 +396,54 @@ fn validate(section: &str, value: &Value) -> AppResult<Value> {
             }
             serde_json::to_value(s)?
         }
+        "network" => {
+            let s: NetworkSettings = serde_json::from_value(value.clone()).map_err(invalid)?;
+            if !(10..=1000).contains(&s.lease_size)
+                || !(0..=1_000_000_000).contains(&s.restricted_min_stock)
+                || !(1..=168).contains(&s.max_clock_skew_hours)
+                || s.port < 1024
+                || !(1..=1440).contains(&s.catalog_refresh_minutes)
+            {
+                return Err(AppError::validation(
+                    "A network setting is outside its allowed range.",
+                ));
+            }
+            for subnet in &s.allowed_subnets {
+                if subnet.parse::<ipnet::IpNet>().is_err() {
+                    return Err(AppError::field(
+                        "allowedSubnets",
+                        format!("'{subnet}' is not a subnet like 192.168.1.0/24."),
+                    ));
+                }
+            }
+            serde_json::to_value(s)?
+        }
+        "backup" => {
+            let s: BackupSettings = serde_json::from_value(value.clone()).map_err(invalid)?;
+            if chrono::NaiveTime::parse_from_str(&s.daily_at, "%H:%M").is_err() {
+                return Err(AppError::field("dailyAt", "Use a time like 21:00."));
+            }
+            if !(0..=24).contains(&s.interval_hours)
+                || !(1..=90).contains(&s.keep_daily)
+                || !(0..=52).contains(&s.keep_weekly)
+                || !(0..=120).contains(&s.keep_monthly)
+            {
+                return Err(AppError::validation(
+                    "A backup setting is outside its allowed range.",
+                ));
+            }
+            for (field, dir) in [
+                ("directory", &s.directory),
+                ("mirrorDirectory", &s.mirror_directory),
+            ] {
+                if let Some(d) = dir {
+                    if !std::path::Path::new(d).is_absolute() {
+                        return Err(AppError::field(field, "Use a full folder path."));
+                    }
+                }
+            }
+            serde_json::to_value(s)?
+        }
         other => {
             return Err(AppError::validation(format!(
                 "Unknown settings section '{other}'."
@@ -336,7 +474,7 @@ pub fn store(
 #[derive(Debug, Clone, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateSettingsInput {
-    /// "business", "tax", "inventory", "security" or "invoice".
+    /// "business", "tax", "inventory", "security", "invoice", "network" or "backup".
     pub section: String,
     /// The whole section (fields left out take their defaults).
     pub value: Value,
@@ -344,6 +482,9 @@ pub struct UpdateSettingsInput {
 
 pub fn update(ctx: &mut Ctx<'_>, input: &UpdateSettingsInput) -> AppResult<Settings> {
     ctx.require("settings.manage")?;
+    if input.section == "backup" {
+        ctx.require("backup.manage")?;
+    }
     if !SECTIONS.contains(&input.section.as_str()) {
         return Err(AppError::field("section", "Unknown settings section."));
     }

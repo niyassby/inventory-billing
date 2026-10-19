@@ -1,4 +1,5 @@
 import { Link, Outlet, useLocation } from "react-router-dom";
+import { ConnectionBadge } from "@/components/connection-badge";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Notification } from "@hugeicons/core-free-icons/index";
 import { AppSidebar } from "@/components/sidebar/app-sidebar";
@@ -70,9 +71,12 @@ export default function Layout() {
                   <Separator orientation="vertical" className="mr-2" />
                   <Breadcrumbs />
                 </div>
-                <Button variant="outline" size="icon" aria-label="Notifications">
-                  <HugeiconsIcon icon={Notification} size={16} strokeWidth={2} />
-                </Button>
+                <div className="flex items-center gap-2">
+                  <ConnectionBadge />
+                  <Button variant="outline" size="icon" aria-label="Notifications">
+                    <HugeiconsIcon icon={Notification} size={16} strokeWidth={2} />
+                  </Button>
+                </div>
               </div>
             </header>
             <div className="h-full">

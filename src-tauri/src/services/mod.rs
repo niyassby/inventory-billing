@@ -9,12 +9,15 @@
 pub mod accounts;
 pub mod audit;
 pub mod auth;
+pub mod backup;
 pub mod catalog;
 pub mod common;
 pub mod context;
+pub mod devices;
 pub mod expenses;
 pub mod idempotency;
 pub mod journal;
+pub mod notifications;
 pub mod numbering;
 pub mod parties;
 pub mod party_ledger;
@@ -25,6 +28,7 @@ pub mod settings;
 pub mod setup;
 pub mod stock;
 pub mod stock_posting;
+pub mod sync;
 pub mod users;
 
 #[cfg(test)]

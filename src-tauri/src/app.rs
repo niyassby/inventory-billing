@@ -12,6 +12,7 @@ use r2d2_sqlite::SqliteConnectionManager;
 
 use crate::db;
 use crate::error::{AppError, AppResult, ErrorCode};
+use crate::secrets::{MemorySecrets, SecretStore};
 
 pub type DbPool = Pool<SqliteConnectionManager>;
 pub type Conn = PooledConnection<SqliteConnectionManager>;
@@ -92,6 +93,10 @@ pub struct AppState {
     pub clock: Arc<dyn Clock>,
     pub limiter: Arc<RateLimiter>,
     pub db_path: PathBuf,
+    /// OS keychain in the app, memory in tests (device credential, TLS key, backup key).
+    pub secrets: Arc<dyn SecretStore>,
+    /// State of the LAN server when this PC is the hub.
+    pub hub: Arc<std::sync::RwLock<crate::node::HubInfo>>,
 }
 
 impl AppState {
@@ -120,7 +125,21 @@ impl AppState {
             clock,
             limiter: Arc::new(RateLimiter::default()),
             db_path: db_path.to_path_buf(),
+            secrets: Arc::new(MemorySecrets::default()),
+            hub: Arc::default(),
         })
+    }
+
+    pub fn with_secrets(mut self, secrets: Arc<dyn SecretStore>) -> Self {
+        self.secrets = secrets;
+        self
+    }
+
+    /// Folder next to the database (backups, hub certificate, client cache).
+    pub fn data_dir(&self) -> PathBuf {
+        self.db_path
+            .parent()
+            .map_or_else(|| PathBuf::from("."), Path::to_path_buf)
     }
 
     pub fn conn(&self) -> AppResult<Conn> {

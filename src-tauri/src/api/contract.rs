@@ -34,6 +34,9 @@ impl Spec {
 pub fn schema() -> Value {
     let mut gen = SchemaSettings::draft07().into_generator();
     let mut specs = super::specs(&mut gen);
+    let local = super::local::specs(&mut gen);
+    let local_names: Vec<&str> = local.iter().map(|s| s.name).collect();
+    specs.extend(local);
     specs.sort_by_key(|s| s.name);
     let error = gen.subschema_for::<crate::error::AppError>();
     let approval = gen.subschema_for::<crate::services::auth::ApprovalInput>();
@@ -61,11 +64,12 @@ pub fn schema() -> Value {
         "description": "Generated from src-tauri/src/api (do not edit). Every command takes { token, input, approval? }.",
         "type": "object",
         "additionalProperties": false,
-        "required": ["approval", "commands", "error", "publicCommands"],
+        "required": ["approval", "commands", "error", "localCommands", "publicCommands"],
         "properties": {
             "approval": approval,
             "commands": { "type": "object", "additionalProperties": false, "required": names, "properties": commands },
             "error": error,
+            "localCommands": { "type": "array", "items": { "type": "string", "enum": local_names } },
             "publicCommands": { "type": "array", "items": { "type": "string", "enum": public } },
         },
         "definitions": gen.definitions(),

@@ -196,6 +196,222 @@
       ],
       "type": "object"
     },
+    "BackupHeader": {
+      "properties": {
+        "appVersion": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string"
+        },
+        "dbBytes": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "encrypted": {
+          "type": "boolean"
+        },
+        "format": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "kdfSalt": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "kind": {
+          "type": "string"
+        },
+        "nonce": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "schemaVersion": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "sha256": {
+          "description": "SHA-256 of the database file inside.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "appVersion",
+        "createdAt",
+        "dbBytes",
+        "encrypted",
+        "format",
+        "kind",
+        "schemaVersion",
+        "sha256"
+      ],
+      "type": "object"
+    },
+    "BackupRun": {
+      "properties": {
+        "encrypted": {
+          "type": "boolean"
+        },
+        "error": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "fileExists": {
+          "description": "The file is still in the backup folder.",
+          "type": "boolean"
+        },
+        "fileName": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "finishedAt": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "mirrored": {
+          "type": "boolean"
+        },
+        "schemaVersion": {
+          "format": "int64",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "sha256": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "sizeBytes": {
+          "format": "int64",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "startedAt": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "encrypted",
+        "fileExists",
+        "finishedAt",
+        "id",
+        "kind",
+        "mirrored",
+        "startedAt",
+        "status"
+      ],
+      "type": "object"
+    },
+    "BackupSettings": {
+      "properties": {
+        "dailyAt": {
+          "default": "21:00",
+          "description": "Daily backup time, business timezone (\"HH:MM\").",
+          "type": "string"
+        },
+        "directory": {
+          "default": null,
+          "description": "Backup folder; default: \"backups\" next to the database.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "enabled": {
+          "default": true,
+          "type": "boolean"
+        },
+        "intervalHours": {
+          "default": 4,
+          "description": "Extra backups every N hours while the app runs (0 = daily only).",
+          "format": "int64",
+          "type": "integer"
+        },
+        "keepDaily": {
+          "default": 7,
+          "format": "int64",
+          "type": "integer"
+        },
+        "keepMonthly": {
+          "default": 12,
+          "format": "int64",
+          "type": "integer"
+        },
+        "keepWeekly": {
+          "default": 4,
+          "format": "int64",
+          "type": "integer"
+        },
+        "mirrorDirectory": {
+          "default": null,
+          "description": "Optional second copy (USB drive, NAS share).",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "type": "object"
+    },
+    "BackupStatus": {
+      "properties": {
+        "directory": {
+          "type": "string"
+        },
+        "encrypted": {
+          "type": "boolean"
+        },
+        "lastSuccess": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/BackupRun"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "runs": {
+          "items": {
+            "$ref": "#/definitions/BackupRun"
+          },
+          "type": "array"
+        },
+        "settings": {
+          "$ref": "#/definitions/BackupSettings"
+        }
+      },
+      "required": [
+        "directory",
+        "encrypted",
+        "runs",
+        "settings"
+      ],
+      "type": "object"
+    },
     "Brand": {
       "properties": {
         "id": {
@@ -304,6 +520,39 @@
       },
       "type": "object"
     },
+    "CachedCustomer": {
+      "properties": {
+        "gstin": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "phone": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "stateCode": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "name"
+      ],
+      "type": "object"
+    },
     "Category": {
       "properties": {
         "id": {
@@ -386,6 +635,67 @@
         "allocation",
         "amount",
         "description"
+      ],
+      "type": "object"
+    },
+    "ClientStatus": {
+      "properties": {
+        "businessName": {
+          "type": "string"
+        },
+        "catalogueAt": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "clockSkewSeconds": {
+          "format": "int64",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "hubUrl": {
+          "type": "string"
+        },
+        "lastContactAt": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "lastError": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "link": {
+          "$ref": "#/definitions/Link"
+        },
+        "offlineNumbersLeft": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "pending": {
+          "description": "Offline sales waiting to be sent.",
+          "format": "int64",
+          "type": "integer"
+        },
+        "rejected": {
+          "description": "Offline sales the hub refused (a manager must retry or discard them).",
+          "format": "int64",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "businessName",
+        "hubUrl",
+        "link",
+        "offlineNumbersLeft",
+        "pending",
+        "rejected"
       ],
       "type": "object"
     },
@@ -666,6 +976,15 @@
       ],
       "type": "object"
     },
+    "CustomerSearch": {
+      "properties": {
+        "term": {
+          "default": "",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
     "DeleteMasterInput": {
       "properties": {
         "id": {
@@ -679,6 +998,125 @@
       "required": [
         "id",
         "kind"
+      ],
+      "type": "object"
+    },
+    "DeviceMode": {
+      "enum": [
+        "standalone",
+        "hub",
+        "client"
+      ],
+      "type": "string"
+    },
+    "DeviceStatus": {
+      "properties": {
+        "client": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/ClientStatus"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Client mode: the connection to the hub."
+        },
+        "deviceName": {
+          "type": "string"
+        },
+        "hub": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/HubInfo"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Hub mode: the LAN server."
+        },
+        "hubLink": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/HubLink"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "mode": {
+          "$ref": "#/definitions/DeviceMode"
+        },
+        "restartRequired": {
+          "description": "The saved mode differs from the running one: restart the app.",
+          "type": "boolean"
+        },
+        "runningMode": {
+          "$ref": "#/definitions/DeviceMode"
+        }
+      },
+      "required": [
+        "deviceName",
+        "mode",
+        "restartRequired",
+        "runningMode"
+      ],
+      "type": "object"
+    },
+    "DeviceSummary": {
+      "properties": {
+        "appVersion": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "id": {
+          "type": "string"
+        },
+        "lastSeenAt": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "mode": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "openExceptions": {
+          "description": "Offline sales waiting for review (oversells, changed prices).",
+          "format": "int64",
+          "type": "integer"
+        },
+        "pairedAt": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "revokedAt": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "shortCode": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "mode",
+        "name",
+        "openExceptions"
       ],
       "type": "object"
     },
@@ -743,6 +1181,31 @@
         "INTERNAL"
       ],
       "type": "string"
+    },
+    "ExceptionQuery": {
+      "properties": {
+        "includeResolved": {
+          "default": false,
+          "type": "boolean"
+        },
+        "page": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "pageSize": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        }
+      },
+      "type": "object"
     },
     "ExpenseCategory": {
       "properties": {
@@ -972,6 +1435,30 @@
       },
       "type": "object"
     },
+    "FoundHub": {
+      "properties": {
+        "fingerprintShort": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "urls": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "name",
+        "urls"
+      ],
+      "type": "object"
+    },
     "GoodsReceiptDetail": {
       "properties": {
         "businessDate": {
@@ -1117,6 +1604,81 @@
       ],
       "type": "object"
     },
+    "HubInfo": {
+      "description": "What the hub tells its own window about the LAN server.",
+      "properties": {
+        "error": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "fingerprint": {
+          "description": "Full certificate fingerprint; counters show the short form when pairing.",
+          "type": "string"
+        },
+        "fingerprintShort": {
+          "type": "string"
+        },
+        "port": {
+          "format": "uint16",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "running": {
+          "type": "boolean"
+        },
+        "urls": {
+          "description": "Addresses counters can use (\"https://192.168.1.20:47900\").",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "fingerprint",
+        "fingerprintShort",
+        "port",
+        "running",
+        "urls"
+      ],
+      "type": "object"
+    },
+    "HubLink": {
+      "description": "The hub a client counter is paired with.",
+      "properties": {
+        "businessName": {
+          "type": "string"
+        },
+        "deviceId": {
+          "type": "string"
+        },
+        "fingerprint": {
+          "description": "SHA-256 of the hub's certificate, pinned at pairing.",
+          "type": "string"
+        },
+        "pairedAt": {
+          "type": "string"
+        },
+        "shortCode": {
+          "type": "string"
+        },
+        "url": {
+          "description": "For example \"https://192.168.1.20:47900\".",
+          "type": "string"
+        }
+      },
+      "required": [
+        "businessName",
+        "deviceId",
+        "fingerprint",
+        "pairedAt",
+        "shortCode",
+        "url"
+      ],
+      "type": "object"
+    },
     "IdInput": {
       "properties": {
         "id": {
@@ -1235,6 +1797,11 @@
             "string",
             "null"
           ]
+        },
+        "origin": {
+          "default": "online",
+          "description": "\"online\", or \"offline\" for a bill a counter made while the hub was unreachable.",
+          "type": "string"
         },
         "partyId": {
           "type": [
@@ -1592,6 +2159,31 @@
       },
       "type": "object"
     },
+    "Link": {
+      "oneOf": [
+        {
+          "enum": [
+            "connected",
+            "hub_offline"
+          ],
+          "type": "string"
+        },
+        {
+          "description": "A heartbeat or call just failed; still trying the hub first.",
+          "enum": [
+            "degraded"
+          ],
+          "type": "string"
+        },
+        {
+          "description": "Back online and sending queued sales.",
+          "enum": [
+            "syncing"
+          ],
+          "type": "string"
+        }
+      ]
+    },
     "LoginInput": {
       "properties": {
         "email": {
@@ -1631,9 +2223,144 @@
         }
       ]
     },
+    "NetworkSettings": {
+      "properties": {
+        "allowedSubnets": {
+          "default": [],
+          "description": "Extra subnets allowed to reach the hub (CIDR). Private ranges are always allowed.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "catalogRefreshMinutes": {
+          "default": 15,
+          "description": "How often counters refresh their offline catalogue.",
+          "format": "int64",
+          "type": "integer"
+        },
+        "leaseSize": {
+          "default": 50,
+          "description": "Invoice numbers leased to a counter at a time.",
+          "format": "int64",
+          "type": "integer"
+        },
+        "maxClockSkewHours": {
+          "default": 24,
+          "description": "An offline invoice whose counter clock differs from the hub's by more than this is held for review instead of being posted.",
+          "format": "int64",
+          "type": "integer"
+        },
+        "offlineSalesPolicy": {
+          "$ref": "#/definitions/OfflineSalesPolicy",
+          "default": "allow_reserved_numbers"
+        },
+        "port": {
+          "default": 47900,
+          "description": "TCP port of the hub's HTTPS API.",
+          "format": "uint16",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "restrictedMinStock": {
+          "default": 5000,
+          "description": "Under `allow_restricted`: items with cached stock at or below this (thousandths) can't be sold offline.",
+          "format": "int64",
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
     "NoInput": {
       "description": "Empty input for commands that take none.",
       "type": "object"
+    },
+    "Notification": {
+      "properties": {
+        "body": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "createdAt": {
+          "type": "string"
+        },
+        "entityId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "entityType": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "readAt": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "severity": {
+          "description": "\"info\", \"warning\" or \"error\".",
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "createdAt",
+        "id",
+        "kind",
+        "severity",
+        "title"
+      ],
+      "type": "object"
+    },
+    "NotificationQuery": {
+      "properties": {
+        "includeRead": {
+          "default": false,
+          "type": "boolean"
+        }
+      },
+      "type": "object"
+    },
+    "OfflineSalesPolicy": {
+      "description": "What a client counter may do while the hub can't be reached (docs/ARCHITECTURE.md §6).",
+      "oneOf": [
+        {
+          "description": "No sales while the hub is offline.",
+          "enum": [
+            "block"
+          ],
+          "type": "string"
+        },
+        {
+          "description": "Sell with invoice numbers leased in advance; oversells are recorded, not refused.",
+          "enum": [
+            "allow_reserved_numbers"
+          ],
+          "type": "string"
+        },
+        {
+          "description": "As above, but not items with little cached stock or batch tracking.",
+          "enum": [
+            "allow_restricted"
+          ],
+          "type": "string"
+        }
+      ]
     },
     "OpenDocument": {
       "properties": {
@@ -1689,6 +2416,81 @@
       },
       "required": [
         "openingFloat"
+      ],
+      "type": "object"
+    },
+    "OutboxEntry": {
+      "properties": {
+        "attempts": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "clientCreatedAt": {
+          "type": "string"
+        },
+        "command": {
+          "type": "string"
+        },
+        "deviceSeq": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "docNo": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "id": {
+          "type": "string"
+        },
+        "lastError": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/AppError"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "status": {
+          "description": "\"pending\", \"done\", \"rejected\" or \"discarded\".",
+          "type": "string"
+        },
+        "total": {
+          "format": "int64",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "attempts",
+        "clientCreatedAt",
+        "command",
+        "deviceSeq",
+        "id",
+        "status",
+        "total"
+      ],
+      "type": "object"
+    },
+    "OutboxQuery": {
+      "properties": {
+        "includeDone": {
+          "default": false,
+          "type": "boolean"
+        }
+      },
+      "type": "object"
+    },
+    "OutboxRetryInput": {
+      "properties": {
+        "id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id"
       ],
       "type": "object"
     },
@@ -1925,6 +2727,76 @@
         "page",
         "pageSize",
         "total"
+      ],
+      "type": "object"
+    },
+    "Page_for_SyncException": {
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/definitions/SyncException"
+          },
+          "type": "array"
+        },
+        "page": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "pageSize": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "total": {
+          "format": "int64",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "items",
+        "page",
+        "pageSize",
+        "total"
+      ],
+      "type": "object"
+    },
+    "PairDeviceInput": {
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "deviceName": {
+          "type": "string"
+        },
+        "fingerprint": {
+          "description": "The fingerprint from `device_probe_hub` that the person confirmed.",
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "code",
+        "deviceName",
+        "fingerprint",
+        "url"
+      ],
+      "type": "object"
+    },
+    "PairingCode": {
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "expiresAt": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "code",
+        "expiresAt"
       ],
       "type": "object"
     },
@@ -2793,6 +3665,46 @@
         "unitName",
         "unitPrice",
         "variantId"
+      ],
+      "type": "object"
+    },
+    "ProbeInput": {
+      "properties": {
+        "url": {
+          "description": "\"192.168.1.20\", \"192.168.1.20:47900\" or a full https URL.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "url"
+      ],
+      "type": "object"
+    },
+    "ProbeResult": {
+      "properties": {
+        "appVersion": {
+          "type": "string"
+        },
+        "businessName": {
+          "type": "string"
+        },
+        "fingerprint": {
+          "type": "string"
+        },
+        "fingerprintShort": {
+          "description": "Compare with the code shown on the hub's screen before pairing.",
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "appVersion",
+        "businessName",
+        "fingerprint",
+        "fingerprintShort",
+        "url"
       ],
       "type": "object"
     },
@@ -3758,6 +4670,57 @@
       "required": [
         "id",
         "temporaryPassword"
+      ],
+      "type": "object"
+    },
+    "ResolveExceptionInput": {
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "note": {
+          "description": "What was done about it (a stock count, a price correction, nothing needed…).",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "note"
+      ],
+      "type": "object"
+    },
+    "RestoreInput": {
+      "properties": {
+        "passphrase": {
+          "description": "Needed for encrypted backups made with a different passphrase than the current one.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "path": {
+          "description": "Full path of a .invbak file.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "type": "object"
+    },
+    "RestoreResult": {
+      "properties": {
+        "restored": {
+          "$ref": "#/definitions/VerifiedBackup"
+        },
+        "safetyBackup": {
+          "$ref": "#/definitions/BackupRun",
+          "description": "Backup of the database as it was just before the restore."
+        }
+      },
+      "required": [
+        "restored",
+        "safetyBackup"
       ],
       "type": "object"
     },
@@ -4732,6 +5695,35 @@
       ],
       "type": "object"
     },
+    "SetModeInput": {
+      "properties": {
+        "deviceName": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "mode": {
+          "$ref": "#/definitions/DeviceMode",
+          "description": "\"standalone\" or \"hub\" (a counter is set up by pairing)."
+        }
+      },
+      "required": [
+        "mode"
+      ],
+      "type": "object"
+    },
+    "SetPassphraseInput": {
+      "properties": {
+        "passphrase": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "passphrase"
+      ],
+      "type": "object"
+    },
     "SetPinInput": {
       "properties": {
         "currentPassword": {
@@ -4749,6 +5741,9 @@
     },
     "Settings": {
       "properties": {
+        "backup": {
+          "$ref": "#/definitions/BackupSettings"
+        },
         "business": {
           "$ref": "#/definitions/BusinessSettings"
         },
@@ -4758,6 +5753,9 @@
         "invoice": {
           "$ref": "#/definitions/InvoiceSettings"
         },
+        "network": {
+          "$ref": "#/definitions/NetworkSettings"
+        },
         "security": {
           "$ref": "#/definitions/SecuritySettings"
         },
@@ -4766,9 +5764,11 @@
         }
       },
       "required": [
+        "backup",
         "business",
         "inventory",
         "invoice",
+        "network",
         "security",
         "tax"
       ],
@@ -5163,6 +6163,69 @@
       ],
       "type": "object"
     },
+    "SyncException": {
+      "properties": {
+        "amount": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "createdAt": {
+          "type": "string"
+        },
+        "details": true,
+        "deviceName": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "docNo": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "id": {
+          "type": "string"
+        },
+        "itemName": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "kind": {
+          "type": "string"
+        },
+        "resolutionNote": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "resolvedAt": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "sourceId": {
+          "type": "string"
+        },
+        "sourceType": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "amount",
+        "createdAt",
+        "id",
+        "kind",
+        "sourceId",
+        "sourceType"
+      ],
+      "type": "object"
+    },
     "TaxRate": {
       "properties": {
         "cessRate": {
@@ -5473,7 +6536,7 @@
     "UpdateSettingsInput": {
       "properties": {
         "section": {
-          "description": "\"business\", \"tax\", \"inventory\", \"security\" or \"invoice\".",
+          "description": "\"business\", \"tax\", \"inventory\", \"security\", \"invoice\", \"network\" or \"backup\".",
           "type": "string"
         },
         "value": {
@@ -5721,6 +6784,38 @@
       ],
       "type": "object"
     },
+    "VerifiedBackup": {
+      "properties": {
+        "header": {
+          "$ref": "#/definitions/BackupHeader"
+        },
+        "invoices": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "lastInvoiceDate": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "products": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "users": {
+          "format": "int64",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "header",
+        "invoices",
+        "products",
+        "users"
+      ],
+      "type": "object"
+    },
     "VoidBillInput": {
       "properties": {
         "id": {
@@ -5933,6 +7028,86 @@
           ],
           "type": "object"
         },
+        "backup_now": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/NoInput"
+            },
+            "output": {
+              "$ref": "#/definitions/BackupRun"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "backup_restore": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/RestoreInput"
+            },
+            "output": {
+              "$ref": "#/definitions/RestoreResult"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "backup_set_passphrase": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/SetPassphraseInput"
+            },
+            "output": {
+              "type": "null"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "backup_status": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/NoInput"
+            },
+            "output": {
+              "$ref": "#/definitions/BackupStatus"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "backup_verify": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/RestoreInput"
+            },
+            "output": {
+              "$ref": "#/definitions/VerifiedBackup"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
         "brands_list": {
           "additionalProperties": false,
           "properties": {
@@ -6019,6 +7194,191 @@
           ],
           "type": "object"
         },
+        "client_cached_customers": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/CustomerSearch"
+            },
+            "output": {
+              "items": {
+                "$ref": "#/definitions/CachedCustomer"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "client_sync_now": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/NoInput"
+            },
+            "output": {
+              "$ref": "#/definitions/ClientStatus"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "device_discover_hubs": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/NoInput"
+            },
+            "output": {
+              "items": {
+                "$ref": "#/definitions/FoundHub"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "device_pair": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/PairDeviceInput"
+            },
+            "output": {
+              "$ref": "#/definitions/DeviceStatus"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "device_probe_hub": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/ProbeInput"
+            },
+            "output": {
+              "$ref": "#/definitions/ProbeResult"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "device_restart": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/NoInput"
+            },
+            "output": {
+              "type": "null"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "device_set_mode": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/SetModeInput"
+            },
+            "output": {
+              "$ref": "#/definitions/DeviceStatus"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "device_status": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/NoInput"
+            },
+            "output": {
+              "$ref": "#/definitions/DeviceStatus"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "devices_list": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/NoInput"
+            },
+            "output": {
+              "items": {
+                "$ref": "#/definitions/DeviceSummary"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "devices_pairing_code": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/NoInput"
+            },
+            "output": {
+              "$ref": "#/definitions/PairingCode"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "devices_revoke": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/IdInput"
+            },
+            "output": {
+              "type": "null"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
         "expenses_categories": {
           "additionalProperties": false,
           "properties": {
@@ -6094,6 +7454,108 @@
             },
             "output": {
               "$ref": "#/definitions/ExpenseDetail"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "hub_status": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/NoInput"
+            },
+            "output": {
+              "$ref": "#/definitions/HubInfo"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "notifications_list": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/NotificationQuery"
+            },
+            "output": {
+              "items": {
+                "$ref": "#/definitions/Notification"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "notifications_mark_read": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/IdInput"
+            },
+            "output": {
+              "type": "null"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "outbox_discard": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/IdInput"
+            },
+            "output": {
+              "$ref": "#/definitions/ClientStatus"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "outbox_list": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/OutboxQuery"
+            },
+            "output": {
+              "items": {
+                "$ref": "#/definitions/OutboxEntry"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "outbox_retry": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/OutboxRetryInput"
+            },
+            "output": {
+              "$ref": "#/definitions/ClientStatus"
             }
           },
           "required": [
@@ -7127,6 +8589,38 @@
           ],
           "type": "object"
         },
+        "sync_exceptions": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/ExceptionQuery"
+            },
+            "output": {
+              "$ref": "#/definitions/Page_for_SyncException"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "sync_resolve_exception": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/ResolveExceptionInput"
+            },
+            "output": {
+              "type": "null"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
         "tax_rates_list": {
           "additionalProperties": false,
           "properties": {
@@ -7288,16 +8782,38 @@
         "auth_me",
         "auth_pin_login",
         "auth_set_pin",
+        "backup_now",
+        "backup_restore",
+        "backup_set_passphrase",
+        "backup_status",
+        "backup_verify",
         "brands_list",
         "brands_save",
         "catalog_delete_master",
         "categories_list",
         "categories_save",
+        "client_cached_customers",
+        "client_sync_now",
+        "device_discover_hubs",
+        "device_pair",
+        "device_probe_hub",
+        "device_restart",
+        "device_set_mode",
+        "device_status",
+        "devices_list",
+        "devices_pairing_code",
+        "devices_revoke",
         "expenses_categories",
         "expenses_create",
         "expenses_list",
         "expenses_save_category",
         "expenses_void",
+        "hub_status",
+        "notifications_list",
+        "notifications_mark_read",
+        "outbox_discard",
+        "outbox_list",
+        "outbox_retry",
         "parties_delete",
         "parties_get",
         "parties_list",
@@ -7360,6 +8876,8 @@
         "stock_count_start",
         "stock_transfer",
         "stock_warehouses",
+        "sync_exceptions",
+        "sync_resolve_exception",
         "tax_rates_list",
         "tax_rates_save",
         "units_list",
@@ -7375,11 +8893,37 @@
     "error": {
       "$ref": "#/definitions/AppError"
     },
+    "localCommands": {
+      "items": {
+        "enum": [
+          "device_status",
+          "device_discover_hubs",
+          "device_probe_hub",
+          "device_pair",
+          "device_set_mode",
+          "device_restart",
+          "client_sync_now",
+          "outbox_list",
+          "outbox_retry",
+          "outbox_discard",
+          "client_cached_customers"
+        ],
+        "type": "string"
+      },
+      "type": "array"
+    },
     "publicCommands": {
       "items": {
         "enum": [
           "auth_login",
           "auth_pin_login",
+          "client_sync_now",
+          "device_discover_hubs",
+          "device_pair",
+          "device_probe_hub",
+          "device_restart",
+          "device_set_mode",
+          "device_status",
           "setup_create_business",
           "setup_status"
         ],
@@ -7392,6 +8936,7 @@
     "approval",
     "commands",
     "error",
+    "localCommands",
     "publicCommands"
   ],
   "title": "ApiContract",

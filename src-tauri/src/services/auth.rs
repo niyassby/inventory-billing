@@ -357,16 +357,17 @@ pub fn authenticate(
     token: &str,
     now: DateTime<Utc>,
 ) -> AppResult<Authenticated> {
-    let row: Option<(String, String, String, String, bool)> = conn
+    #[allow(clippy::type_complexity, reason = "one flat SQL row, decoded once below")]
+    let row: Option<(String, String, String, String, bool, Option<String>)> = conn
         .query_row(
-            "SELECT s.id, s.user_id, s.expires_at, coalesce(s.last_seen_at, s.created_at), u.must_change_password
+            "SELECT s.id, s.user_id, s.expires_at, coalesce(s.last_seen_at, s.created_at), u.must_change_password, s.device_id
              FROM sessions s JOIN users u ON u.id = s.user_id
              WHERE s.token_hash = ?1 AND s.revoked_at IS NULL AND u.is_active = 1 AND u.deleted_at IS NULL",
             [crypto::hash_token(token)],
-            |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?)),
+            |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?, r.get(5)?)),
         )
         .optional()?;
-    let Some((session_id, user_id, expires_at, last_seen, must_change)) = row else {
+    let Some((session_id, user_id, expires_at, last_seen, must_change, device_id)) = row else {
         return Err(AppError::unauthorized());
     };
     let parse = |t: &str| {
@@ -399,9 +400,89 @@ pub fn authenticate(
             permissions: user.permissions.into_iter().collect::<HashSet<_>>(),
             max_discount_rate: user.max_discount_rate,
             session_id: Some(session_id),
-            device_id: None,
+            device_id,
         },
         must_change_password: must_change,
+    })
+}
+
+/// Over the LAN: a session works only on the device it was created on, so a token copied off
+/// one counter is useless on another machine.
+pub fn authenticate_on_device(
+    conn: &Connection,
+    token: &str,
+    now: DateTime<Utc>,
+    device_id: &str,
+) -> AppResult<Authenticated> {
+    let auth = authenticate(conn, token, now)?;
+    if auth.actor.device_id.as_deref() != Some(device_id) {
+        return Err(AppError::unauthorized());
+    }
+    Ok(auth)
+}
+
+/// Ties a session created through the LAN API to the device that asked for it.
+pub fn bind_session_to_device(conn: &Connection, token: &str, device_id: &str) -> AppResult<()> {
+    conn.execute(
+        "UPDATE sessions SET device_id = ?1 WHERE token_hash = ?2 AND device_id IS NULL",
+        params![device_id, crypto::hash_token(token)],
+    )?;
+    Ok(())
+}
+
+/// The actor behind a sale a counter made offline: the session must belong to that device and
+/// have been valid at the (clock-corrected) time of the sale. Permissions are the user's current
+/// ones, so a user disabled since then can't sync new sales.
+pub fn offline_actor(
+    conn: &Connection,
+    token: &str,
+    device_id: &str,
+    at: DateTime<Utc>,
+) -> AppResult<Actor> {
+    #[allow(
+        clippy::type_complexity,
+        reason = "one flat SQL row, decoded once below"
+    )]
+    let row: Option<(String, String, String, Option<String>, Option<String>)> = conn
+        .query_row(
+            "SELECT s.id, s.user_id, s.expires_at, s.revoked_at, s.device_id
+             FROM sessions s JOIN users u ON u.id = s.user_id
+             WHERE s.token_hash = ?1 AND u.is_active = 1 AND u.deleted_at IS NULL",
+            [crypto::hash_token(token)],
+            |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?)),
+        )
+        .optional()?;
+    let Some((session_id, user_id, expires_at, revoked_at, session_device)) = row else {
+        return Err(AppError::unauthorized());
+    };
+    let parse = |t: &str| {
+        DateTime::parse_from_rfc3339(t)
+            .map(|d| d.with_timezone(&Utc))
+            .map_err(AppError::internal)
+    };
+    let created_at: String = conn.query_row(
+        "SELECT created_at FROM sessions WHERE id = ?1",
+        [&session_id],
+        |r| r.get(0),
+    )?;
+    let valid_then = parse(&created_at)? <= at
+        && at < parse(&expires_at)?
+        && match &revoked_at {
+            Some(r) => at < parse(r)?,
+            None => true,
+        };
+    if session_device.as_deref() != Some(device_id) || !valid_then {
+        return Err(AppError::unauthorized());
+    }
+    let user = session_user(conn, &user_id)?;
+    Ok(Actor {
+        user_id: user.id,
+        name: user.name,
+        role_code: user.role_code,
+        permissions: user.permissions.into_iter().collect::<HashSet<_>>(),
+        max_discount_rate: user.max_discount_rate,
+        session_id: Some(session_id),
+        device_id: Some(device_id.to_string()),
     })
 }
 

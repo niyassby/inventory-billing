@@ -3,10 +3,10 @@
 //! packages/shared/src/constants.ts; a test keeps them in sync.
 
 use schemars::JsonSchema;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, JsonSchema)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum ErrorCode {
     Unauthorized,
@@ -66,7 +66,7 @@ impl ErrorCode {
     }
 }
 
-#[derive(Debug, Clone, Serialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct AppError {
     pub code: ErrorCode,
     pub message: String,
@@ -133,6 +133,18 @@ impl AppError {
             "Something went wrong. Please try again.",
         )
         .with_details(json!({ "incident": incident }))
+    }
+
+    /// A poisoned mutex (a thread panicked while holding it).
+    pub fn internal_lock<T>(_: std::sync::PoisonError<T>) -> Self {
+        Self::internal("lock poisoned")
+    }
+
+    pub fn hub_offline() -> Self {
+        Self::new(
+            ErrorCode::HubOffline,
+            "The hub PC can't be reached. This action needs a live connection to the hub.",
+        )
     }
 }
 
