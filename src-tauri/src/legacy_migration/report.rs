@@ -3,9 +3,11 @@
 
 use std::collections::BTreeMap;
 
-use serde::Serialize;
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Default, Serialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct MigrationReport {
     pub started_at: String,
     pub finished_at: String,
@@ -28,7 +30,8 @@ pub struct MigrationReport {
     pub warnings: Vec<String>,
 }
 
-#[derive(Debug, Default, Serialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct TableCounts {
     pub legacy_rows: usize,
     pub migrated_rows: usize,
@@ -36,7 +39,8 @@ pub struct TableCounts {
     pub migrated_to: Vec<String>,
 }
 
-#[derive(Debug, Default, Serialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct Totals {
     /// Sum of v1 invoice totals, excluding cancelled ones (major units, as stored in v1).
     pub legacy_sales_total: f64,
@@ -51,7 +55,8 @@ pub struct Totals {
     pub expense_total_minor: i64,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct LossyAmount {
     pub table: String,
     pub id: String,
@@ -60,7 +65,8 @@ pub struct LossyAmount {
     pub migrated_minor: i64,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct BalanceAdjustment {
     pub party_id: String,
     pub name: String,
@@ -73,7 +79,8 @@ pub struct BalanceAdjustment {
     pub adjustment_minor: i64,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct NegativeStock {
     pub variant_id: String,
     pub sku: String,

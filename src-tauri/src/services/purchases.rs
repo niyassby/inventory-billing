@@ -206,6 +206,9 @@ pub struct PurchaseDocLine {
     pub line_total: i64,
     /// Received so far (orders) or returned so far (bills).
     pub progress_qty: i64,
+    /// The unit the quantity is in (a pack size or the base unit).
+    #[serde(default)]
+    pub unit_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
@@ -261,7 +264,7 @@ fn order_detail(conn: &Connection, id: &str) -> AppResult<PurchaseDocDetail> {
         .optional()?
         .ok_or_else(|| AppError::not_found("The purchase order"))?;
     doc.lines = conn
-        .prepare("SELECT id, variant_id, item_name, qty, unit_cost, taxable, tax_total, line_total, received_qty FROM purchase_order_items WHERE purchase_order_id = ?1 ORDER BY line_no")?
+        .prepare("SELECT id, variant_id, item_name, qty, unit_cost, taxable, tax_total, line_total, received_qty, unit_id FROM purchase_order_items WHERE purchase_order_id = ?1 ORDER BY line_no")?
         .query_map([id], map_doc_line)?
         .collect::<Result<_, _>>()?;
     Ok(doc)
@@ -278,6 +281,7 @@ fn map_doc_line(r: &rusqlite::Row<'_>) -> rusqlite::Result<PurchaseDocLine> {
         tax_total: r.get(6)?,
         line_total: r.get(7)?,
         progress_qty: r.get(8)?,
+        unit_id: r.get(9)?,
     })
 }
 
@@ -474,7 +478,7 @@ pub struct GoodsReceiptDetail {
     pub lines: Vec<PurchaseDocLine>,
 }
 
-fn receipt_detail(conn: &Connection, id: &str) -> AppResult<GoodsReceiptDetail> {
+pub(crate) fn receipt_detail(conn: &Connection, id: &str) -> AppResult<GoodsReceiptDetail> {
     let (doc_no, business_date, party_id, purchase_order_id): (String, String, String, Option<String>) = conn
         .query_row("SELECT doc_no, business_date, party_id, purchase_order_id FROM goods_receipts WHERE id = ?1 AND status <> 'draft'", [id], |r| {
             Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?))
@@ -483,7 +487,7 @@ fn receipt_detail(conn: &Connection, id: &str) -> AppResult<GoodsReceiptDetail> 
         .ok_or_else(|| AppError::not_found("The goods receipt"))?;
     let lines: Vec<PurchaseDocLine> = conn
         .prepare(
-            "SELECT id, variant_id, item_name, qty, unit_cost, 0, 0, 0, 0 FROM goods_receipt_items WHERE receipt_id = ?1 ORDER BY line_no",
+            "SELECT id, variant_id, item_name, qty, unit_cost, 0, 0, 0, 0, unit_id FROM goods_receipt_items WHERE receipt_id = ?1 ORDER BY line_no",
         )?
         .query_map([id], map_doc_line)?
         .collect::<Result<_, _>>()?;
@@ -690,7 +694,7 @@ fn bill_detail(conn: &Connection, id: &str) -> AppResult<PurchaseDocDetail> {
         .prepare(
             "SELECT l.id, l.variant_id, l.item_name, l.qty, l.unit_cost, l.taxable, l.tax_total, l.line_total,
                coalesce((SELECT sum(ri.qty) FROM purchase_return_items ri JOIN purchase_returns pr ON pr.id = ri.return_id
-                         WHERE ri.original_item_id = l.id AND pr.status = 'finalized'), 0)
+                         WHERE ri.original_item_id = l.id AND pr.status = 'finalized'), 0), l.unit_id
              FROM purchase_bill_items l WHERE l.bill_id = ?1 ORDER BY l.line_no",
         )?
         .query_map([id], map_doc_line)?
@@ -1487,6 +1491,7 @@ pub fn create_return(
                             tax_total: o.tax,
                             line_total: o.taxable + o.tax,
                             progress_qty: 0,
+                            unit_id: None,
                         })
                         .collect(),
                     warnings: Vec::new(),

@@ -150,6 +150,7 @@ pub fn create_business(
         for doc_type in DOC_TYPES {
             ensure_default_series(tx, &branch_id, doc_type, &now)?;
         }
+        seed_masters(tx, tax.regime, &owner_id, &now)?;
         let mut entry = AuditEntry::new("SETUP", "business", Some(&branch_id))
             .summary(format!("Business '{}' set up", business.name))
             .after(json!({ "business": business, "owner": owner_email }));
@@ -157,6 +158,42 @@ pub fn create_business(
         entry.write(tx, &now)
     })?;
     Ok(owner_email)
+}
+
+/// Units every shop uses and, for GST, the standard rate slabs, so the first product can be added
+/// straight away. All of them can be renamed or removed later.
+const DEFAULT_UNITS: [(&str, &str, i64); 9] = [
+    ("pcs", "Pieces", 0),
+    ("kg", "Kilogram", 3),
+    ("g", "Gram", 0),
+    ("ltr", "Litre", 3),
+    ("ml", "Millilitre", 0),
+    ("m", "Metre", 2),
+    ("box", "Box", 0),
+    ("pack", "Pack", 0),
+    ("dozen", "Dozen", 0),
+];
+
+const GST_SLABS: [i64; 5] = [0, 5, 12, 18, 28];
+
+fn seed_masters(tx: &Connection, regime: TaxRegime, owner_id: &str, now: &str) -> AppResult<()> {
+    for (code, name, decimals) in DEFAULT_UNITS {
+        tx.execute(
+            "INSERT INTO units (id, code, name, decimals, created_at, updated_at, created_by, updated_by)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?5, ?6, ?6)",
+            params![new_id(), code, name, decimals, now, owner_id],
+        )?;
+    }
+    if regime == TaxRegime::Gst {
+        for percent in GST_SLABS {
+            tx.execute(
+                "INSERT INTO tax_rates (id, name, tax_type, rate, cess_rate, is_active, created_at, updated_at, created_by, updated_by)
+                 VALUES (?1, ?2, 'gst', ?3, 0, 1, ?4, ?4, ?5, ?5)",
+                params![new_id(), format!("GST {percent}%"), percent * 10_000, now, owner_id],
+            )?;
+        }
+    }
+    Ok(())
 }
 
 /// The default branch and its default warehouse (every v2 database has them after setup or

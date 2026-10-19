@@ -412,6 +412,43 @@
       ],
       "type": "object"
     },
+    "BalanceAdjustment": {
+      "properties": {
+        "adjustmentMinor": {
+          "description": "Opening-balance entry posted so the v2 balance equals what v1 showed.",
+          "format": "int64",
+          "type": "integer"
+        },
+        "fromDocumentsMinor": {
+          "description": "Balance rebuilt from the migrated documents and payments (minor, +ve = owes us).",
+          "format": "int64",
+          "type": "integer"
+        },
+        "legacyBalance": {
+          "description": "Balance v1 showed (customer due, or supplier balance), major units.",
+          "format": "double",
+          "type": "number"
+        },
+        "name": {
+          "type": "string"
+        },
+        "partyId": {
+          "type": "string"
+        },
+        "partyType": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "adjustmentMinor",
+        "fromDocumentsMinor",
+        "legacyBalance",
+        "name",
+        "partyId",
+        "partyType"
+      ],
+      "type": "object"
+    },
     "Brand": {
       "properties": {
         "id": {
@@ -1701,6 +1738,36 @@
       ],
       "type": "object"
     },
+    "ImportLegacyInput": {
+      "properties": {
+        "dryRun": {
+          "default": false,
+          "description": "Only check and report; change nothing.",
+          "type": "boolean"
+        }
+      },
+      "type": "object"
+    },
+    "ImportLegacyResult": {
+      "properties": {
+        "applied": {
+          "type": "boolean"
+        },
+        "report": {
+          "$ref": "#/definitions/MigrationReport"
+        },
+        "reportPath": {
+          "description": "Where the full report (JSON) was saved.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "applied",
+        "report",
+        "reportPath"
+      ],
+      "type": "object"
+    },
     "InventorySettings": {
       "properties": {
         "lowStockAlerts": {
@@ -2196,6 +2263,153 @@
       "required": [
         "email",
         "password"
+      ],
+      "type": "object"
+    },
+    "LossyAmount": {
+      "properties": {
+        "column": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "legacyValue": {
+          "format": "double",
+          "type": "number"
+        },
+        "migratedMinor": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "table": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "column",
+        "id",
+        "legacyValue",
+        "migratedMinor",
+        "table"
+      ],
+      "type": "object"
+    },
+    "MigrationReport": {
+      "properties": {
+        "backupPath": {
+          "type": "string"
+        },
+        "backupSha256": {
+          "description": "SHA-256 of the backup copy (SQLite backups are logically, not byte-for-byte, identical to v1).",
+          "type": "string"
+        },
+        "balanceAdjustments": {
+          "items": {
+            "$ref": "#/definitions/BalanceAdjustment"
+          },
+          "type": "array"
+        },
+        "dryRun": {
+          "type": "boolean"
+        },
+        "finishedAt": {
+          "type": "string"
+        },
+        "legacyPath": {
+          "type": "string"
+        },
+        "lossyAmounts": {
+          "items": {
+            "$ref": "#/definitions/LossyAmount"
+          },
+          "type": "array"
+        },
+        "negativeStock": {
+          "items": {
+            "$ref": "#/definitions/NegativeStock"
+          },
+          "type": "array"
+        },
+        "schemaVersion": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "startedAt": {
+          "type": "string"
+        },
+        "tables": {
+          "additionalProperties": {
+            "$ref": "#/definitions/TableCounts"
+          },
+          "description": "Per v1 table: rows read, rows written (and where), rows skipped.",
+          "type": "object"
+        },
+        "targetPath": {
+          "description": "None for a dry run (the trial database is deleted afterwards).",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "totals": {
+          "$ref": "#/definitions/Totals"
+        },
+        "unbalancedJournalEntries": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "usersRequiringPasswordChange": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "warnings": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "backupPath",
+        "backupSha256",
+        "balanceAdjustments",
+        "dryRun",
+        "finishedAt",
+        "legacyPath",
+        "lossyAmounts",
+        "negativeStock",
+        "schemaVersion",
+        "startedAt",
+        "tables",
+        "totals",
+        "unbalancedJournalEntries",
+        "usersRequiringPasswordChange",
+        "warnings"
+      ],
+      "type": "object"
+    },
+    "NegativeStock": {
+      "properties": {
+        "qtyMilli": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "sku": {
+          "type": "string"
+        },
+        "variantId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "qtyMilli",
+        "sku",
+        "variantId"
       ],
       "type": "object"
     },
@@ -2699,11 +2913,104 @@
       ],
       "type": "object"
     },
+    "Page_for_ReceiptListItem": {
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/definitions/ReceiptListItem"
+          },
+          "type": "array"
+        },
+        "page": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "pageSize": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "total": {
+          "format": "int64",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "items",
+        "page",
+        "pageSize",
+        "total"
+      ],
+      "type": "object"
+    },
+    "Page_for_ReturnListItem": {
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/definitions/ReturnListItem"
+          },
+          "type": "array"
+        },
+        "page": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "pageSize": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "total": {
+          "format": "int64",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "items",
+        "page",
+        "pageSize",
+        "total"
+      ],
+      "type": "object"
+    },
     "Page_for_SalesDocListItem": {
       "properties": {
         "items": {
           "items": {
             "$ref": "#/definitions/SalesDocListItem"
+          },
+          "type": "array"
+        },
+        "page": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "pageSize": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "total": {
+          "format": "int64",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "items",
+        "page",
+        "pageSize",
+        "total"
+      ],
+      "type": "object"
+    },
+    "Page_for_StockDocListItem": {
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/definitions/StockDocListItem"
           },
           "type": "array"
         },
@@ -4047,6 +4354,44 @@
       },
       "type": "object"
     },
+    "PublicInventory": {
+      "properties": {
+        "negativeStockPolicy": {
+          "$ref": "#/definitions/NegativeStockPolicy"
+        }
+      },
+      "required": [
+        "negativeStockPolicy"
+      ],
+      "type": "object"
+    },
+    "PublicSettings": {
+      "properties": {
+        "business": {
+          "$ref": "#/definitions/BusinessSettings"
+        },
+        "inventory": {
+          "$ref": "#/definitions/PublicInventory"
+        },
+        "invoice": {
+          "$ref": "#/definitions/InvoiceSettings"
+        },
+        "offlineSalesPolicy": {
+          "$ref": "#/definitions/OfflineSalesPolicy"
+        },
+        "tax": {
+          "$ref": "#/definitions/TaxSettings"
+        }
+      },
+      "required": [
+        "business",
+        "inventory",
+        "invoice",
+        "offlineSalesPolicy",
+        "tax"
+      ],
+      "type": "object"
+    },
     "PurchaseBillInput": {
       "properties": {
         "billDiscount": {
@@ -4278,6 +4623,14 @@
         "unitCost": {
           "format": "int64",
           "type": "integer"
+        },
+        "unitId": {
+          "default": null,
+          "description": "The unit the quantity is in (a pack size or the base unit).",
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "variantId": {
           "type": "string"
@@ -4585,6 +4938,116 @@
       ],
       "type": "object"
     },
+    "ReceiptListItem": {
+      "properties": {
+        "billDocNo": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "businessDate": {
+          "type": "string"
+        },
+        "docNo": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "orderDocNo": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "partyId": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "supplierName": {
+          "type": "string"
+        },
+        "supplierReference": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "value": {
+          "format": "int64",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "businessDate",
+        "docNo",
+        "id",
+        "partyId",
+        "status",
+        "supplierName",
+        "value"
+      ],
+      "type": "object"
+    },
+    "ReceiptListQuery": {
+      "properties": {
+        "from": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "page": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "pageSize": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "partyId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "purchaseOrderId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "search": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "to": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "unbilledOnly": {
+          "default": false,
+          "description": "Only receipts not yet covered by a supplier bill.",
+          "type": "boolean"
+        }
+      },
+      "type": "object"
+    },
     "RegisterSession": {
       "properties": {
         "cashIn": {
@@ -4831,7 +5294,7 @@
               "type": "null"
             }
           ],
-          "description": "Money handed back now; without it the credit stays on the customer's account."
+          "description": "Money paid back now. Walk-in returns are always refunded in full (the amount is set to the return's total); a customer's return without a refund becomes credit on their account."
         },
         "warehouseId": {
           "type": [
@@ -4920,6 +5383,94 @@
       "required": [
         "qty"
       ],
+      "type": "object"
+    },
+    "ReturnListItem": {
+      "properties": {
+        "amountRefunded": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "businessDate": {
+          "type": "string"
+        },
+        "customerName": {
+          "type": "string"
+        },
+        "docNo": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "invoiceDocNo": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "status": {
+          "type": "string"
+        },
+        "total": {
+          "format": "int64",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "amountRefunded",
+        "businessDate",
+        "customerName",
+        "docNo",
+        "id",
+        "status",
+        "total"
+      ],
+      "type": "object"
+    },
+    "ReturnListQuery": {
+      "properties": {
+        "from": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "page": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "pageSize": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "partyId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "search": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "to": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
       "type": "object"
     },
     "RoleInput": {
@@ -6104,6 +6655,120 @@
       ],
       "type": "object"
     },
+    "StockDocListItem": {
+      "properties": {
+        "businessDate": {
+          "type": "string"
+        },
+        "docNo": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "lineCount": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "note": {
+          "description": "Adjustment reason or count scope.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "status": {
+          "type": "string"
+        },
+        "toWarehouseName": {
+          "description": "Transfers: the receiving store.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "warehouseName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "businessDate",
+        "id",
+        "kind",
+        "lineCount",
+        "status",
+        "warehouseName"
+      ],
+      "type": "object"
+    },
+    "StockDocQuery": {
+      "properties": {
+        "from": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "kind": {
+          "description": "\"adjustment\", \"transfer\" or \"count\".",
+          "type": "string"
+        },
+        "page": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "pageSize": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "search": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "to": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "type": "object"
+    },
+    "StockDocRef": {
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "description": "\"adjustment\" or \"transfer\" (counts: `stock_count_get`).",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "kind"
+      ],
+      "type": "object"
+    },
     "StockDocResult": {
       "properties": {
         "businessDate": {
@@ -6223,6 +6888,38 @@
         "kind",
         "sourceId",
         "sourceType"
+      ],
+      "type": "object"
+    },
+    "TableCounts": {
+      "properties": {
+        "legacyRows": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "migratedRows": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "migratedTo": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "skippedRows": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "legacyRows",
+        "migratedRows",
+        "migratedTo",
+        "skippedRows"
       ],
       "type": "object"
     },
@@ -6367,6 +7064,56 @@
         "sgst",
         "taxRate",
         "taxable"
+      ],
+      "type": "object"
+    },
+    "Totals": {
+      "properties": {
+        "expenseTotalMinor": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "legacyExpenseTotal": {
+          "format": "double",
+          "type": "number"
+        },
+        "legacyPurchaseTotal": {
+          "format": "double",
+          "type": "number"
+        },
+        "legacySalesTotal": {
+          "description": "Sum of v1 invoice totals, excluding cancelled ones (major units, as stored in v1).",
+          "format": "double",
+          "type": "number"
+        },
+        "legacyStockValue": {
+          "description": "Σ stock × cost in v1 (major units) vs Σ stock_levels.value in v2 (minor units).",
+          "format": "double",
+          "type": "number"
+        },
+        "purchaseTotalMinor": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "salesTotalMinor": {
+          "description": "Sum of finalized v2 invoice totals (minor units).",
+          "format": "int64",
+          "type": "integer"
+        },
+        "stockValueMinor": {
+          "format": "int64",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "expenseTotalMinor",
+        "legacyExpenseTotal",
+        "legacyPurchaseTotal",
+        "legacySalesTotal",
+        "legacyStockValue",
+        "purchaseTotalMinor",
+        "salesTotalMinor",
+        "stockValueMinor"
       ],
       "type": "object"
     },
@@ -6899,6 +7646,27 @@
         "code",
         "id",
         "isDefault",
+        "name"
+      ],
+      "type": "object"
+    },
+    "WarehouseInput": {
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "code",
         "name"
       ],
       "type": "object"
@@ -7967,6 +8735,38 @@
           ],
           "type": "object"
         },
+        "purchases_get_receipt": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/IdInput"
+            },
+            "output": {
+              "$ref": "#/definitions/GoodsReceiptDetail"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "purchases_get_return": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/IdInput"
+            },
+            "output": {
+              "$ref": "#/definitions/PurchaseDocDetail"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
         "purchases_list": {
           "additionalProperties": false,
           "properties": {
@@ -7975,6 +8775,22 @@
             },
             "output": {
               "$ref": "#/definitions/Page_for_PurchaseListItem"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "purchases_list_receipts": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/ReceiptListQuery"
+            },
+            "output": {
+              "$ref": "#/definitions/Page_for_ReceiptListItem"
             }
           },
           "required": [
@@ -8316,6 +9132,25 @@
           ],
           "type": "object"
         },
+        "sales_invoice_returns": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/IdInput"
+            },
+            "output": {
+              "items": {
+                "$ref": "#/definitions/ReturnDetail"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
         "sales_list_invoices": {
           "additionalProperties": false,
           "properties": {
@@ -8324,6 +9159,22 @@
             },
             "output": {
               "$ref": "#/definitions/Page_for_InvoiceListItem"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "sales_list_returns": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/ReturnListQuery"
+            },
+            "output": {
+              "$ref": "#/definitions/Page_for_ReturnListItem"
             }
           },
           "required": [
@@ -8402,7 +9253,9 @@
             "input": {
               "$ref": "#/definitions/NoInput"
             },
-            "output": true
+            "output": {
+              "$ref": "#/definitions/PublicSettings"
+            }
           },
           "required": [
             "input",
@@ -8434,6 +9287,22 @@
             },
             "output": {
               "$ref": "#/definitions/AuthSession"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "setup_import_legacy": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/ImportLegacyInput"
+            },
+            "output": {
+              "$ref": "#/definitions/ImportLegacyResult"
             }
           },
           "required": [
@@ -8546,6 +9415,38 @@
             },
             "output": {
               "$ref": "#/definitions/CountDetail"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "stock_document_get": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/StockDocRef"
+            },
+            "output": {
+              "$ref": "#/definitions/StockDocResult"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "stock_documents": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/StockDocQuery"
+            },
+            "output": {
+              "$ref": "#/definitions/Page_for_StockDocListItem"
             }
           },
           "required": [
@@ -8773,6 +9674,22 @@
             "output"
           ],
           "type": "object"
+        },
+        "warehouses_save": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/WarehouseInput"
+            },
+            "output": {
+              "$ref": "#/definitions/Warehouse"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
         }
       },
       "required": [
@@ -8838,7 +9755,10 @@
         "purchases_create_return",
         "purchases_get_bill",
         "purchases_get_order",
+        "purchases_get_receipt",
+        "purchases_get_return",
         "purchases_list",
+        "purchases_list_receipts",
         "purchases_receive_goods",
         "purchases_save_order",
         "purchases_void_bill",
@@ -8859,7 +9779,9 @@
         "sales_get_return",
         "sales_held_list",
         "sales_hold",
+        "sales_invoice_returns",
         "sales_list_invoices",
+        "sales_list_returns",
         "sales_preview",
         "sales_recall",
         "sales_void_invoice",
@@ -8867,6 +9789,7 @@
         "settings_public",
         "settings_update",
         "setup_create_business",
+        "setup_import_legacy",
         "setup_status",
         "stock_adjust",
         "stock_card",
@@ -8874,6 +9797,8 @@
         "stock_count_finalize",
         "stock_count_get",
         "stock_count_start",
+        "stock_document_get",
+        "stock_documents",
         "stock_transfer",
         "stock_warehouses",
         "sync_exceptions",
@@ -8886,7 +9811,8 @@
         "users_delete",
         "users_list",
         "users_reset_password",
-        "users_update"
+        "users_update",
+        "warehouses_save"
       ],
       "type": "object"
     },
@@ -8925,6 +9851,7 @@
           "device_set_mode",
           "device_status",
           "setup_create_business",
+          "setup_import_legacy",
           "setup_status"
         ],
         "type": "string"

@@ -281,8 +281,8 @@ fn inter_state_sales_use_igst_and_packs_convert_to_base_units() {
         &mut kit.ctx(&mut conn, &owner),
         &crate::services::catalog::UnitInput {
             id: None,
-            code: "box".into(),
-            name: "Box".into(),
+            code: "ctn".into(),
+            name: "Carton".into(),
             decimals: 0,
         },
     )
@@ -719,5 +719,40 @@ fn concurrent_sales_of_the_last_unit() {
         .count();
     assert_eq!((ok, insufficient), (1, 1), "{results:?}");
     assert_eq!(kit.stock(&last), 0);
+    kit.assert_books_balance();
+}
+
+#[test]
+fn walk_in_returns_are_refunded_in_full_whatever_amount_was_sent() {
+    let (kit, rice) = shop();
+    let owner = kit.owner();
+    let invoice = sell(
+        &kit,
+        &owner,
+        &sale("sale-walkin-1", vec![line(&rice, 2)], vec![cash(23_600)]),
+    )
+    .unwrap();
+    let mut conn = kit.conn();
+    let ret = sales::create_return(
+        &mut kit.ctx(&mut conn, &owner),
+        &ReturnInput {
+            idempotency_key: "ret-walkin-1".into(),
+            original_invoice_id: Some(invoice.id.clone()),
+            party_id: None,
+            warehouse_id: None,
+            reason: "Wrong item".into(),
+            lines: vec![ReturnLineInput {
+                original_item_id: Some(invoice.lines[0].id.clone()),
+                variant_id: None,
+                qty: 1_000,
+                restock: true,
+            }],
+            // The screen only estimates; the backend refunds the exact total.
+            refund: Some(cash(1)),
+        },
+    )
+    .unwrap();
+    assert_eq!((ret.total, ret.amount_refunded), (11_800, 11_800));
+    drop(conn);
     kit.assert_books_balance();
 }

@@ -84,8 +84,8 @@ fn products_with_variants_pack_barcodes_and_search() {
         &mut kit.ctx(&mut conn, &owner),
         &UnitInput {
             id: None,
-            code: "box".into(),
-            name: "Box".into(),
+            code: "ctn".into(),
+            name: "Carton".into(),
             decimals: 0,
         },
     )
@@ -124,7 +124,7 @@ fn products_with_variants_pack_barcodes_and_search() {
     .unwrap();
     assert_eq!(
         (pack.unit_code.as_str(), pack.factor_num, pack.sale_price),
-        ("box", 12, 12 * 29900)
+        ("ctn", 12, 12 * 29900)
     );
     let by_sku = catalog::lookup_code(
         &ctx,

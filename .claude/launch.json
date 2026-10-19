@@ -6,6 +6,12 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],
       "port": 1420
+    },
+    {
+      "name": "dev-bridge",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev:bridge"],
+      "port": 1430
     }
   ]
 }

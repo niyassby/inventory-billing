@@ -6,7 +6,7 @@ use chrono::{DateTime, Utc};
 use rusqlite::{params, Connection, OptionalExtension};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
+use serde_json::Value;
 
 use super::audit::AuditEntry;
 use super::{write, Ctx};
@@ -507,11 +507,37 @@ pub fn get(ctx: &Ctx<'_>) -> AppResult<Settings> {
     load(ctx.conn)
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct PublicInventory {
+    pub negative_stock_policy: NegativeStockPolicy,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct PublicSettings {
+    pub business: BusinessSettings,
+    pub tax: TaxSettings,
+    pub invoice: InvoiceSettings,
+    pub inventory: PublicInventory,
+    pub offline_sales_policy: OfflineSalesPolicy,
+}
+
+impl From<&Settings> for PublicSettings {
+    fn from(s: &Settings) -> Self {
+        Self {
+            business: s.business.clone(),
+            tax: s.tax.clone(),
+            invoice: s.invoice.clone(),
+            inventory: PublicInventory {
+                negative_stock_policy: s.inventory.negative_stock_policy,
+            },
+            offline_sales_policy: s.network.offline_sales_policy,
+        }
+    }
+}
+
 /// Settings every signed-in user may read (currency, tax defaults, business name for receipts).
-pub fn public(conn: &Connection) -> AppResult<Value> {
-    let s = load(conn)?;
-    Ok(
-        json!({ "business": s.business, "tax": s.tax, "invoice": s.invoice,
-               "inventory": { "negativeStockPolicy": s.inventory.negative_stock_policy } }),
-    )
+pub fn public(conn: &Connection) -> AppResult<PublicSettings> {
+    Ok(PublicSettings::from(&load(conn)?))
 }

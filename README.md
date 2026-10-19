@@ -7,8 +7,9 @@ offline. Multi-counter shops connect their devices to one **hub** PC over the lo
 
 > **Status:** under active rebuild. Phase 0 (audit), Phase 1 (tooling, TypeScript, shared
 > package), Phase 2 (v2 database schema and the v1 data migration), Phase 3 (v2 backend
-> services, permissions and tests) and Phase 4 (LAN hub, offline counters, backups) are done.
-> The screens still run on the legacy single-device version until Phase 5. Read [docs/AUDIT.md](docs/AUDIT.md) for its known
+> services, permissions and tests), Phase 4 (LAN hub, offline counters, backups) and Phase 5
+> (point of sale, sales, products and stock, purchases, customers and suppliers on the new
+> backend) are done. Reports, accounts and settings screens follow in Phase 6. Read [docs/AUDIT.md](docs/AUDIT.md) for its known
 > issues before using it with real data.
 
 ## Stack

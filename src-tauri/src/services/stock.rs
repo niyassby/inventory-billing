@@ -135,6 +135,10 @@ pub struct StockDocResult {
     pub warnings: Vec<StockWarning>,
 }
 
+#[allow(
+    clippy::too_many_arguments,
+    reason = "the adjustment journal needs every document field"
+)]
 fn post_adjustment_journal(
     tx: &Connection,
     today: &str,

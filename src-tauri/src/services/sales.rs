@@ -1636,7 +1636,8 @@ pub struct ReturnInput {
     pub warehouse_id: Option<String>,
     pub reason: String,
     pub lines: Vec<ReturnLineInput>,
-    /// Money handed back now; without it the credit stays on the customer's account.
+    /// Money paid back now. Walk-in returns are always refunded in full (the amount is set to the
+    /// return's total); a customer's return without a refund becomes credit on their account.
     pub refund: Option<PaymentInput>,
 }
 
@@ -1703,7 +1704,7 @@ fn proportional(value: i64, part: i64, whole: i64) -> i64 {
     .unwrap_or(0)
 }
 
-fn return_detail(conn: &Connection, id: &str) -> AppResult<ReturnDetail> {
+pub(crate) fn return_detail(conn: &Connection, id: &str) -> AppResult<ReturnDetail> {
     let mut detail = conn
         .query_row(
             "SELECT id, doc_no, business_date, status, original_invoice_id, party_id, customer_name, reason, taxable, tax_total, total, amount_refunded
@@ -1997,6 +1998,16 @@ pub fn create_return(ctx: &mut Ctx<'_>, input: &ReturnInput) -> AppResult<Return
                     None => 0,
                 };
                 let total = taxable + tax + round_off;
+                // A walk-in customer always gets the full value back; the screen can't know the
+                // exact amount (tax and round-off) before this point, so it only chooses the mode.
+                let refund: Option<ValidPayment> = match (&party, refund.clone()) {
+                    (None, Some(mut r)) => {
+                        r.amount = total;
+                        r.tendered = None;
+                        Some(r)
+                    }
+                    (_, r) => r,
+                };
                 let refund_amount = refund.as_ref().map_or(0, |r| r.amount);
                 if refund_amount > total {
                     return Err(AppError::field(

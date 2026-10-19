@@ -82,13 +82,9 @@ pub fn handle(
         let user = user(conn, token, now)?;
         match name {
             "auth_me" => Ok(serde_json::to_value(&user)?),
-            "settings_public" => {
-                let s = context(conn)?.settings;
-                Ok(
-                    json!({ "business": s.business, "tax": s.tax, "invoice": s.invoice,
-                           "inventory": { "negativeStockPolicy": s.inventory.negative_stock_policy } }),
-                )
-            }
+            "settings_public" => Ok(serde_json::to_value(
+                crate::services::settings::PublicSettings::from(&context(conn)?.settings),
+            )?),
             "products_search" => {
                 require(&user, "products.view")?;
                 let q: SearchQuery = input(payload)?;

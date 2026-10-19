@@ -15,14 +15,20 @@ packages/shared/           @inventory/shared: pure TS, no React and no Tauri
   src/types/legacy.ts      types of the current (v1) Tauri commands
   src/generated/           api-schema.json (from Rust) and api.ts (npm run gen:api): do not edit
 src/
-  api/client.ts            typed clients over a Transport: v1 `api` and v2 `createV2Client`
+  App.tsx                  gate (setup → sign-in → password change) and all routes (lazy-loaded)
+  app/                     shell (sidebar, top bar, F2), navigation config (permission-aware)
+  api/v2.ts                `call(command, input)`: typed, asks for manager approval and retries
+  api/transport.ts         Tauri IPC in the app, the HTTP dev bridge in a plain browser
+  api/client.ts, errors.ts typed clients over a Transport; ApiError with stable codes
   api/connection.ts        what the top bar shows about the hub connection (hooks/use-connection.ts)
-  api/errors.ts            ApiError + normalisation of backend errors into stable codes
-  api/hooks/*.ts           TanStack Query hooks per domain
-  stores/app-store.ts      Zustand: session + UI state (legacy POS cart lives here for now)
-  app/                     shell: layout, auth page, RequireAuth guard
-  components/ui/           shadcn primitives (TSX; the rest are converted as they are touched)
-  pages/**                 legacy pages (.jsx), rebuilt module by module in Phases 5–7
+  lib/queries.ts           useCommand / useList (queries) and useAction (mutations + toasts)
+  lib/format.ts            money, quantity, rate and date display/parsing (exact, no floats)
+  lib/business.ts          business settings (currency, locale) for formatting
+  stores/                  session (token in sessionStorage), approval prompt; legacy app-store (v1 pages)
+  components/app/          page frame, DataTable, inputs (money/qty/rate), pickers, dialogs, line editor
+  components/ui/           shadcn primitives (TSX for everything the v2 screens use)
+  features/<module>/       screens per module: auth, dashboard, pos, sales, inventory, parties, purchases
+  pages/**                 v1 pages kept only as reference for Phase 6 (accounts, reports, settings, leads, labels)
 src-tauri/src/
   api/                     v2 commands (one macro: IPC, LAN dispatch, contract) + contract.rs (JSON schema)
   api/local.rs             commands about this PC (role, pairing, outbox); never forwarded to the hub
@@ -36,7 +42,8 @@ src-tauri/src/
   domain/                  pure logic (money, pricing, numbering, ids); mirrors packages/shared
   legacy_migration/        v1 → v2 data migration (reader, transform, report, end-to-end tests)
   bin/migrate_legacy.rs    command-line front end for the migration
-  commands/, repositories/, database/   v1 backend, still serving the screens until Phase 5
+  bin/dev_server.rs        development only: the v2 commands over HTTP on 127.0.0.1:1430
+  commands/, repositories/, database/   v1 backend (unused by the screens since Phase 5; removed in Phase 8)
 packages/shared/test-vectors/  JSON vectors both the TS and Rust money code must pass
 docs/                      audit, architecture, assumptions, this guide
 ```
@@ -136,27 +143,46 @@ file (never edit a released one) and extend `src-tauri/src/db/tests.rs`.
 cargo run --manifest-path src-tauri/Cargo.toml --bin migrate-legacy -- --dry-run
 ```
 
-## Previewing the UI without Tauri
+## Running the screens in a browser
 
-`npm run dev` serves the frontend at http://localhost:1420. Backend calls fail in a plain browser
-because there is no Tauri IPC. For quick UI checks you can stub IPC from the browser console
-before signing in:
+The screens talk to the backend through a transport: Tauri IPC inside the app, or the
+development bridge in an ordinary browser (same commands, same checks, real database):
 
-```js
-window.__TAURI_INTERNALS__ = {
-  transformCallback: () => 0,
-  invoke: async (cmd, args) => (cmd === "login" ? { user: {/* … */}, token: "dev" } : []),
-};
+```bash
+npm run dev:bridge
 ```
+
+```bash
+npm run dev
+```
+
+Then open http://localhost:1420. `dev:bridge` keeps its database in `.dev-data/` and, on an empty
+folder, creates a demo shop: `demo@example.test` / `Demo-shop-2026` (test data only). Delete
+`.dev-data/` to start over. The first build of the bridge takes a while (it compiles the whole
+backend in debug mode).
+
+## Writing a screen
+
+- Read with `useCommand(name, input)` (or `useList` for paged lists); write with
+  `useAction(name, { invalidates, success })` or `call(name, input)` for multi-step flows. Never
+  call `invoke` directly.
+- Every write that creates a document sends a `requestId()` as its `idempotencyKey`, created once
+  per screen, so a double click or a retry never makes two documents.
+- Money is minor units, quantities thousandths, rates ppm. Use `MoneyInput`, `QtyInput`,
+  `RateInput` and the `show*` helpers; never `parseFloat`.
+- `APPROVAL_REQUIRED` needs no code: `call` opens the manager-approval dialog and retries.
+- Totals shown before saving come from the backend (`sales_preview`); the screen never computes
+  tax.
+- Business rules belong in the backend or in `packages/shared`, never in a component. Pure
+  screen logic (like the POS cart in `features/pos/cart.ts`) lives in a `.ts` file with tests.
 
 ## TypeScript migration status
 
 | Area | Status | Converted in |
 |---|---|---|
 | `packages/shared`, `src/api`, `src/stores`, `src/lib`, `src/hooks` | ✅ TS | Phase 1 |
-| App shell (`main`, `App`, `app/*`, login form) | ✅ TS | Phase 1 |
-| shadcn primitives used by TS code (12 files) | ✅ TS | Phase 1 |
-| Remaining shadcn primitives, sidebar components | JS | Phase 7 (design system) |
-| Pages: inventory, sales/POS, purchases, contacts | JS | Phase 5 (rebuilt) |
-| Pages: accounting, reports, settings | JS | Phase 6 (rebuilt) |
-| Dashboard | JS | Phase 7 |
+| App shell, sign-in, setup | ✅ TS (rewritten on v2) | Phase 5 |
+| shadcn primitives used by the v2 screens (25 files) | ✅ TS | Phases 1 and 5 |
+| Inventory, sales/POS, purchases, customers and suppliers, payments, dashboard | ✅ TS (rebuilt on v2) | Phase 5 |
+| Accounting, reports, settings, leads, barcode labels | JS (v1, not routed) | Phase 6 (rebuilt) |
+| Remaining shadcn primitives | JS | Phase 7 (design system) |

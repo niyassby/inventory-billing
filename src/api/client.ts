@@ -72,7 +72,8 @@ export function createV2Client(transport: Transport, token: TokenSource): V2Clie
     ): Promise<Api.CommandOutput<K>> {
       try {
         const args = { token: token() ?? "", input, approval: approval ?? null };
-        return await transport.call(command, args);
+        // The one trust boundary: the generated contract describes what the backend returns.
+        return (await transport.call(command, args)) as Api.CommandOutput<K>;
       } catch (error) {
         throw toApiError(error);
       }

@@ -107,6 +107,10 @@ pub fn is_due(
     }
 }
 
+#[allow(
+    clippy::too_many_arguments,
+    reason = "one notice row, written in one place"
+)]
 fn notify(
     conn: &Connection,
     kind: &str,

@@ -2,10 +2,11 @@ import { useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { listen } from "@tauri-apps/api/event";
 import type { Api } from "@inventory/shared";
-import { createV2Client, tauriTransport } from "@/api/client";
+import { createV2Client } from "@/api/client";
+import { defaultTransport } from "@/api/transport";
 
 /** Local device commands need no session. */
-const device = createV2Client(tauriTransport, () => null);
+const device = createV2Client(defaultTransport(), () => null);
 
 const KEY = ["device-status"] as const;
 

@@ -689,3 +689,57 @@ fn reader_handles_missing_tables_and_columns() {
         .unwrap();
     assert!(none.is_none());
 }
+
+#[test]
+fn first_start_import_checks_first_then_fills_the_open_database() {
+    use crate::services::setup::needs_setup;
+    use crate::services::upgrade::{import_legacy, ImportLegacyInput};
+    let f = fixture();
+    let legacy_hash = sha256(&f.legacy);
+    // The app has already opened (and migrated) its empty v2 database next to the v1 file.
+    let state = crate::app::AppState::open(&f.target, std::sync::Arc::new(crate::app::SystemClock))
+        .unwrap();
+
+    let dry = import_legacy(&state, &ImportLegacyInput { dry_run: true }).unwrap();
+    assert!(!dry.applied);
+    assert!(
+        needs_setup(&state.conn().unwrap()).unwrap(),
+        "a dry run changes nothing"
+    );
+
+    let done = import_legacy(&state, &ImportLegacyInput { dry_run: false }).unwrap();
+    assert!(done.applied);
+    let conn = state.conn().unwrap();
+    assert!(!needs_setup(&conn).unwrap());
+    assert_eq!(
+        scalar::<i64>(&conn, "SELECT count(*) FROM sales_invoices"),
+        4
+    );
+    assert_eq!(
+        scalar::<i64>(
+            &conn,
+            "SELECT count(*) FROM audit_log WHERE action = 'LEGACY_IMPORTED'"
+        ),
+        1
+    );
+    drop(conn);
+    assert_eq!(
+        sha256(&f.legacy),
+        legacy_hash,
+        "the v1 file is never written"
+    );
+    let leftovers = std::fs::read_dir(f.target.parent().unwrap())
+        .unwrap()
+        .filter_map(Result::ok)
+        .filter(|e| {
+            e.file_name()
+                .to_string_lossy()
+                .starts_with(".legacy-import-")
+        })
+        .count();
+    assert_eq!(leftovers, 0, "the temporary database is removed");
+
+    // Once the business exists, importing again is refused.
+    let again = import_legacy(&state, &ImportLegacyInput { dry_run: false });
+    assert_eq!(again.unwrap_err().code, crate::error::ErrorCode::Conflict);
+}

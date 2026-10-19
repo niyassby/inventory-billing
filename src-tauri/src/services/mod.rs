@@ -14,6 +14,7 @@ pub mod catalog;
 pub mod common;
 pub mod context;
 pub mod devices;
+pub mod documents;
 pub mod expenses;
 pub mod idempotency;
 pub mod journal;
@@ -29,6 +30,7 @@ pub mod setup;
 pub mod stock;
 pub mod stock_posting;
 pub mod sync;
+pub mod upgrade;
 pub mod users;
 
 #[cfg(test)]

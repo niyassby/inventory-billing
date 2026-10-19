@@ -1,147 +1,233 @@
 import type { ReactNode } from "react";
-import { Suspense, lazy } from "react";
+import { Suspense, lazy, useEffect } from "react";
 import { Navigate, Outlet, Route, Routes } from "react-router-dom";
-import Auth from "./app/auth";
-import Layout from "./app/layout";
-import { FullScreenSpinner, RequireAuth } from "./app/require-auth";
+import { useQuery } from "@tanstack/react-query";
+import { call } from "@/api/v2";
+import { ApprovalDialog, ConfirmDialog } from "@/components/app/dialogs";
+import { ErrorState } from "@/components/app/page";
+import { ChangePassword, SignIn } from "@/features/auth/sign-in";
+import { Setup } from "@/features/auth/setup";
+import { Shell } from "@/app/shell";
+import { useSession } from "@/stores/session";
+import "@/stores/approval";
 
-// Route-level code splitting: each page loads on first visit instead of in one 1.7 MB bundle.
-// lazy() must run once at module level; creating it during render suspends forever.
-const Overview = lazy(() => import("./pages/dashboard/Overview"));
-const Products = lazy(() => import("./pages/inventory/Products"));
-const AddEditProduct = lazy(() => import("./pages/inventory/AddEditProduct"));
-const Categories = lazy(() => import("./pages/inventory/Categories"));
-const Adjustments = lazy(() => import("./pages/inventory/Adjustments"));
-const Barcodes = lazy(() => import("./pages/inventory/Barcodes"));
-const SalesLayout = lazy(() => import("./pages/sales/SalesLayout"));
-const Invoices = lazy(() => import("./pages/sales/Invoices"));
-const Quotations = lazy(() => import("./pages/sales/Quotations"));
-const SalesReturns = lazy(() => import("./pages/sales/Returns"));
-const POS = lazy(() => import("./pages/sales/POS"));
-const Orders = lazy(() => import("./pages/purchases/Orders"));
-const Bills = lazy(() => import("./pages/purchases/Bills"));
-const PurchaseReturns = lazy(() => import("./pages/purchases/Returns"));
-const Customers = lazy(() => import("./pages/contacts/Customers"));
-const Leads = lazy(() => import("./pages/contacts/Leads"));
-const Suppliers = lazy(() => import("./pages/contacts/Suppliers"));
-const ChartOfAccounts = lazy(() => import("./pages/accounting/ChartOfAccounts"));
-const Journals = lazy(() => import("./pages/accounting/Journals"));
-const Expenses = lazy(() => import("./pages/accounting/Expenses"));
-const PaymentsReceived = lazy(() => import("./pages/accounting/PaymentsReceived"));
-const Taxes = lazy(() => import("./pages/accounting/Taxes"));
-const ProfitAndLoss = lazy(() => import("./pages/reports/ProfitAndLoss"));
-const SalesSummary = lazy(() => import("./pages/reports/SalesSummary"));
-const StockValuation = lazy(() => import("./pages/reports/StockValuation"));
-const TaxSummary = lazy(() => import("./pages/reports/TaxSummary"));
-const Company = lazy(() => import("./pages/settings/Company"));
-const Users = lazy(() => import("./pages/settings/Users"));
-const Preferences = lazy(() => import("./pages/settings/Preferences"));
-const Templates = lazy(() => import("./pages/settings/Templates"));
-const Maintenance = lazy(() => import("./pages/settings/Maintenance"));
+// Route-level code splitting: each screen loads on first visit.
+const Dashboard = lazy(() => import("@/features/dashboard/dashboard"));
+const PosPage = lazy(() => import("@/features/pos/pos-page"));
+const ComingSoon = lazy(() => import("@/features/coming-soon"));
+const ProductsPage = lazy(() => import("@/features/inventory/products-page"));
+const ProductEditor = lazy(() => import("@/features/inventory/product-editor"));
+const MastersPage = lazy(() => import("@/features/inventory/masters-page"));
+const Stock = {
+  Moves: lazy(() =>
+    import("@/features/inventory/stock-pages").then((m) => ({ default: m.StockMovesPage })),
+  ),
+  Adjust: lazy(() =>
+    import("@/features/inventory/stock-pages").then((m) => ({ default: m.AdjustmentPage })),
+  ),
+  Transfer: lazy(() =>
+    import("@/features/inventory/stock-pages").then((m) => ({ default: m.TransferPage })),
+  ),
+  Count: lazy(() =>
+    import("@/features/inventory/stock-pages").then((m) => ({ default: m.CountPage })),
+  ),
+  Doc: lazy(() =>
+    import("@/features/inventory/stock-pages").then((m) => ({ default: m.StockDocumentPage })),
+  ),
+  Card: lazy(() =>
+    import("@/features/inventory/stock-pages").then((m) => ({ default: m.StockCardPage })),
+  ),
+};
+const Parties = {
+  List: lazy(() =>
+    import("@/features/parties/party-pages").then((m) => ({ default: m.PartiesPage })),
+  ),
+  Detail: lazy(() =>
+    import("@/features/parties/party-pages").then((m) => ({ default: m.PartyPage })),
+  ),
+  Payments: lazy(() => import("@/features/parties/payments-page")),
+};
+const Sales = {
+  Invoices: lazy(() =>
+    import("@/features/sales/invoice-pages").then((m) => ({ default: m.InvoicesPage })),
+  ),
+  Invoice: lazy(() =>
+    import("@/features/sales/invoice-pages").then((m) => ({ default: m.InvoicePage })),
+  ),
+  Returns: lazy(() =>
+    import("@/features/sales/invoice-pages").then((m) => ({ default: m.ReturnsPage })),
+  ),
+  Return: lazy(() =>
+    import("@/features/sales/invoice-pages").then((m) => ({ default: m.ReturnPage })),
+  ),
+  NewReturn: lazy(() =>
+    import("@/features/sales/invoice-pages").then((m) => ({ default: m.NewReturnPage })),
+  ),
+  Docs: lazy(() =>
+    import("@/features/sales/document-pages").then((m) => ({ default: m.SalesDocsPage })),
+  ),
+  Doc: lazy(() =>
+    import("@/features/sales/document-pages").then((m) => ({ default: m.SalesDocPage })),
+  ),
+  DocEditor: lazy(() =>
+    import("@/features/sales/document-pages").then((m) => ({ default: m.SalesDocEditor })),
+  ),
+};
+const Purchases = {
+  List: lazy(() =>
+    import("@/features/purchases/purchase-pages").then((m) => ({ default: m.PurchasesPage })),
+  ),
+  Editor: lazy(() =>
+    import("@/features/purchases/purchase-pages").then((m) => ({ default: m.PurchaseEditor })),
+  ),
+  Doc: lazy(() =>
+    import("@/features/purchases/purchase-pages").then((m) => ({ default: m.PurchaseDocPage })),
+  ),
+  Receipt: lazy(() =>
+    import("@/features/purchases/purchase-pages").then((m) => ({ default: m.ReceiptPage })),
+  ),
+  NewReturn: lazy(() =>
+    import("@/features/purchases/purchase-pages").then((m) => ({
+      default: m.NewPurchaseReturnPage,
+    })),
+  ),
+};
 
-function PageSuspense({ children }: { children: ReactNode }) {
+export function FullScreenSpinner({ label }: { label: string }) {
   return (
-    <Suspense
-      fallback={
-        <div
-          className="flex h-[60vh] items-center justify-center"
-          role="status"
-          aria-label="Loading"
+    <div className="flex h-screen w-screen items-center justify-center bg-background font-sans text-foreground">
+      <div className="flex flex-col items-center gap-4" role="status" aria-live="polite">
+        <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        <p className="text-sm font-medium text-muted-foreground">{label}</p>
+      </div>
+    </div>
+  );
+}
+
+function Lazy({ children }: { children: ReactNode }) {
+  return <Suspense fallback={<FullScreenSpinner label="Loading…" />}>{children}</Suspense>;
+}
+
+/** First run → setup; then sign-in; then (if needed) a new password; then the app. */
+function Gate() {
+  const setup = useQuery({
+    queryKey: ["setup_status"],
+    queryFn: () => call("setup_status", {}),
+    staleTime: Infinity,
+  });
+  const status = useSession((s) => s.status);
+  const mustChange = useSession((s) => s.mustChangePassword);
+  const restore = useSession((s) => s.restore);
+  useEffect(() => {
+    if (status === "checking") void restore();
+  }, [status, restore]);
+
+  if (setup.isPending) return <FullScreenSpinner label="Starting…" />;
+  if (setup.error) {
+    return (
+      <div className="flex h-screen items-center justify-center p-6">
+        <ErrorState error={setup.error} onRetry={() => void setup.refetch()} />
+      </div>
+    );
+  }
+  if (setup.data.needsSetup) return <Setup status={setup.data} />;
+  if (status === "checking") return <FullScreenSpinner label="Signing you in…" />;
+  if (status === "signedOut") return <SignIn />;
+  if (mustChange) return <ChangePassword />;
+  return <AppRoutes />;
+}
+
+function AppRoutes() {
+  return (
+    <Routes>
+      <Route
+        path="/pos"
+        element={
+          <Lazy>
+            <PosPage />
+          </Lazy>
+        }
+      />
+      <Route element={<Shell />}>
+        <Route
+          element={
+            <Lazy>
+              <Outlet />
+            </Lazy>
+          }
         >
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-        </div>
-      }
-    >
-      {children}
-    </Suspense>
+          <Route index element={<Dashboard />} />
+          <Route path="inventory/products" element={<ProductsPage />} />
+          <Route path="inventory/products/:id" element={<ProductEditor />} />
+          <Route path="inventory/masters" element={<MastersPage />} />
+          <Route path="inventory/stock" element={<Stock.Moves />} />
+          <Route path="inventory/adjustments/new" element={<Stock.Adjust />} />
+          <Route path="inventory/transfers/new" element={<Stock.Transfer />} />
+          <Route path="inventory/counts/:id" element={<Stock.Count />} />
+          <Route path="inventory/documents/:kind/:id" element={<Stock.Doc />} />
+          <Route path="inventory/stock-card/:variantId" element={<Stock.Card />} />
+
+          <Route path="sales/invoices" element={<Sales.Invoices />} />
+          <Route path="sales/invoices/:id" element={<Sales.Invoice />} />
+          <Route path="sales/returns" element={<Sales.Returns />} />
+          <Route path="sales/returns/new" element={<Sales.NewReturn />} />
+          <Route path="sales/returns/:id" element={<Sales.Return />} />
+          <Route path="sales/documents" element={<Sales.Docs />} />
+          <Route path="sales/documents/new" element={<Sales.DocEditor />} />
+          <Route path="sales/documents/:id" element={<Sales.Doc />} />
+          <Route path="sales/documents/:id/edit" element={<Sales.DocEditor />} />
+
+          <Route path="purchases" element={<Purchases.List />} />
+          <Route
+            path="purchases/orders/new"
+            element={<Purchases.Editor key="order" mode="order" />}
+          />
+          <Route
+            path="purchases/orders/:id"
+            element={<Purchases.Doc key="purchase_order" kind="purchase_order" />}
+          />
+          <Route
+            path="purchases/receipts/new"
+            element={<Purchases.Editor key="receipt" mode="receipt" />}
+          />
+          <Route path="purchases/receipts/:id" element={<Purchases.Receipt />} />
+          <Route path="purchases/bills/new" element={<Purchases.Editor key="bill" mode="bill" />} />
+          <Route
+            path="purchases/bills/:id"
+            element={<Purchases.Doc key="purchase_bill" kind="purchase_bill" />}
+          />
+          <Route path="purchases/returns/new" element={<Purchases.NewReturn />} />
+          <Route
+            path="purchases/returns/:id"
+            element={<Purchases.Doc key="purchase_return" kind="purchase_return" />}
+          />
+
+          <Route
+            path="parties/customers"
+            element={<Parties.List key="customer" partyType="customer" />}
+          />
+          <Route
+            path="parties/suppliers"
+            element={<Parties.List key="supplier" partyType="supplier" />}
+          />
+          <Route path="parties/:id" element={<Parties.Detail />} />
+          <Route path="payments" element={<Parties.Payments />} />
+          <Route path="reports/*" element={<ComingSoon title="Reports" />} />
+          <Route path="accounting/*" element={<ComingSoon title="Accounts" />} />
+          <Route path="settings/*" element={<ComingSoon title="Settings" />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Route>
+      </Route>
+    </Routes>
   );
 }
 
 export default function App() {
   return (
-    <Routes>
-      <Route path="/auth" element={<Auth />} />
-
-      {/* POS is full-screen (outside the sidebar layout) but still requires a session. */}
-      <Route
-        path="/sales/pos"
-        element={
-          <RequireAuth>
-            <Suspense fallback={<FullScreenSpinner label="Opening POS…" />}>
-              <POS />
-            </Suspense>
-          </RequireAuth>
-        }
-      />
-
-      <Route path="/" element={<Layout />}>
-        <Route
-          element={
-            <PageSuspense>
-              <Outlet />
-            </PageSuspense>
-          }
-        >
-          <Route index element={<Navigate to="/dashboard" replace />} />
-          <Route path="dashboard" element={<Overview />} />
-          <Route path="dashboard/reports" element={<Navigate to="/reports" replace />} />
-
-          <Route path="inventory" element={<Outlet />}>
-            <Route index element={<Products />} />
-            <Route path="products" element={<Products />} />
-            <Route path="products/new" element={<AddEditProduct />} />
-            <Route path="products/edit/:id" element={<AddEditProduct />} />
-            <Route path="categories" element={<Categories />} />
-            <Route path="adjustments" element={<Adjustments />} />
-            <Route path="barcodes" element={<Barcodes />} />
-          </Route>
-
-          <Route path="sales" element={<SalesLayout />}>
-            <Route index element={<Invoices />} />
-            <Route path="invoices" element={<Invoices />} />
-            <Route path="quotations" element={<Quotations />} />
-            <Route path="returns" element={<SalesReturns />} />
-          </Route>
-
-          <Route path="purchases" element={<Navigate to="/purchases/orders" replace />} />
-          <Route path="purchases/orders" element={<Orders />} />
-          <Route path="purchases/bills" element={<Bills />} />
-          <Route path="purchases/returns" element={<PurchaseReturns />} />
-
-          <Route path="contacts" element={<Navigate to="/contacts/customers" replace />} />
-          <Route path="contacts/customers" element={<Customers />} />
-          <Route path="contacts/leads" element={<Leads />} />
-          <Route path="contacts/suppliers" element={<Suppliers />} />
-
-          <Route
-            path="accounting"
-            element={<Navigate to="/accounting/chart-of-accounts" replace />}
-          />
-          <Route path="accounting/chart-of-accounts" element={<ChartOfAccounts />} />
-          <Route path="accounting/journals" element={<Journals />} />
-          <Route path="accounting/expenses" element={<Expenses />} />
-          <Route path="accounting/payments-received" element={<PaymentsReceived />} />
-          <Route path="accounting/taxes" element={<Taxes />} />
-
-          <Route path="reports" element={<Navigate to="/reports/profit-and-loss" replace />} />
-          <Route path="reports/profit-and-loss" element={<ProfitAndLoss />} />
-          <Route path="reports/sales" element={<SalesSummary />} />
-          <Route path="reports/stock-valuation" element={<StockValuation />} />
-          <Route path="reports/tax" element={<TaxSummary />} />
-          {/* The report pages' own tab buttons use these older paths (audit §8). */}
-          <Route path="reports/sales-summary" element={<Navigate to="/reports/sales" replace />} />
-          <Route path="reports/tax-summary" element={<Navigate to="/reports/tax" replace />} />
-
-          <Route path="settings" element={<Navigate to="/settings/company" replace />} />
-          <Route path="settings/company" element={<Company />} />
-          <Route path="settings/users" element={<Users />} />
-          <Route path="settings/preferences" element={<Preferences />} />
-          <Route path="settings/templates" element={<Templates />} />
-          <Route path="settings/maintenance" element={<Maintenance />} />
-        </Route>
-      </Route>
-
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
-    </Routes>
+    <>
+      <Gate />
+      <ApprovalDialog />
+      <ConfirmDialog />
+    </>
   );
 }

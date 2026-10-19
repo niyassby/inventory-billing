@@ -46,11 +46,6 @@ export type Discount =
     };
 /**
  * This interface was referenced by `ApiContract`'s JSON-Schema
- * via the `definition` "TaxRegime".
- */
-export type TaxRegime = "gst" | "vat" | "none";
-/**
- * This interface was referenced by `ApiContract`'s JSON-Schema
  * via the `definition` "NegativeStockPolicy".
  */
 export type NegativeStockPolicy = "allow" | "block" | "warn";
@@ -61,6 +56,11 @@ export type NegativeStockPolicy = "allow" | "block" | "warn";
  * via the `definition` "OfflineSalesPolicy".
  */
 export type OfflineSalesPolicy = "block" | "allow_reserved_numbers" | "allow_restricted";
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "TaxRegime".
+ */
+export type TaxRegime = "gst" | "vat" | "none";
 /**
  * This interface was referenced by `ApiContract`'s JSON-Schema
  * via the `definition` "Rounding".
@@ -321,9 +321,21 @@ export interface ApiContract {
       input: IdInput;
       output: PurchaseDocDetail;
     };
+    purchases_get_receipt: {
+      input: IdInput;
+      output: GoodsReceiptDetail;
+    };
+    purchases_get_return: {
+      input: IdInput;
+      output: PurchaseDocDetail;
+    };
     purchases_list: {
       input: PurchaseListQuery;
       output: PageFor_PurchaseListItem;
+    };
+    purchases_list_receipts: {
+      input: ReceiptListQuery;
+      output: PageFor_ReceiptListItem;
     };
     purchases_receive_goods: {
       input: GoodsReceiptInput;
@@ -405,9 +417,17 @@ export interface ApiContract {
       input: HoldInput;
       output: HeldBill;
     };
+    sales_invoice_returns: {
+      input: IdInput;
+      output: ReturnDetail[];
+    };
     sales_list_invoices: {
       input: InvoiceListQuery;
       output: PageFor_InvoiceListItem;
+    };
+    sales_list_returns: {
+      input: ReturnListQuery;
+      output: PageFor_ReturnListItem;
     };
     sales_preview: {
       input: PreviewInput;
@@ -427,7 +447,7 @@ export interface ApiContract {
     };
     settings_public: {
       input: NoInput;
-      output: unknown;
+      output: PublicSettings;
     };
     settings_update: {
       input: UpdateSettingsInput;
@@ -436,6 +456,10 @@ export interface ApiContract {
     setup_create_business: {
       input: SetupInput;
       output: AuthSession;
+    };
+    setup_import_legacy: {
+      input: ImportLegacyInput;
+      output: ImportLegacyResult;
     };
     setup_status: {
       input: NoInput;
@@ -464,6 +488,14 @@ export interface ApiContract {
     stock_count_start: {
       input: CountStartInput;
       output: CountDetail;
+    };
+    stock_document_get: {
+      input: StockDocRef;
+      output: StockDocResult;
+    };
+    stock_documents: {
+      input: StockDocQuery;
+      output: PageFor_StockDocListItem;
     };
     stock_transfer: {
       input: TransferInput;
@@ -517,6 +549,10 @@ export interface ApiContract {
       input: UpdateUserInput;
       output: UserSummary;
     };
+    warehouses_save: {
+      input: WarehouseInput;
+      output: Warehouse;
+    };
   };
   error: AppError;
   localCommands: (
@@ -543,6 +579,7 @@ export interface ApiContract {
     | "device_set_mode"
     | "device_status"
     | "setup_create_business"
+    | "setup_import_legacy"
     | "setup_status"
   )[];
 }
@@ -1736,6 +1773,10 @@ export interface PurchaseDocLine {
   taxTotal: number;
   taxable: number;
   unitCost: number;
+  /**
+   * The unit the quantity is in (a pack size or the base unit).
+   */
+  unitId?: string | null;
   variantId: string;
 }
 /**
@@ -1845,6 +1886,19 @@ export interface PurchaseReturnLineInput {
 }
 /**
  * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "GoodsReceiptDetail".
+ */
+export interface GoodsReceiptDetail {
+  businessDate: string;
+  docNo: string;
+  id: string;
+  lines: PurchaseDocLine[];
+  partyId: string;
+  purchaseOrderId?: string | null;
+  value: number;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
  * via the `definition` "PurchaseListQuery".
  */
 export interface PurchaseListQuery {
@@ -1886,6 +1940,49 @@ export interface PurchaseListItem {
 }
 /**
  * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "ReceiptListQuery".
+ */
+export interface ReceiptListQuery {
+  from?: string | null;
+  page?: number | null;
+  pageSize?: number | null;
+  partyId?: string | null;
+  purchaseOrderId?: string | null;
+  search?: string | null;
+  to?: string | null;
+  /**
+   * Only receipts not yet covered by a supplier bill.
+   */
+  unbilledOnly?: boolean;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "Page_for_ReceiptListItem".
+ */
+export interface PageFor_ReceiptListItem {
+  items: ReceiptListItem[];
+  page: number;
+  pageSize: number;
+  total: number;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "ReceiptListItem".
+ */
+export interface ReceiptListItem {
+  billDocNo?: string | null;
+  businessDate: string;
+  docNo: string;
+  id: string;
+  orderDocNo?: string | null;
+  partyId: string;
+  status: string;
+  supplierName: string;
+  supplierReference?: string | null;
+  value: number;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
  * via the `definition` "GoodsReceiptInput".
  */
 export interface GoodsReceiptInput {
@@ -1896,19 +1993,6 @@ export interface GoodsReceiptInput {
   purchaseOrderId?: string | null;
   supplierReference?: string | null;
   warehouseId?: string | null;
-}
-/**
- * This interface was referenced by `ApiContract`'s JSON-Schema
- * via the `definition` "GoodsReceiptDetail".
- */
-export interface GoodsReceiptDetail {
-  businessDate: string;
-  docNo: string;
-  id: string;
-  lines: PurchaseDocLine[];
-  partyId: string;
-  purchaseOrderId?: string | null;
-  value: number;
 }
 /**
  * This interface was referenced by `ApiContract`'s JSON-Schema
@@ -2162,7 +2246,7 @@ export interface ReturnInput {
   partyId?: string | null;
   reason: string;
   /**
-   * Money handed back now; without it the credit stays on the customer's account.
+   * Money paid back now. Walk-in returns are always refunded in full (the amount is set to the return's total); a customer's return without a refund becomes credit on their account.
    */
   refund?: PaymentInput | null;
   warehouseId?: string | null;
@@ -2411,6 +2495,42 @@ export interface InvoiceListItem {
 }
 /**
  * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "ReturnListQuery".
+ */
+export interface ReturnListQuery {
+  from?: string | null;
+  page?: number | null;
+  pageSize?: number | null;
+  partyId?: string | null;
+  search?: string | null;
+  to?: string | null;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "Page_for_ReturnListItem".
+ */
+export interface PageFor_ReturnListItem {
+  items: ReturnListItem[];
+  page: number;
+  pageSize: number;
+  total: number;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "ReturnListItem".
+ */
+export interface ReturnListItem {
+  amountRefunded: number;
+  businessDate: string;
+  customerName: string;
+  docNo: string;
+  id: string;
+  invoiceDocNo?: string | null;
+  status: string;
+  total: number;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
  * via the `definition` "PreviewInput".
  */
 export interface PreviewInput {
@@ -2589,6 +2709,24 @@ export interface TaxSettings {
 }
 /**
  * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "PublicSettings".
+ */
+export interface PublicSettings {
+  business: BusinessSettings;
+  inventory: PublicInventory;
+  invoice: InvoiceSettings;
+  offlineSalesPolicy: OfflineSalesPolicy;
+  tax: TaxSettings;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "PublicInventory".
+ */
+export interface PublicInventory {
+  negativeStockPolicy: NegativeStockPolicy;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
  * via the `definition` "UpdateSettingsInput".
  */
 export interface UpdateSettingsInput {
@@ -2630,6 +2768,135 @@ export interface OwnerInput {
   email: string;
   name: string;
   password: string;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "ImportLegacyInput".
+ */
+export interface ImportLegacyInput {
+  /**
+   * Only check and report; change nothing.
+   */
+  dryRun?: boolean;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "ImportLegacyResult".
+ */
+export interface ImportLegacyResult {
+  applied: boolean;
+  report: MigrationReport;
+  /**
+   * Where the full report (JSON) was saved.
+   */
+  reportPath: string;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "MigrationReport".
+ */
+export interface MigrationReport {
+  backupPath: string;
+  /**
+   * SHA-256 of the backup copy (SQLite backups are logically, not byte-for-byte, identical to v1).
+   */
+  backupSha256: string;
+  balanceAdjustments: BalanceAdjustment[];
+  dryRun: boolean;
+  finishedAt: string;
+  legacyPath: string;
+  lossyAmounts: LossyAmount[];
+  negativeStock: NegativeStock[];
+  schemaVersion: number;
+  startedAt: string;
+  /**
+   * Per v1 table: rows read, rows written (and where), rows skipped.
+   */
+  tables: {
+    [k: string]: TableCounts;
+  };
+  /**
+   * None for a dry run (the trial database is deleted afterwards).
+   */
+  targetPath?: string | null;
+  totals: Totals;
+  unbalancedJournalEntries: string[];
+  usersRequiringPasswordChange: string[];
+  warnings: string[];
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "BalanceAdjustment".
+ */
+export interface BalanceAdjustment {
+  /**
+   * Opening-balance entry posted so the v2 balance equals what v1 showed.
+   */
+  adjustmentMinor: number;
+  /**
+   * Balance rebuilt from the migrated documents and payments (minor, +ve = owes us).
+   */
+  fromDocumentsMinor: number;
+  /**
+   * Balance v1 showed (customer due, or supplier balance), major units.
+   */
+  legacyBalance: number;
+  name: string;
+  partyId: string;
+  partyType: string;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "LossyAmount".
+ */
+export interface LossyAmount {
+  column: string;
+  id: string;
+  legacyValue: number;
+  migratedMinor: number;
+  table: string;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "NegativeStock".
+ */
+export interface NegativeStock {
+  qtyMilli: number;
+  sku: string;
+  variantId: string;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "TableCounts".
+ */
+export interface TableCounts {
+  legacyRows: number;
+  migratedRows: number;
+  migratedTo: string[];
+  skippedRows: number;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "Totals".
+ */
+export interface Totals {
+  expenseTotalMinor: number;
+  legacyExpenseTotal: number;
+  legacyPurchaseTotal: number;
+  /**
+   * Sum of v1 invoice totals, excluding cancelled ones (major units, as stored in v1).
+   */
+  legacySalesTotal: number;
+  /**
+   * Σ stock × cost in v1 (major units) vs Σ stock_levels.value in v2 (minor units).
+   */
+  legacyStockValue: number;
+  purchaseTotalMinor: number;
+  /**
+   * Sum of finalized v2 invoice totals (minor units).
+   */
+  salesTotalMinor: number;
+  stockValueMinor: number;
 }
 /**
  * This interface was referenced by `ApiContract`'s JSON-Schema
@@ -2799,6 +3066,63 @@ export interface CountStartInput {
    */
   variantIds?: string[] | null;
   warehouseId?: string | null;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "StockDocRef".
+ */
+export interface StockDocRef {
+  id: string;
+  /**
+   * "adjustment" or "transfer" (counts: `stock_count_get`).
+   */
+  kind: string;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "StockDocQuery".
+ */
+export interface StockDocQuery {
+  from?: string | null;
+  /**
+   * "adjustment", "transfer" or "count".
+   */
+  kind: string;
+  page?: number | null;
+  pageSize?: number | null;
+  search?: string | null;
+  to?: string | null;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "Page_for_StockDocListItem".
+ */
+export interface PageFor_StockDocListItem {
+  items: StockDocListItem[];
+  page: number;
+  pageSize: number;
+  total: number;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "StockDocListItem".
+ */
+export interface StockDocListItem {
+  businessDate: string;
+  docNo?: string | null;
+  id: string;
+  kind: string;
+  lineCount: number;
+  /**
+   * Adjustment reason or count scope.
+   */
+  note?: string | null;
+  status: string;
+  /**
+   * Transfers: the receiving store.
+   */
+  toWarehouseName?: string | null;
+  warehouseName: string;
 }
 /**
  * This interface was referenced by `ApiContract`'s JSON-Schema
@@ -2981,6 +3305,15 @@ export interface UpdateUserInput {
   phone?: string | null;
   roleId: string;
 }
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "WarehouseInput".
+ */
+export interface WarehouseInput {
+  code: string;
+  id?: string | null;
+  name: string;
+}
 
 export type CommandName = keyof ApiContract["commands"];
 export type CommandInput<K extends CommandName> = ApiContract["commands"][K]["input"];
@@ -2989,7 +3322,7 @@ export type ApiErrorPayload = ApiContract["error"];
 export type Approval = ApiContract["approval"];
 
 /** Commands that work without a session (setup and sign-in). */
-export const PUBLIC_COMMANDS = ["auth_login","auth_pin_login","client_sync_now","device_discover_hubs","device_pair","device_probe_hub","device_restart","device_set_mode","device_status","setup_create_business","setup_status"] as const satisfies readonly CommandName[];
+export const PUBLIC_COMMANDS = ["auth_login","auth_pin_login","client_sync_now","device_discover_hubs","device_pair","device_probe_hub","device_restart","device_set_mode","device_status","setup_create_business","setup_import_legacy","setup_status"] as const satisfies readonly CommandName[];
 
 /** Commands about this PC itself; never forwarded to the hub. */
 export const LOCAL_COMMANDS = ["device_status","device_discover_hubs","device_probe_hub","device_pair","device_set_mode","device_restart","client_sync_now","outbox_list","outbox_retry","outbox_discard","client_cached_customers"] as const satisfies readonly CommandName[];

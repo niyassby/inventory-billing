@@ -1,7 +1,5 @@
-//! The v2 database: connection setup and versioned migrations (docs/DATABASE.md).
-//!
-//! The running app still uses the v1 database through `crate::database` until Phase 3 moves
-//! the services over; this module is what Phase 3 builds on.
+//! The v2 database: connection setup and versioned migrations (docs/DATABASE.md). The app uses
+//! only this database; the v1 file is read once, by the first-run import (services::upgrade).
 
 pub mod migrate;
 

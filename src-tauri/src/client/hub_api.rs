@@ -120,7 +120,7 @@ fn http_client(verifier: Arc<Pinned>, timeout: Duration) -> AppResult<reqwest::C
         .with_no_client_auth();
     reqwest::Client::builder()
         .use_preconfigured_tls(config)
-        .connect_timeout(Duration::from_secs(3))
+        .connect_timeout(Duration::from_secs(5))
         .timeout(timeout)
         .build()
         .map_err(AppError::internal)
@@ -174,7 +174,7 @@ impl HubApi {
         let api = Self {
             base: base.trim_end_matches('/').to_string(),
             device_token: None,
-            http: http_client(verifier.clone(), Duration::from_secs(5))?,
+            http: http_client(verifier.clone(), Duration::from_secs(10))?,
             verifier,
         };
         let health: Health = api.get("/v1/health").await.map_err(|e| match e {

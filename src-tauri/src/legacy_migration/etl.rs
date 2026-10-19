@@ -285,6 +285,7 @@ impl<'a> Etl<'a> {
         format!("{prefix}-{:06}", self.payment_seq)
     }
 
+    #[allow(clippy::too_many_arguments, reason = "one v1 ledger row, decoded once")]
     fn post_party_ledger(
         &self,
         party_id: &str,

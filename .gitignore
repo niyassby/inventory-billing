@@ -25,3 +25,6 @@ dist-ssr
 
 # Test output
 coverage
+
+# Development bridge data (src-tauri/src/bin/dev_server.rs)
+.dev-data/

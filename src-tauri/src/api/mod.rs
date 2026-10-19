@@ -116,6 +116,7 @@ async fn authed<T: Send + 'static>(
 /// business); a LAN device gets FORBIDDEN.
 pub const LOCAL_ONLY: &[&str] = &[
     "setup_create_business",
+    "setup_import_legacy",
     "backup_restore",
     "backup_set_passphrase",
     "backup_verify",
@@ -165,20 +166,15 @@ macro_rules! commands {
             tauri::generate_handler![ $( $pname, )* $( $aname, )* $( $sname, )* auth_logout, auth_me, auth_change_password ]
         }
 
-        /// A command sent by a paired device over the LAN (crate::hub). Same commands, same
-        /// checks; the session must belong to that device.
-        pub async fn dispatch(
+        /// Runs a command from JSON (the LAN API and the development bridge use this).
+        pub async fn dispatch_as(
             state: &AppState,
-            device_id: &str,
+            caller: Caller,
             name: &str,
             token: String,
             input: Value,
             approval: Option<ApprovalInput>,
         ) -> AppResult<Value> {
-            if LOCAL_ONLY.contains(&name) {
-                return Err(AppError::new(ErrorCode::Forbidden, "This can only be done on the hub PC itself."));
-            }
-            let caller = Caller::Device(device_id.to_string());
             let value = match name {
                 $(
                     stringify!($pname) => {
@@ -206,12 +202,6 @@ macro_rules! commands {
                 }
                 _ => return Err(AppError::not_found("That command")),
             };
-            // A session started over the LAN belongs to the device that started it.
-            if matches!(name, "auth_login" | "auth_pin_login") {
-                if let Some(session_token) = value.get("token").and_then(Value::as_str) {
-                    auth::bind_session_to_device(&*state.conn()?, session_token, device_id)?;
-                }
-            }
             Ok(value)
         }
 
@@ -231,8 +221,8 @@ macro_rules! commands {
 }
 
 use crate::services::{
-    backup, catalog, common::Page, devices, expenses, notifications, parties, payments, purchases,
-    sales, settings, setup, stock, sync, users,
+    backup, catalog, common::Page, devices, documents, expenses, notifications, parties, payments,
+    purchases, sales, settings, setup, stock, sync, upgrade, users,
 };
 
 fn legacy_database_found(state: &AppState) -> bool {
@@ -249,13 +239,14 @@ commands! {
         let email = setup::create_business(conn, now, input)?;
         auth::login(conn, &state.limiter, now, &auth::LoginInput { email, password: input.owner.password.clone() })
     };
+    public setup_import_legacy(upgrade::ImportLegacyInput) -> upgrade::ImportLegacyResult = |state: &AppState, _: &mut Conn, input: &upgrade::ImportLegacyInput| upgrade::import_legacy(state, input);
     public auth_login(auth::LoginInput) -> AuthSession = |state: &AppState, conn: &mut Conn, input: &auth::LoginInput| auth::login(conn, &state.limiter, state.now(), input);
     public auth_pin_login(auth::PinLoginInput) -> AuthSession = |state: &AppState, conn: &mut Conn, input: &auth::PinLoginInput| auth::pin_login(conn, &state.limiter, state.now(), input);
 
     authed auth_set_pin(auth::SetPinInput) -> () = |ctx: &mut Ctx<'_>, input: &auth::SetPinInput| auth::set_pin(ctx.conn, ctx.actor, ctx.now, input);
 
     authed settings_get(NoInput) -> settings::Settings = |ctx: &mut Ctx<'_>, _: &NoInput| settings::get(ctx);
-    authed settings_public(NoInput) -> serde_json::Value = |ctx: &mut Ctx<'_>, _: &NoInput| settings::public(ctx.conn);
+    authed settings_public(NoInput) -> settings::PublicSettings = |ctx: &mut Ctx<'_>, _: &NoInput| settings::public(ctx.conn);
     authed settings_update(settings::UpdateSettingsInput) -> settings::Settings = settings::update;
 
     authed users_list(NoInput) -> Vec<users::UserSummary> = |ctx: &mut Ctx<'_>, _: &NoInput| users::list(ctx);
@@ -342,6 +333,15 @@ commands! {
     authed expenses_void(expenses::VoidExpenseInput) -> expenses::ExpenseDetail = expenses::void;
     authed expenses_list(expenses::ExpenseListQuery) -> Page<expenses::ExpenseDetail> = |ctx: &mut Ctx<'_>, q: &expenses::ExpenseListQuery| expenses::list(ctx, q);
 
+    authed stock_documents(documents::StockDocQuery) -> Page<documents::StockDocListItem> = |ctx: &mut Ctx<'_>, q: &documents::StockDocQuery| documents::list_stock_documents(ctx, q);
+    authed stock_document_get(documents::StockDocRef) -> stock::StockDocResult = |ctx: &mut Ctx<'_>, i: &documents::StockDocRef| documents::get_stock_document(ctx, i);
+    authed warehouses_save(documents::WarehouseInput) -> stock::Warehouse = documents::save_warehouse;
+    authed sales_list_returns(documents::ReturnListQuery) -> Page<documents::ReturnListItem> = |ctx: &mut Ctx<'_>, q: &documents::ReturnListQuery| documents::list_sales_returns(ctx, q);
+    authed sales_invoice_returns(users::IdInput) -> Vec<sales::ReturnDetail> = |ctx: &mut Ctx<'_>, i: &users::IdInput| documents::returns_of_invoice(ctx, i);
+    authed purchases_list_receipts(documents::ReceiptListQuery) -> Page<documents::ReceiptListItem> = |ctx: &mut Ctx<'_>, q: &documents::ReceiptListQuery| documents::list_goods_receipts(ctx, q);
+    authed purchases_get_receipt(users::IdInput) -> purchases::GoodsReceiptDetail = |ctx: &mut Ctx<'_>, i: &users::IdInput| documents::get_goods_receipt(ctx, i);
+    authed purchases_get_return(users::IdInput) -> purchases::PurchaseDocDetail = |ctx: &mut Ctx<'_>, i: &users::IdInput| documents::get_purchase_return(ctx, i);
+
     authed devices_pairing_code(NoInput) -> devices::PairingCode = |ctx: &mut Ctx<'_>, _: &NoInput| devices::create_pairing_code(ctx);
     authed devices_list(NoInput) -> Vec<devices::DeviceSummary> = |ctx: &mut Ctx<'_>, _: &NoInput| devices::list(ctx);
     authed devices_revoke(users::IdInput) -> () = devices::revoke;
@@ -362,6 +362,33 @@ commands! {
     stateful backup_verify(backup::RestoreInput) -> backup::VerifiedBackup = |state: &AppState, ctx: &mut Ctx<'_>, input: &backup::RestoreInput| backup::verify(state, ctx, input);
     stateful backup_restore(backup::RestoreInput) -> backup::RestoreResult = backup::restore;
     stateful backup_set_passphrase(backup::SetPassphraseInput) -> () = backup::set_passphrase;
+}
+
+/// A command sent by a paired device over the LAN (crate::hub). Same commands, same checks; the
+/// session must belong to that device, and hub-only commands are refused.
+pub async fn dispatch(
+    state: &AppState,
+    device_id: &str,
+    name: &str,
+    token: String,
+    input: Value,
+    approval: Option<ApprovalInput>,
+) -> AppResult<Value> {
+    if LOCAL_ONLY.contains(&name) {
+        return Err(AppError::new(
+            ErrorCode::Forbidden,
+            "This can only be done on the hub PC itself.",
+        ));
+    }
+    let caller = Caller::Device(device_id.to_string());
+    let value = dispatch_as(state, caller, name, token, input, approval).await?;
+    // A session started over the LAN belongs to the device that started it.
+    if matches!(name, "auth_login" | "auth_pin_login") {
+        if let Some(session_token) = value.get("token").and_then(Value::as_str) {
+            auth::bind_session_to_device(&*state.conn()?, session_token, device_id)?;
+        }
+    }
+    Ok(value)
 }
 
 // Commands with special session handling.

@@ -214,6 +214,14 @@ impl Kit {
 
     pub fn gst_rate(&self, percent: i64) -> String {
         let mut conn = self.conn();
+        // Setup seeds the standard GST slabs; reuse them.
+        if let Ok(id) = conn.query_row(
+            "SELECT id FROM tax_rates WHERE name = ?1 AND deleted_at IS NULL",
+            [format!("GST {percent}%")],
+            |r| r.get::<_, String>(0),
+        ) {
+            return id;
+        }
         let owner = self.owner();
         catalog::save_tax_rate(
             &mut self.ctx(&mut conn, &owner),

@@ -5,6 +5,56 @@ All notable changes to this project. The format follows
 
 ## [Unreleased]
 
+### Phase 5: core modules on the v2 backend (2026-10-19)
+
+#### Added
+- **First start:** import the previous version's data (dry run with a reconciliation report,
+  then import into the new database; the old file is never written), or set up a new business
+  (business, tax, owner). New businesses get default units and GST rates.
+- **Sign-in** with password or PIN, forced password change, session in `sessionStorage`,
+  sign-out; manager approval dialog that every screen gets for free (`APPROVAL_REQUIRED` →
+  manager e-mail + PIN → the same request again).
+- **App shell:** permission-aware sidebar, connection badge (standalone / hub / counter
+  connected / offline / syncing), F2 opens the till from anywhere, dashboard with today's bills
+  and notices.
+- **Point of sale:** scan or search (scanner-friendly), keyboard control (F1, F3, F4, F7–F10,
+  arrows, +/−, Delete), backend-priced totals, line and bill discounts, price changes with
+  approval, customers and credit, split payments with change, hold and recall on any counter,
+  till open/close with cash count, receipt printing (58/80 mm, A4).
+- **Sales:** invoices (list, detail, print, void with reason), sales returns / credit notes from
+  an invoice with restock and refund, quotations, sales orders and delivery challans (edit, status,
+  print, convert to an invoice).
+- **Products and stock:** product list (search, category, low stock), editor with variants,
+  prices, MRP, cost, reorder levels, opening stock, pack sizes and barcodes; categories, brands,
+  units, tax rates and stores; stock adjustments, transfers, stock counts with a variance report,
+  stock card per item.
+- **Purchases:** purchase orders, goods received (from an order, part deliveries), supplier bills
+  (from a receipt or an order, landed charges, pay now), voids, returns to supplier.
+- **Customers and suppliers:** lists with balances, editor (GSTIN check, credit limit, opening
+  balance), statement, open bills, receive and pay with automatic allocation; payments list with
+  void.
+- Backend: stock-document, sales-return and goods-receipt lists and look-ups, store editing,
+  `setup_import_legacy`, typed public settings; walk-in returns are refunded in full at the
+  computed total; purchase lines carry their unit.
+- Development bridge (`npm run dev:bridge`): the real backend over HTTP for the browser preview
+  and end-to-end tests.
+- Shared UI: data table (sorting, server paging, virtualisation, keyboard rows), money, quantity
+  and rate inputs (exact), item and party pickers, line-items editor, confirm and approval
+  dialogs, page frame with empty, error and loading states. 13 more shadcn primitives typed.
+
+#### Changed
+- The app no longer opens or creates the v1 database; the v1 command layer is removed and the
+  v1 database code is kept only as a test fixture for the migration tests.
+- The v1 screens for the rebuilt modules are removed; accounting, reports, settings, leads and
+  barcode labels wait for Phase 6 (their data is imported).
+
+#### Notes
+- Tests: 101 Rust tests; 197 TypeScript tests (cart, settlement, held bills, printing, format,
+  navigation, approval retries, transport).
+- The screens were exercised in a browser against the real backend through the dev bridge; they
+  have not yet been run inside a packaged Tauri window. Playwright end-to-end tests come in
+  Phase 8.
+
 ### Phase 4: offline and multi-user (LAN hub), outbox, backup (2026-10-19)
 
 #### Added
