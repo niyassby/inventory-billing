@@ -194,3 +194,21 @@ sequenceDiagram
 | `stock` column only | `stock_movements` ledger + verifiable cache |
 | Single device | Standalone / Hub / Client modes over HTTPS on the LAN, with mDNS discovery |
 | Manual backup path | Scheduled, encrypted, rotated, verified backups and a tested restore |
+
+## 12. Implementation status (Phase 4)
+
+Built as designed in §3–§8, with these differences (each recorded in ASSUMPTIONS.md):
+
+| Design | As built | Why |
+|---|---|---|
+| `specta` / `utoipa` contract (D-6) | `schemars` JSON schema → `json-schema-to-typescript`; the same schema documents the HTTP surface (A-38) | Stable crates; one contract for IPC and HTTP. |
+| Client `client_cache.db` with incremental cursors | `client.db`: full catalogue snapshot every 15 min (A-52), cached sessions, leases, outbox | Simpler; incremental sync is a Phase 7 item. |
+| Tablets via hub-served UI (D-3) | HTTP API ready; serving the UI and browser pairing deferred to Phase 5 (A-47) | The screens still run on v1. |
+| Offline sales policy (D-8) | As designed, plus: offline sales must be fully paid and need no manager (A-48) | The hub can't check credit or PINs while offline. |
+| Backup key from the owner's passphrase | As designed; until a passphrase is set backups are not encrypted (A-53) | Not blocking the first sale. |
+
+Code map: `src-tauri/src/hub` (HTTPS server, TLS identity, mDNS), `src-tauri/src/client` (counter runtime,
+pinned HTTPS client, offline handlers, local store), `services/devices.rs`, `services/sync.rs`,
+`services/backup.rs`, `jobs.rs`, `node.rs` (device role), `secrets.rs` (OS keychain),
+`api/local.rs` (commands about this PC). In client mode `lib.rs::route` forwards every v2 command to the hub
+unchanged, so screens don't know which mode they run in.

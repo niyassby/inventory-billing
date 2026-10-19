@@ -5,6 +5,46 @@ All notable changes to this project. The format follows
 
 ## [Unreleased]
 
+### Phase 4: offline and multi-user (LAN hub), outbox, backup (2026-10-19)
+
+#### Added
+- **Device roles:** standalone (default), hub, or counter (`device.json`; secrets in the OS
+  keychain). Changing the role needs a manager's sign-in and a restart.
+- **Hub:** HTTPS API on port 47900 (axum + rustls/ring) with a self-signed certificate,
+  LAN-only address filter, mDNS announcement (`_invhub._tcp`), the same v2 commands as the
+  window (`api::dispatch`), plus catalogue, number lease and outbox endpoints.
+- **Pairing:** 6-digit one-time codes, certificate fingerprint check, a per-device credential,
+  sessions bound to the device, device removal.
+- **Counters:** every v2 command is forwarded to the hub. When the hub is unreachable they search
+  the cached catalogue and make fully paid sales numbered from leased blocks (`C2/26-27/00001`),
+  priced by the same code as the hub. Sales are queued and sent in order when the hub returns;
+  retries never bill twice. Connection state (connected / slow / offline / syncing) is shown in
+  the top bar. Refused offline sales wait for a manager to retry (optionally with approval) or
+  discard.
+- **Offline reconciliation:** offline sales are posted even when stock goes below zero, at the
+  price the customer paid, dated by the hub's clock; oversells, changed prices and wrong counter
+  clocks are listed in `sync_exceptions` for review.
+- **Backups:** scheduled (daily 21:00 and every 4 hours), integrity-checked, zstd-compressed,
+  AES-256-GCM encrypted once a passphrase is set, mirrored to a second folder, rotated (7 daily,
+  4 weekly, 12 monthly). File check without restoring. Live restore after full verification and
+  a safety backup. Failures raise a notice.
+- **Background jobs:** backups, hourly low-stock notices, weekly integrity check, daily cleanup.
+  Notifications commands for the dashboard.
+- Migration 0009 (devices short codes, invoice origin, pairing codes, sync exceptions, backup
+  runs, notifications, job runs; `devices.manage` and `sync.review` permissions). Network and
+  backup settings sections.
+- docs/ADMIN_GUIDE.md: network setup, offline behaviour, backups and the restore drill.
+- 99 Rust tests, 16 new: pairing and TLS pinning, device-bound sessions, two counters selling the
+  last unit while the hub is off, a lost response replayed, clock skew, refused sales retried,
+  offline policy, the restore drill, tampered and wrong-passphrase backups, retention, jobs.
+  165 TypeScript tests.
+
+#### Notes
+- Screens for Settings → Network / Backup, the pairing wizard and the sync issues list come with
+  the Phase 5–6 screens; the commands and the top-bar status exist now.
+- Not yet tested on two physical PCs over Wi-Fi; the tests run hub and counters over real HTTPS on
+  127.0.0.1.
+
 ### Phase 3: backend services and permissions (2026-10-17)
 
 #### Added

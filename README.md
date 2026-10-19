@@ -6,9 +6,9 @@ offline. Multi-counter shops connect their devices to one **hub** PC over the lo
 (see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)).
 
 > **Status:** under active rebuild. Phase 0 (audit), Phase 1 (tooling, TypeScript, shared
-> package), Phase 2 (v2 database schema and the v1 data migration) and Phase 3 (v2 backend
-> services, permissions and tests) are done. The screens still run on the legacy single-device
-> version until Phase 5. Read [docs/AUDIT.md](docs/AUDIT.md) for its known
+> package), Phase 2 (v2 database schema and the v1 data migration), Phase 3 (v2 backend
+> services, permissions and tests) and Phase 4 (LAN hub, offline counters, backups) are done.
+> The screens still run on the legacy single-device version until Phase 5. Read [docs/AUDIT.md](docs/AUDIT.md) for its known
 > issues before using it with real data.
 
 ## Stack
@@ -45,6 +45,7 @@ The first run creates the database in `%LOCALAPPDATA%\com.niyas.tauri-app\invent
 
 ## Documentation
 
+- [docs/ADMIN_GUIDE.md](docs/ADMIN_GUIDE.md): network setup, offline counters, backups and restore
 - [docs/AUDIT.md](docs/AUDIT.md): Phase 0 review of the legacy code
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): offline and multi-user design (LAN hub)
 - [docs/DATABASE.md](docs/DATABASE.md): schema, ER diagrams, invariants, v1 migration

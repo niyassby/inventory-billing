@@ -16,6 +16,7 @@ packages/shared/           @inventory/shared: pure TS, no React and no Tauri
   src/generated/           api-schema.json (from Rust) and api.ts (npm run gen:api): do not edit
 src/
   api/client.ts            typed clients over a Transport: v1 `api` and v2 `createV2Client`
+  api/connection.ts        what the top bar shows about the hub connection (hooks/use-connection.ts)
   api/errors.ts            ApiError + normalisation of backend errors into stable codes
   api/hooks/*.ts           TanStack Query hooks per domain
   stores/app-store.ts      Zustand: session + UI state (legacy POS cart lives here for now)
@@ -23,7 +24,12 @@ src/
   components/ui/           shadcn primitives (TSX; the rest are converted as they are touched)
   pages/**                 legacy pages (.jsx), rebuilt module by module in Phases 5–7
 src-tauri/src/
-  api/                     v2 commands (one macro: session, approval, logging) + contract.rs (JSON schema)
+  api/                     v2 commands (one macro: IPC, LAN dispatch, contract) + contract.rs (JSON schema)
+  api/local.rs             commands about this PC (role, pairing, outbox); never forwarded to the hub
+  hub/                     LAN HTTPS server (axum + rustls), TLS identity, mDNS discovery
+  client/                  counter mode: pinned HTTPS client, offline handlers, client.db, sync loop
+  jobs.rs                  background scheduler (backup, low stock, integrity, cleanup)
+  node.rs, secrets.rs      this PC's role (device.json) and the OS keychain
   services/                v2 business logic, one module per area; tests/ and testkit.rs
   app.rs, error.rs         AppState (pool, clock, rate limiter), AppError and its codes
   db/                      v2 database: connection settings, migration runner, migrations/*.sql, schema tests
@@ -106,6 +112,20 @@ In the UI, call v2 through the generated types:
 const v2 = createV2Client(tauriTransport, () => session.token);
 const page = await v2.call("products_list", { search: "rice", page: 1 });
 ```
+
+## LAN hub and counters (v2)
+
+The same command list serves the window (IPC), counters (`POST /v1/call/{command}` on the hub,
+`api::dispatch`) and, on a counter, the proxy in `lib.rs::route` that forwards IPC calls to the
+hub. A command therefore needs no network code. If it should work on a counter while the hub is
+offline, add it to `client::offline` (and keep it to read-only or fully self-checking work).
+
+Tests run hubs and counters in-process over real HTTPS on 127.0.0.1
+(`services/tests/network.rs`); `server.kill()` simulates switching the hub off. To try it by
+hand, make one PC the hub (Settings → Network once the screens exist, or write
+`{"mode":"hub","deviceName":"Hub","hub":null}` to `device.json` next to the database and
+restart), then pair a second PC (or a second Windows user) through `device_probe_hub` and
+`device_pair`.
 
 ## Database
 
