@@ -4,5 +4,6 @@ mod access;
 mod backup_jobs;
 mod billing;
 mod catalog_stock;
+mod documents;
 mod network;
 mod purchasing;

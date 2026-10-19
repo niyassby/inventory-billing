@@ -104,7 +104,7 @@ export function ItemLines<L extends ItemLine>({
                   <td className="px-3 py-1.5">
                     <p className="font-medium">{l.item.name}</p>
                     <p className="text-xs text-muted-foreground">
-                      {l.item.sku} · {l.item.unitCode}
+                      {[l.item.sku, l.item.unitCode].filter(Boolean).join(" · ")}
                     </p>
                   </td>
                   {showStock && (

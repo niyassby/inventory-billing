@@ -49,11 +49,17 @@ All notable changes to this project. The format follows
   barcode labels wait for Phase 6 (their data is imported).
 
 #### Notes
-- Tests: 101 Rust tests; 197 TypeScript tests (cart, settlement, held bills, printing, format,
-  navigation, approval retries, transport).
-- The screens were exercised in a browser against the real backend through the dev bridge; they
-  have not yet been run inside a packaged Tauri window. Playwright end-to-end tests come in
-  Phase 8.
+- Tests: 103 Rust tests (new: first-run import into the open database, document lists and
+  look-ups, walk-in refunds); 193 TypeScript tests (cart, settlement, held bills, printing,
+  format, navigation, approval retries, transport).
+- Walked through in a browser against the real backend (dev bridge): setup, sign-in, product
+  create and edit, till sale with change, invoice view, walk-in return, supplier, purchase order
+  → goods received → bill with part payment → supplier payment, quotation → invoice, stock
+  adjustment, stock count, stock card. Afterwards the ledger checks were clean and the trial
+  balance and stock value agreed with the accounts.
+- Fixed during the walk-through: variant ids were hidden by the form library (editing a saved
+  product), price field names for screen readers, "Tax (included)" on the till.
+- Not yet run inside a packaged Tauri window; Playwright end-to-end tests come in Phase 8.
 
 ### Phase 4: offline and multi-user (LAN hub), outbox, backup (2026-10-19)
 

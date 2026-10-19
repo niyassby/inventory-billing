@@ -20,7 +20,8 @@ import { errorText, useCommand } from "@/lib/queries";
 import { useCan } from "@/stores/session";
 
 interface VariantRow {
-  id: string | null;
+  /** The saved variant (RHF uses `id` for its own row keys). */
+  variantId: string | null;
   variantName: string;
   sku: string;
   barcode: string;
@@ -55,7 +56,7 @@ interface ProductForm {
 }
 
 const emptyVariant = (): VariantRow => ({
-  id: null,
+  variantId: null,
   variantName: "",
   sku: "",
   barcode: "",
@@ -90,7 +91,7 @@ function fromDetail(p: Api.ProductDetail): ProductForm {
     trackBatches: p.trackBatches,
     isActive: p.isActive,
     variants: p.variants.map((v) => ({
-      id: v.id,
+      variantId: v.id,
       variantName: v.variantName ?? "",
       sku: v.sku,
       barcode: v.barcode ?? "",
@@ -176,7 +177,7 @@ function Editor({ product }: { product: Api.ProductDetail | null }) {
       trackExpiry: v.trackBatches,
       isActive: v.isActive,
       variants: v.variants.map((x) => ({
-        id: x.id,
+        id: x.variantId,
         variantName: x.variantName || null,
         sku: x.sku,
         barcode: x.barcode || null,
@@ -186,7 +187,7 @@ function Editor({ product }: { product: Api.ProductDetail | null }) {
         reorderLevel: x.reorderLevel ?? 0,
         reorderQty: 0,
         isActive: x.isActive,
-        openingStock: x.id ? null : x.openingStock,
+        openingStock: x.variantId ? null : x.openingStock,
       })),
       unitConversions: v.packs
         .filter((p) => p.fromUnitId && p.baseQty)
@@ -383,7 +384,7 @@ function Editor({ product }: { product: Api.ProductDetail | null }) {
                 </thead>
                 <tbody>
                   {variants.fields.map((f, i) => {
-                    const existing = product?.variants.find((v) => v.id === f.id);
+                    const existing = product?.variants.find((v) => v.id === f.variantId);
                     const priceError = formState.errors.variants?.[i]?.salePrice?.message;
                     return (
                       <tr key={f.id} className="align-top">
@@ -411,7 +412,9 @@ function Editor({ product }: { product: Api.ProductDetail | null }) {
                               name={`variants.${i}.${name}`}
                               render={({ field }) => (
                                 <MoneyInput
-                                  aria-label={name}
+                                  aria-label={
+                                    { salePrice: "Sale price", mrp: "MRP", costPrice: "Cost" }[name]
+                                  }
                                   aria-invalid={
                                     (name === "salePrice" && Boolean(priceError)) || undefined
                                   }

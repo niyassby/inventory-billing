@@ -395,7 +395,10 @@ export default function PosPage() {
                   <dd className="text-right tabular-nums">−{money(p.discount)}</dd>
                 </>
               )}
-              <dt className="text-muted-foreground">Tax{p?.isInterState ? " (IGST)" : ""}</dt>
+              <dt className="text-muted-foreground">
+                Tax{p?.isInterState ? " (IGST)" : ""}
+                {settings.data?.tax.pricesIncludeTax ? " (included)" : ""}
+              </dt>
               <dd className="text-right tabular-nums">{p ? money(p.tax) : "—"}</dd>
               {p && p.roundOff !== 0 && (
                 <>
