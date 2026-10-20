@@ -25,8 +25,11 @@ test("sign in, sell an item for cash, and see it in the invoices and reports", a
   await find.fill("8900000000017");
   await find.press("Enter");
   await expect(page.getByRole("row", { name: /E2E Basmati Rice/ })).toBeVisible();
-  await page.getByRole("button", { name: /^Pay/ }).click();
-  await page.getByRole("button", { name: /Complete sale/ }).click();
+  // Keyboard only: F10 opens the payment, Enter completes it.
+  await expect(page.getByRole("button", { name: /^Pay/ })).toBeEnabled();
+  await page.keyboard.press("F10");
+  await expect(page.getByRole("button", { name: /Complete sale/ })).toBeVisible();
+  await page.keyboard.press("Enter");
   await expect(page.getByRole("heading", { name: /Sale complete/ })).toBeVisible();
   await expect(page.getByText(/125\.00/).first()).toBeVisible();
 

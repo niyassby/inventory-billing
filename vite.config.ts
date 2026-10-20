@@ -49,6 +49,9 @@ export default defineConfig({
     },
   },
 
+  // Charts load with the dashboard route only; pre-bundling avoids a mid-session reload in dev.
+  optimizeDeps: { include: ["recharts"] },
+
   preview: { headers: previewHeaders() },
 
   // Tauri: keep Rust errors visible and use the fixed port tauri.conf.json expects.

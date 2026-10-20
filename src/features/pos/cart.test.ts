@@ -17,6 +17,7 @@ import {
   settle,
   stepQty,
   toHeld,
+  quickTenders,
 } from "./cart";
 
 function item(id: string, price = 10_000, unit = "pcs"): Api.SearchItem {
@@ -165,5 +166,21 @@ describe("settle", () => {
     expect(settle(10_000, [{ mode: "card", amount: 12_000 }]).payments).toEqual([
       { mode: "card", amount: 10_000, tendered: null },
     ]);
+  });
+});
+
+describe("quickTenders", () => {
+  it("offers the exact amount, then round amounts above it", () => {
+    expect(quickTenders(11_800, 100)).toEqual([11_800, 15_000, 20_000, 50_000]);
+    expect(quickTenders(10_000, 100)).toEqual([10_000, 20_000, 50_000, 200_000]);
+  });
+
+  it("offers nothing when there is nothing to pay", () => {
+    expect(quickTenders(0, 100)).toEqual([]);
+    expect(quickTenders(-5, 100)).toEqual([]);
+  });
+
+  it("works for currencies without minor units", () => {
+    expect(quickTenders(430, 1)).toEqual([430, 450, 500, 600]);
   });
 });

@@ -2,11 +2,15 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import type { Api } from "@inventory/shared";
-import { ArrowLeft, Pause, Percent, Trash2, User, X } from "lucide-react";
+import { ArrowLeft, Pause, Percent, ScanBarcode, Trash2, User, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Avatar } from "@/components/ui/avatar";
 import { Kbd } from "@/components/ui/kbd";
 import { Textarea } from "@/components/ui/textarea";
 import { ConnectionBadge } from "@/components/connection-badge";
+import { describeConnection } from "@/api/connection";
+import { useConnection } from "@/hooks/use-connection";
 import { confirm } from "@/components/app/dialogs";
 import type { PickerHandle } from "@/components/app/pickers";
 import { PartyPicker, ProductPicker, useDebounced } from "@/components/app/pickers";
@@ -57,6 +61,12 @@ export default function PosPage() {
   const pos = usePos();
   const { cart } = pos;
   const preview = useBillPreview();
+  const connection = useConnection().data;
+  const connectionView = connection ? describeConnection(connection) : null;
+  const notice =
+    connectionView && (connectionView.tone === "warning" || connectionView.tone === "error")
+      ? connectionView
+      : null;
   const register = useCommand("register_current", {});
   const search = useRef<PickerHandle>(null);
   const customer = useRef<PickerHandle>(null);
@@ -224,8 +234,8 @@ export default function PosPage() {
   const p = preview.data;
 
   return (
-    <div className="flex h-screen flex-col bg-muted/20 font-sans">
-      <header className="flex h-14 shrink-0 items-center gap-3 border-b border-border/60 bg-background px-4">
+    <div className="flex h-screen flex-col bg-background font-sans">
+      <header className="flex h-14 shrink-0 items-center gap-3 border-b border-border bg-card px-4">
         <Button
           variant="ghost"
           size="icon"
@@ -248,6 +258,14 @@ export default function PosPage() {
           </Button>
         </div>
       </header>
+      {notice && (
+        <div className="px-4 pt-3">
+          <Alert variant="warning">
+            <AlertTitle>{notice.label}</AlertTitle>
+            <AlertDescription>{notice.detail}</AlertDescription>
+          </Alert>
+        </div>
+      )}
 
       <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 p-4 lg:grid-cols-[1fr_380px]">
         <section className="flex min-h-0 flex-col gap-3" aria-label="Bill">
@@ -260,10 +278,13 @@ export default function PosPage() {
             }}
             onNotFound={(term) => toast.error(`No item matches "${term}"`)}
           />
-          <div className="min-h-0 flex-1 overflow-auto rounded-2xl border border-border/60 bg-background">
+          <div className="min-h-0 flex-1 overflow-auto rounded-xl border border-border bg-card shadow-xs">
             {cart.lines.length === 0 ? (
               <div className="flex h-full flex-col items-center justify-center gap-2 p-8 text-center text-muted-foreground">
-                <p className="text-lg font-medium text-foreground">
+                <span className="mb-1 flex size-14 items-center justify-center rounded-full bg-primary-soft text-primary">
+                  <ScanBarcode className="size-7" aria-hidden />
+                </span>
+                <p className="text-section-title text-foreground">
                   Scan or search an item to start
                 </p>
                 <p className="text-sm">
@@ -272,8 +293,8 @@ export default function PosPage() {
               </div>
             ) : (
               <table className="w-full text-sm">
-                <thead className="sticky top-0 bg-background text-xs text-muted-foreground">
-                  <tr className="border-b border-border/60">
+                <thead className="sticky top-0 bg-muted/80 text-xs text-muted-foreground backdrop-blur-sm">
+                  <tr className="border-b border-border">
                     <th className="w-8 px-3 py-2 text-left font-medium">#</th>
                     <th className="px-3 py-2 text-left font-medium">Item</th>
                     <th className="px-3 py-2 text-right font-medium">Qty</th>
@@ -293,8 +314,9 @@ export default function PosPage() {
                         onClick={() => pos.select(i)}
                         onDoubleClick={() => setEditing(i)}
                         className={cn(
-                          "cursor-pointer border-b border-border/40",
-                          i === cart.selected && "bg-primary/10",
+                          "cursor-pointer border-b border-border/60 transition-colors hover:bg-muted/40",
+                          i === cart.selected &&
+                            "bg-primary-soft shadow-[inset_3px_0_0_var(--primary)] hover:bg-primary-soft",
                         )}
                       >
                         <td className="px-3 py-2 text-muted-foreground">{i + 1}</td>
@@ -309,17 +331,19 @@ export default function PosPage() {
                             )}
                           </p>
                         </td>
-                        <td className="px-3 py-2 text-right tabular-nums">{showQty(line.qty)}</td>
-                        <td className="px-3 py-2 text-right tabular-nums">
+                        <td className="px-3 py-2.5 text-right num text-base font-semibold">
+                          {showQty(line.qty)}
+                        </td>
+                        <td className="px-3 py-2.5 text-right num">
                           {money(line.unitPrice ?? line.item.salePrice)}
                           {line.unitPrice !== null && (
                             <span className="block text-xs text-warning">changed</span>
                           )}
                         </td>
-                        <td className="px-3 py-2 text-right tabular-nums">
+                        <td className="px-3 py-2.5 text-right num">
                           {pl && pl.lineDiscount > 0 ? `−${money(pl.lineDiscount)}` : ""}
                         </td>
-                        <td className="px-3 py-2 text-right font-medium tabular-nums">
+                        <td className="px-3 py-2.5 text-right num text-base font-semibold">
                           {pl ? money(pl.total) : "…"}
                         </td>
                         <td className="px-1">
@@ -342,7 +366,7 @@ export default function PosPage() {
               </table>
             )}
           </div>
-          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+          <div className="flex flex-wrap gap-x-4 gap-y-1 text-caption">
             {KEYS.map(([k, text]) => (
               <span key={k} className="flex items-center gap-1">
                 <Kbd>{k}</Kbd> {text}
@@ -352,7 +376,7 @@ export default function PosPage() {
         </section>
 
         <aside className="flex min-h-0 flex-col gap-3" aria-label="Customer and totals">
-          <div className="rounded-2xl border border-border/60 bg-background p-3">
+          <div className="rounded-xl border border-border bg-card p-3 shadow-xs">
             <div className="mb-2 flex items-center justify-between">
               <p className="flex items-center gap-1 text-xs font-medium text-muted-foreground">
                 <User className="size-3.5" aria-hidden /> Customer <Kbd>F3</Kbd>
@@ -364,12 +388,13 @@ export default function PosPage() {
               )}
             </div>
             {cart.party ? (
-              <p className="font-medium">
-                {cart.party.name}
-                {cart.party.phone && (
-                  <span className="ml-2 text-sm text-muted-foreground">{cart.party.phone}</span>
-                )}
-              </p>
+              <div className="flex items-center gap-2.5 rounded-lg bg-muted/60 p-2">
+                <Avatar name={cart.party.name} />
+                <div className="min-w-0">
+                  <p className="truncate font-medium">{cart.party.name}</p>
+                  {cart.party.phone && <p className="text-caption">{cart.party.phone}</p>}
+                </div>
+              </div>
             ) : (
               <PartyPicker
                 ref={customer}
@@ -383,36 +408,33 @@ export default function PosPage() {
             )}
           </div>
 
-          <div className="flex flex-1 flex-col justify-end gap-2 rounded-2xl border border-border/60 bg-background p-4">
+          <div className="flex flex-1 flex-col justify-end gap-2 rounded-xl border border-border bg-card p-4 shadow-xs">
             <dl className="grid grid-cols-2 gap-y-1 text-sm">
               <dt className="text-muted-foreground">Items</dt>
-              <dd className="text-right tabular-nums">{showQty(itemCount(cart))}</dd>
+              <dd className="text-right num">{showQty(itemCount(cart))}</dd>
               <dt className="text-muted-foreground">Subtotal</dt>
-              <dd className="text-right tabular-nums">{p ? money(p.gross) : "—"}</dd>
+              <dd className="text-right num">{p ? money(p.gross) : "—"}</dd>
               {p && p.discount > 0 && (
                 <>
                   <dt className="text-muted-foreground">Discount</dt>
-                  <dd className="text-right tabular-nums">−{money(p.discount)}</dd>
+                  <dd className="text-right num text-success">−{money(p.discount)}</dd>
                 </>
               )}
               <dt className="text-muted-foreground">
                 Tax{p?.isInterState ? " (IGST)" : ""}
                 {settings.data?.tax.pricesIncludeTax ? " (included)" : ""}
               </dt>
-              <dd className="text-right tabular-nums">{p ? money(p.tax) : "—"}</dd>
+              <dd className="text-right num">{p ? money(p.tax) : "—"}</dd>
               {p && p.roundOff !== 0 && (
                 <>
                   <dt className="text-muted-foreground">Round off</dt>
-                  <dd className="text-right tabular-nums">{money(p.roundOff)}</dd>
+                  <dd className="text-right num">{money(p.roundOff)}</dd>
                 </>
               )}
             </dl>
-            <div className="mt-2 flex items-end justify-between border-t border-border/60 pt-3">
-              <span className="text-sm font-medium">Total</span>
-              <span
-                className="text-4xl font-semibold tracking-tight tabular-nums"
-                aria-live="polite"
-              >
+            <div className="mt-2 flex items-end justify-between border-t border-border pt-3">
+              <span className="text-sm font-medium text-muted-foreground">Total to pay</span>
+              <span className="text-display" aria-live="polite">
                 {total === null ? "…" : money(total)}
               </span>
             </div>
@@ -448,7 +470,7 @@ export default function PosPage() {
               </Button>
             </div>
             <Button
-              size="lg"
+              size="xl"
               className="h-14 text-lg"
               disabled={cart.lines.length === 0 || total === null || !previewMatches}
               onClick={pay}

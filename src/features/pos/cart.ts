@@ -187,6 +187,24 @@ export function settle(total: number, tenders: Tender[]): Settlement {
   return { payments, paid, change, due: remaining };
 }
 
+/** Note sizes (in major units) a customer is likely to hand over. */
+const NOTE_SIZES = [50, 100, 200, 500, 2000];
+
+/**
+ * One-tap cash amounts for the payment dialog: the exact amount first, then the next few round
+ * amounts above it ("₹118 due" → 118, 150, 200, 500). `scale` is the minor units per major unit.
+ */
+export function quickTenders(due: number, scale: number): number[] {
+  if (due <= 0) return [];
+  const out = [due];
+  for (const size of NOTE_SIZES) {
+    const step = size * scale;
+    const up = Math.ceil(due / step) * step;
+    if (up > due && !out.includes(up)) out.push(up);
+  }
+  return out.slice(0, 4);
+}
+
 // ---------------------------------------------------------------------------------------------
 // Held bills (saved on the hub, recalled on any counter)
 
