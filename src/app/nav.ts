@@ -116,12 +116,15 @@ export const NAV: NavGroup[] = [
   },
   {
     label: "Insights",
-    items: [{ title: "Reports", to: "/reports", icon: ChartColumn, permission: "reports.view" }],
+    items: [
+      { title: "Reports", to: "/reports", icon: ChartColumn, permission: "reports.view" },
+      { title: "Settings", to: "/settings", icon: Settings, permission: "settings.view" },
+    ],
   },
-  {
-    label: "Admin",
-    items: [{ title: "Settings", to: "/settings", icon: Settings, permission: "settings.view" }],
-  },
+  // {
+  //   label: "Admin",
+  //   items: [{ title: "Settings", to: "/settings", icon: Settings, permission: "settings.view" }],
+  // },
 ];
 
 /** The groups and items a user with these permissions can open. */

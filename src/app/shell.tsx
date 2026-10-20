@@ -158,7 +158,7 @@ export function Shell() {
       <SidebarInset className="min-h-screen font-sans">
         <header className="sticky top-0 z-40 flex h-12 shrink-0 items-center gap-2 border-b border-border bg-background/85 px-3 backdrop-blur-md">
           <SidebarTrigger className="-ml-1 text-muted-foreground" />
-          <Separator orientation="vertical" className="mx-1 h-4" />
+          <Separator orientation="vertical" className="my-auto h-6" />
           <Crumbs pathname={pathname} />
           <div className="ml-auto flex items-center gap-1.5">
             <Button

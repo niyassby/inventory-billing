@@ -256,10 +256,10 @@ html[data-density="compact"] {
 }
 
 /* Keyboard users always see where they are. */
-:focus-visible {
+/* :focus-visible {
   outline: 2px solid var(--ring);
   outline-offset: 2px;
-}
+} */
 
 .skip-link {
   position: absolute;
