@@ -5,6 +5,36 @@ All notable changes to this project. The format follows
 
 ## [Unreleased]
 
+### Phase 8: testing, packaging and documentation (2026-10-20)
+
+#### Added
+- End-to-end test (Playwright, Chrome) for the main billing flow, served with the packaged app's
+  Content-Security-Policy; `npm run test:e2e`; a CI job for it.
+- Content-Security-Policy in the app (audit S-4), minimum window size, NSIS and MSI installers.
+- Start-up database check: a damaged file is kept as a copy and not opened.
+- Docs: `USER_GUIDE.md`, `RELEASE.md` (checklist, code signing, auto-update steps),
+  `SECURITY_REVIEW.md` (audit S-1 to S-12 status, dependency audit, licenses), and the damaged-file
+  recovery steps in the Admin guide.
+- CI: dependency audit job and a tag-triggered release workflow (unsigned installers).
+
+#### Fixed (found by the end-to-end test)
+- Ctrl+K crashed the app to a blank screen (the palette was missing its `Command` wrapper; added
+  in Phase 7 and not exercised in a browser until now).
+- A barcode scanner that pressed Enter within ~120 ms of the last digit got "No item matches":
+  the till now looks the exact code up directly when the search hasn't run yet.
+
+#### Changed
+- Excel export uses `write-excel-file`; `xlsx` (unfixed advisories) is removed: `npm audit` is clean.
+- Product name "Inventory and Billing" (the data folder is unchanged).
+
+#### Removed
+- The unused v1 screens (`src/pages`) and the v1 client store.
+
+#### Not done
+- Code signing, auto-update, a packaged-window check of the CSP and a clean-PC install test need
+  the owner's certificate and a PC (docs/RELEASE.md). Invoice-save and app-start benchmarks
+  (A-76). A "restore on first start" screen (A-79).
+
 ### Phase 7: polish, accessibility and performance (2026-10-20)
 
 #### Added

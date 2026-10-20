@@ -28,7 +28,7 @@ src/
   components/app/          page frame, DataTable, inputs (money/qty/rate), pickers, dialogs, line editor
   components/ui/           shadcn primitives (TSX for everything the v2 screens use)
   features/<module>/       screens per module: auth, dashboard, pos, sales, inventory, parties, purchases
-  pages/**                 v1 pages, no longer routed (leads and barcode labels were not rebuilt, A-14); removed in Phase 8
+  pages/**                 (removed in Phase 8: the v1 screens)
 src-tauri/src/
   api/                     v2 commands (one macro: IPC, LAN dispatch, contract) + contract.rs (JSON schema)
   api/local.rs             commands about this PC (role, pairing, outbox); never forwarded to the hub
@@ -197,3 +197,11 @@ Master Prompt (§12). It is ignored in normal runs; in a release build:
 ```bash
 cargo test --release --lib perf -- --ignored --nocapture
 ```
+
+## End-to-end tests
+
+`npm run test:e2e` starts the dev bridge on port 1431 with a fresh demo shop (`.e2e-data/`), builds
+the web app into `dist-e2e/` and serves it with the packaged app's Content-Security-Policy, then
+drives installed Chrome through `e2e/*.spec.ts`. The first run compiles the bridge (about 15
+minutes in a debug build); later runs take about a minute. `e2e/global-setup.ts` creates the
+item the test sells through the same API the screens use.

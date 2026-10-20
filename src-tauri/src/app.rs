@@ -105,6 +105,7 @@ impl AppState {
         if let Some(parent) = db_path.parent() {
             std::fs::create_dir_all(parent).map_err(AppError::internal)?;
         }
+        check_existing_file(db_path)?;
         {
             let mut conn = db::open(db_path)?;
             db::migrate::run(&mut conn)?;
@@ -151,6 +152,38 @@ impl AppState {
     }
 }
 
+/// An existing database file is checked before the app uses it. A damaged file is never opened,
+/// repaired or replaced: a copy is kept next to it (`.corrupt-<time>`) for support, and the error
+/// says what to do (restore the latest backup).
+fn check_existing_file(db_path: &Path) -> AppResult<()> {
+    if !db_path.exists() {
+        return Ok(());
+    }
+    let result =
+        rusqlite::Connection::open_with_flags(db_path, rusqlite::OpenFlags::SQLITE_OPEN_READ_WRITE)
+            .and_then(|c| c.query_row("PRAGMA quick_check", [], |r| r.get::<_, String>(0)));
+    let problem = match result {
+        Ok(text) if text == "ok" => return Ok(()),
+        Ok(text) => text,
+        Err(e) => e.to_string(),
+    };
+    let stamp = chrono::Utc::now().format("%Y%m%dT%H%M%SZ");
+    let copy = db_path.with_extension(format!("db.corrupt-{stamp}"));
+    let kept = std::fs::copy(db_path, &copy).is_ok();
+    tracing::error!(
+        "database check failed ({problem}); {}",
+        if kept {
+            format!("a copy was kept at {}", copy.display())
+        } else {
+            "a copy could not be kept".to_string()
+        }
+    );
+    Err(AppError::new(
+        ErrorCode::Internal,
+        "The data file failed its safety check, so the app did not open it. Nothing was changed.          Restore the latest backup (see the Admin guide, \"If the data file is damaged\").",
+    ))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -185,5 +218,36 @@ mod tests {
                 .unwrap();
             assert_eq!(fk, 1);
         }
+    }
+
+    #[test]
+    fn a_damaged_data_file_is_kept_and_not_opened() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("inventory_v2.db");
+        {
+            let state = AppState::open(&path, Arc::new(SystemClock)).unwrap();
+            drop(state);
+        }
+        // Damage the file: overwrite the middle of the first pages.
+        let mut bytes = std::fs::read(&path).unwrap();
+        for b in bytes.iter_mut().skip(4096).take(8192) {
+            *b = 0xA5;
+        }
+        std::fs::write(&path, &bytes).unwrap();
+        let before = std::fs::read(&path).unwrap();
+
+        let err = AppState::open(&path, Arc::new(SystemClock)).err().unwrap();
+        assert_eq!(err.code, ErrorCode::Internal);
+        assert!(err.message.contains("Restore the latest backup"));
+        assert_eq!(
+            std::fs::read(&path).unwrap(),
+            before,
+            "the file is untouched"
+        );
+        let kept = std::fs::read_dir(dir.path())
+            .unwrap()
+            .filter_map(Result::ok)
+            .any(|e| e.file_name().to_string_lossy().contains(".corrupt-"));
+        assert!(kept, "a copy is kept for support");
     }
 }

@@ -6,7 +6,16 @@ import tseslint from "typescript-eslint";
 
 export default tseslint.config(
   {
-    ignores: ["dist", "coverage", "node_modules", "src-tauri", "**/generated/**"],
+    ignores: [
+      "dist",
+      "dist-e2e",
+      "test-results",
+      "playwright-report",
+      "coverage",
+      "node_modules",
+      "src-tauri",
+      "**/generated/**",
+    ],
   },
 
   // Strict, type-aware rules for all TypeScript (new and migrated code).
@@ -18,7 +27,12 @@ export default tseslint.config(
       globals: globals.browser,
       parserOptions: {
         projectService: {
-          allowDefaultProject: ["vite.config.ts", "vitest.config.ts"],
+          allowDefaultProject: [
+            "vite.config.ts",
+            "vitest.config.ts",
+            "playwright.config.ts",
+            "e2e/*.ts",
+          ],
         },
         tsconfigRootDir: import.meta.dirname,
       },

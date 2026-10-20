@@ -18,7 +18,7 @@ use axum::extract::{Path, Request, State};
 use axum::http::{header, HeaderValue, Method, StatusCode};
 use axum::middleware::{self, Next};
 use axum::response::{IntoResponse, Response};
-use axum::routing::post;
+use axum::routing::{get, post};
 use axum::{Json, Router};
 use serde::Deserialize;
 use serde_json::{json, Value};
@@ -153,6 +153,7 @@ async fn main() {
         demo(&state).expect("demo data");
     }
     let app = Router::new()
+        .route("/health", get(|| async { "ok" }))
         .route("/v1/call/:command", post(call))
         .layer(middleware::from_fn(cors))
         .with_state(state);

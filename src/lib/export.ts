@@ -128,22 +128,24 @@ export function downloadBlob(name: string, blob: Blob): void {
   setTimeout(() => URL.revokeObjectURL(url), 5000);
 }
 
-/** An Excel workbook (the spreadsheet library loads only when this is used). */
+/** An Excel workbook (the writer loads only when this is used). Header and totals are bold. */
+export async function tableToXlsx(table: Api.ReportTable, minorDigits = 2): Promise<Blob> {
+  const { default: writeExcelFile } = await import("write-excel-file/universal");
+  const cell = (c: Api.Column, v: unknown, bold: boolean) => {
+    const value = rawValue(c, v, minorDigits);
+    return value === "" ? null : { value, fontWeight: bold ? ("bold" as const) : undefined };
+  };
+  const sheetData = [
+    table.columns.map((c) => ({ value: c.label, fontWeight: "bold" as const })),
+    ...table.rows.map((row) => table.columns.map((c, i) => cell(c, row[i], false))),
+    ...(table.totals ? [table.columns.map((c, i) => cell(c, table.totals?.[i], true))] : []),
+  ];
+  return writeExcelFile(sheetData, {
+    sheet: table.title.slice(0, 31).replace(/[\\/?*[\]:]/g, " "),
+    columns: table.columns.map((c) => ({ width: Math.max(12, c.label.length + 2) })),
+  }).toBlob();
+}
+
 export async function downloadXlsx(table: Api.ReportTable, minorDigits = 2): Promise<void> {
-  const XLSX = await import("xlsx");
-  const header = table.columns.map((c) => c.label);
-  const rows = [...table.rows, ...(table.totals ? [table.totals] : [])].map((row) =>
-    table.columns.map((c, i) => rawValue(c, row[i], minorDigits)),
-  );
-  const sheet = XLSX.utils.aoa_to_sheet([header, ...rows]);
-  sheet["!cols"] = table.columns.map((c) => ({ wch: Math.max(12, c.label.length + 2) }));
-  const book = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(book, sheet, table.title.slice(0, 31).replace(/[\\/?*[\]:]/g, " "));
-  const data = XLSX.write(book, { bookType: "xlsx", type: "array" }) as ArrayBuffer;
-  downloadBlob(
-    fileName(table, "xlsx"),
-    new Blob([data], {
-      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    }),
-  );
+  downloadBlob(fileName(table, "xlsx"), await tableToXlsx(table, minorDigits));
 }

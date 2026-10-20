@@ -2,6 +2,7 @@ import { forwardRef, useEffect, useId, useImperativeHandle, useRef, useState } f
 import type { ReactNode } from "react";
 import type { Api } from "@inventory/shared";
 import { Search } from "lucide-react";
+import { call } from "@/api/v2";
 import { Input } from "@/components/ui/input";
 import { useMoney } from "@/lib/business";
 import { showQty } from "@/lib/format";
@@ -194,7 +195,8 @@ export const ProductPicker = forwardRef<PickerHandle, ProductPickerProps>(functi
         setTerm("");
       }}
       onSubmitTerm={(t) => {
-        // A scanner types fast and presses Enter: the first exact hit wins.
+        // A scanner types the code and presses Enter within milliseconds, before the search
+        // above has run: look the exact code up directly instead of reporting "not found".
         const hit = query.data?.[0];
         if (
           hit &&
@@ -203,9 +205,18 @@ export const ProductPicker = forwardRef<PickerHandle, ProductPickerProps>(functi
         ) {
           onSelect(hit);
           setTerm("");
-        } else {
-          onNotFound?.(t);
+          return;
         }
+        call("products_lookup", { term: t, limit: null, warehouseId: warehouseId ?? null })
+          .then((found) => {
+            if (found) {
+              onSelect(found);
+              setTerm("");
+            } else {
+              onNotFound?.(t);
+            }
+          })
+          .catch(() => onNotFound?.(t));
       }}
       itemKey={(i) => `${i.variantId}:${i.unitId}`}
       placeholder={placeholder ?? "Search item, SKU or scan barcode"}

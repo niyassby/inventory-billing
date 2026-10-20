@@ -114,6 +114,24 @@ A failed backup shows a red notice on the dashboard. Check the folder exists and
 
 Restore only works on the hub or standalone PC itself, never from a counter.
 
+### If the data file is damaged
+
+At start the app checks the database file. If the check fails (after a disk fault, for example)
+the app **does not open it, repair it or replace it**: it keeps a copy next to it
+(`inventory_v2.db.corrupt-<time>`), writes the reason to the log and shows the message "The data
+file failed its safety check".
+
+1. Close the app. Do not delete anything.
+2. Copy the whole data folder (`%LOCALAPPDATA%\com.niyas.tauri-app`) somewhere safe: the
+   `.corrupt-…` copy can often be recovered by a specialist.
+3. Move `inventory_v2.db` (and its `-wal` and `-shm` files) out of the folder, start the app and
+   create the business again with the **same** name. Sign in as the owner and use
+   Settings → Backup → *Restore* with the newest backup from the `backups` folder (or the USB
+   copy). Everything up to that backup returns; sales made after it must be entered again, so
+   keep the paper bills of that day.
+
+A "restore on first start" screen would shorten this: a suggestion (ASSUMPTIONS A-79).
+
 ## 5. Troubleshooting
 
 | Symptom | Check |

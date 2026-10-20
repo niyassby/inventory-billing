@@ -28,3 +28,9 @@ coverage
 
 # Development bridge data (src-tauri/src/bin/dev_server.rs)
 .dev-data/
+
+# End-to-end tests
+.e2e-data/
+dist-e2e/
+test-results/
+playwright-report/

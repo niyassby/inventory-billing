@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Api } from "@inventory/shared";
-import { cellText, fileName, rawValue, tableToCsv, tableToHtml } from "./export";
+import { cellText, fileName, rawValue, tableToCsv, tableToHtml, tableToXlsx } from "./export";
 
 const table: Api.ReportTable = {
   report: "sales_summary",
@@ -65,5 +65,12 @@ describe("export", () => {
     expect(html).toContain('class="total"');
     expect(html).toContain("₹1,234.50");
     expect(fileName(table, "csv")).toBe("sales-summary-2026-10-01-to-2026-10-31.csv");
+  });
+
+  it("writes an Excel workbook (a zip file) with the report in it", async () => {
+    const blob = await tableToXlsx(table);
+    const head = new Uint8Array(await blob.arrayBuffer()).slice(0, 2);
+    expect(String.fromCharCode(...head)).toBe("PK");
+    expect(blob.size).toBeGreaterThan(1000);
   });
 });

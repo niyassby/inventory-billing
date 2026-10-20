@@ -10,8 +10,8 @@ offline. Multi-counter shops connect their devices to one **hub** PC over the lo
 > services, permissions and tests), Phase 4 (LAN hub, offline counters, backups) and Phase 5
 > (point of sale, sales, products and stock, purchases, customers and suppliers on the new
 > backend) and Phase 6 (reports, accounting-lite, settings) and Phase 7 (polish, accessibility,
-> performance) are done. Testing, packaging and the production checklist follow in Phase 8. Read [docs/AUDIT.md](docs/AUDIT.md) for its known
-> issues before using it with real data.
+> performance) are done. Phase 8 (tests, packaging, documentation) is done:
+> see [docs/RELEASE.md](docs/RELEASE.md) for what to check before a release.
 
 ## Stack
 
@@ -33,7 +33,7 @@ npm install
 npm run tauri dev
 ```
 
-The first run creates the database in `%LOCALAPPDATA%\com.niyas.tauri-app\inventory_app.db`.
+The first run creates the database in `%LOCALAPPDATA%\com.niyas.tauri-app\inventory_v2.db`.
 
 ## Common commands
 
@@ -43,10 +43,12 @@ The first run creates the database in `%LOCALAPPDATA%\com.niyas.tauri-app\invent
 | `npm run check` | Typecheck, lint, format check and tests with coverage (what CI runs) |
 | `npm test` | Unit tests (Vitest) |
 | `npm run rust:lint` | `cargo clippy` with warnings as errors |
-| `npm run tauri build` | Build the Windows installer |
+| `npm run test:e2e` | End-to-end test in Chrome against the real backend |
+| `npm run tauri build` | Build the Windows installers (NSIS and MSI) |
 
 ## Documentation
 
+- [docs/USER_GUIDE.md](docs/USER_GUIDE.md): day-to-day use, for cashiers and owners
 - [docs/ADMIN_GUIDE.md](docs/ADMIN_GUIDE.md): network setup, offline counters, backups and restore
 - [docs/AUDIT.md](docs/AUDIT.md): Phase 0 review of the legacy code
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): offline and multi-user design (LAN hub)
@@ -54,3 +56,5 @@ The first run creates the database in `%LOCALAPPDATA%\com.niyas.tauri-app\invent
 - [docs/ASSUMPTIONS.md](docs/ASSUMPTIONS.md): decisions and defaults
 - [docs/DEVELOPER.md](docs/DEVELOPER.md): project layout, conventions and workflow
 - [CHANGELOG.md](CHANGELOG.md)
+- [docs/RELEASE.md](docs/RELEASE.md): build, release checklist, code signing, auto-update
+- [docs/SECURITY_REVIEW.md](docs/SECURITY_REVIEW.md): security review and dependency audit
