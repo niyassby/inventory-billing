@@ -31,6 +31,8 @@ const Accounting = {
     import("@/features/accounting/accounting-pages").then((m) => ({ default: m.DayClosePage })),
   ),
 };
+// Development only: every primitive in the current theme (not part of the packaged app).
+const KitchenSink = import.meta.env.DEV ? lazy(() => import("@/features/dev/kitchen-sink")) : null;
 const SettingsPage = lazy(() => import("@/features/settings/settings-page"));
 const ProductsPage = lazy(() => import("@/features/inventory/products-page"));
 const ProductEditor = lazy(() => import("@/features/inventory/product-editor"));
@@ -234,6 +236,7 @@ function AppRoutes() {
           <Route path="accounting/expenses" element={<Accounting.Expenses />} />
           <Route path="accounting/accounts" element={<Accounting.Accounts />} />
           <Route path="accounting/day-close" element={<Accounting.DayClose />} />
+          {KitchenSink && <Route path="dev/ui" element={<KitchenSink />} />}
           <Route path="settings" element={<SettingsPage />} />
           <Route path="settings/:section" element={<SettingsPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />

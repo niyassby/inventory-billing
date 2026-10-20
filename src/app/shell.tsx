@@ -35,7 +35,7 @@ function AppSidebar() {
   const groups = visibleNav(user?.permissions ?? []);
   const active = activeItem(pathname);
   return (
-    <Sidebar collapsible="icon">
+    <Sidebar collapsible="icon" className="da rk">
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
@@ -75,7 +75,7 @@ function AppSidebar() {
           </SidebarGroup>
         ))}
       </SidebarContent>
-      <SidebarFooter>
+      <SidebarFooter className="border-t">
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton tooltip="Sign out" onClick={() => void signOut()}>
