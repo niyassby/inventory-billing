@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { initials, tintFor } from "@/components/ui/avatar";
-import { STATUS_TONES, stockTone } from "./status";
+import { balanceTone, STATUS_TONES, stockTone } from "./status";
 
 describe("status tones", () => {
   it("keeps green for settled things and amber for what is still owed", () => {
@@ -30,5 +30,13 @@ describe("avatar helpers", () => {
 
   it("gives the same tint to the same name", () => {
     expect(tintFor("Notebook A5")).toBe(tintFor("Notebook A5"));
+  });
+});
+
+describe("balance tone", () => {
+  it("tells owed, paid ahead and settled apart", () => {
+    expect(balanceTone(5000)).toBe("owed");
+    expect(balanceTone(-5000)).toBe("advance");
+    expect(balanceTone(0)).toBe("settled");
   });
 });

@@ -12,6 +12,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { StatusBadge } from "@/components/app/badges";
 import type { ColumnDef } from "@/components/app/data-table";
+import { SearchInput } from "@/components/app/search-input";
 import { DataTable } from "@/components/app/data-table";
 import type { ItemLine } from "@/components/app/item-lines";
 import { ItemLines, lineKey } from "@/components/app/item-lines";
@@ -115,7 +116,7 @@ export function SalesDocsPage() {
           ))}
         </TabsList>
       </Tabs>
-      <Input
+      <SearchInput
         aria-label="Search"
         placeholder="Number or customer"
         className="max-w-xs"
@@ -126,6 +127,7 @@ export function SalesDocsPage() {
         }}
       />
       <DataTable
+        viewKey="sales-documents"
         columns={columns}
         data={query.data?.items}
         loading={query.isPending}

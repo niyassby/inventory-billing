@@ -19,6 +19,8 @@ import { Input } from "@/components/ui/input";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
 import type { ColumnDef } from "@/components/app/data-table";
+import { SearchInput } from "@/components/app/search-input";
+import { BalanceChip } from "@/components/app/badges";
 import { DataTable } from "@/components/app/data-table";
 import { confirm } from "@/components/app/dialogs";
 import { MoneyInput } from "@/components/app/inputs";
@@ -145,7 +147,9 @@ export function PartyDialog({
           </DialogHeader>
           <div className="grid gap-3 sm:grid-cols-2">
             <Field className="sm:col-span-2">
-              <FieldLabel htmlFor="p-name">Name</FieldLabel>
+              <FieldLabel htmlFor="p-name" required>
+                Name
+              </FieldLabel>
               <Input
                 id="p-name"
                 autoFocus
@@ -295,7 +299,9 @@ export function PartiesPage({ partyType }: { partyType: PartyType }) {
         cell: ({ row }) => {
           const b = partyType === "customer" ? row.original.balance : -row.original.balance;
           return (
-            <span className={b > 0 ? "font-medium" : "text-muted-foreground"}>{money(b)}</span>
+            <span className={b > 0 ? "font-medium text-warning" : "text-muted-foreground"}>
+              {money(b)}
+            </span>
           );
         },
       },
@@ -321,7 +327,7 @@ export function PartiesPage({ partyType }: { partyType: PartyType }) {
       }
     >
       <div className="flex flex-wrap items-center gap-3">
-        <Input
+        <SearchInput
           aria-label={`Search ${title.toLowerCase()}`}
           placeholder="Search name, phone or GSTIN"
           className="max-w-xs"
@@ -343,6 +349,7 @@ export function PartiesPage({ partyType }: { partyType: PartyType }) {
         </label>
       </div>
       <DataTable
+        viewKey="parties"
         columns={columns}
         data={query.data?.items}
         loading={query.isPending}
@@ -531,6 +538,13 @@ export function PartyPage() {
         return (
           <Page
             title={p.name}
+            description={
+              <BalanceChip
+                owed={owed}
+                owedLabel={isCustomer ? "They owe" : "You owe"}
+                money={money}
+              />
+            }
             back={{
               to: isCustomer ? "/parties/customers" : "/parties/suppliers",
               label: isCustomer ? "Customers" : "Suppliers",

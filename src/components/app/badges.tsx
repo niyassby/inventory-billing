@@ -1,6 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { label } from "@/lib/format";
-import { stockTone, type StockTone, STATUS_TONES, type StatusTone } from "./status";
+import { balanceTone, stockTone, type StockTone, STATUS_TONES, type StatusTone } from "./status";
 
 const VARIANT: Record<StatusTone, "success" | "warning" | "destructive" | "info" | "secondary"> = {
   success: "success",
@@ -34,6 +34,27 @@ export function OfflineBadge() {
   return (
     <Badge variant="info" title="Made on a counter while the hub was offline">
       Offline sale
+    </Badge>
+  );
+}
+
+/** What a customer or supplier owes, as a chip: amber while open, green when paid ahead. */
+export function BalanceChip({
+  owed,
+  owedLabel,
+  money,
+}: {
+  owed: number;
+  /** "They owe" for a customer, "You owe" for a supplier. */
+  owedLabel: string;
+  money: (minor: number) => string;
+}) {
+  const tone = balanceTone(owed);
+  if (tone === "settled") return <Badge variant="secondary">Settled</Badge>;
+  if (tone === "advance") return <Badge variant="success">Paid ahead {money(-owed)}</Badge>;
+  return (
+    <Badge variant="warning">
+      {owedLabel} {money(owed)}
     </Badge>
   );
 }

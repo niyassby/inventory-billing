@@ -125,6 +125,7 @@ export function StockMovesPage() {
         </TabsList>
       </Tabs>
       <DataTable
+        viewKey="stock-moves"
         columns={columns}
         data={query.data?.items}
         loading={query.isPending}

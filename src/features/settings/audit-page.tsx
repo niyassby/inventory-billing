@@ -3,6 +3,7 @@ import type { Api } from "@inventory/shared";
 import { Input } from "@/components/ui/input";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import type { ColumnDef } from "@/components/app/data-table";
+import { SearchInput } from "@/components/app/search-input";
 import { DataTable } from "@/components/app/data-table";
 import { Section } from "@/components/app/page";
 import { useDebounced } from "@/components/app/pickers";
@@ -84,7 +85,7 @@ export function AuditSection() {
         it and who approved it. It can't be edited.
       </p>
       <div className="mb-3 flex flex-wrap gap-3">
-        <Input
+        <SearchInput
           aria-label="Search the log"
           placeholder="Search"
           className="max-w-xs"
@@ -131,6 +132,7 @@ export function AuditSection() {
         />
       </div>
       <DataTable
+        viewKey="audit"
         columns={columns}
         data={query.data?.items}
         loading={query.isPending}

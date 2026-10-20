@@ -19,6 +19,7 @@ import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select"
 import { Textarea } from "@/components/ui/textarea";
 import { StatusBadge } from "@/components/app/badges";
 import type { ColumnDef } from "@/components/app/data-table";
+import { SearchInput } from "@/components/app/search-input";
 import { DataTable } from "@/components/app/data-table";
 import { confirm } from "@/components/app/dialogs";
 import { MoneyInput, RateInput } from "@/components/app/inputs";
@@ -340,7 +341,7 @@ export function ExpensesPage() {
       }
     >
       <div className="flex flex-wrap gap-3">
-        <Input
+        <SearchInput
           aria-label="Search expenses"
           placeholder="Number or what for"
           className="max-w-xs"
@@ -367,6 +368,7 @@ export function ExpensesPage() {
         </NativeSelect>
       </div>
       <DataTable
+        viewKey="expenses"
         columns={columns}
         data={query.data?.items}
         loading={query.isPending}

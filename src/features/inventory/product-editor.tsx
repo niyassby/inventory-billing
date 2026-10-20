@@ -14,6 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { confirm } from "@/components/app/dialogs";
 import { MoneyInput, QtyInput } from "@/components/app/inputs";
 import { ErrorState, LoadingRows, Page, Section } from "@/components/app/page";
+import { SaveBar } from "@/components/app/save-bar";
 import { call } from "@/api/v2";
 import { showQty, showRate } from "@/lib/format";
 import { errorText, useCommand } from "@/lib/queries";
@@ -265,7 +266,9 @@ function Editor({ product }: { product: Api.ProductDetail | null }) {
           <Section title="Details">
             <div className="grid gap-4 md:grid-cols-3">
               <Field className="md:col-span-2" data-invalid={Boolean(err("name")) || undefined}>
-                <FieldLabel htmlFor="name">Name</FieldLabel>
+                <FieldLabel htmlFor="name" required>
+                  Name
+                </FieldLabel>
                 <Input
                   id="name"
                   autoFocus={isNew}
@@ -300,7 +303,9 @@ function Editor({ product }: { product: Api.ProductDetail | null }) {
                 </NativeSelect>
               </Field>
               <Field data-invalid={Boolean(err("baseUnitId")) || undefined}>
-                <FieldLabel htmlFor="baseUnitId">Unit</FieldLabel>
+                <FieldLabel htmlFor="baseUnitId" required>
+                  Unit
+                </FieldLabel>
                 <NativeSelect id="baseUnitId" className="w-full" {...register("baseUnitId")}>
                   <NativeSelectOption value="">Choose…</NativeSelectOption>
                   {units.data?.map((u) => (
@@ -370,9 +375,19 @@ function Editor({ product }: { product: Api.ProductDetail | null }) {
                 <thead className="text-xs text-muted-foreground">
                   <tr>
                     <th className="px-1 py-1 text-left font-medium">Variant</th>
-                    <th className="px-1 py-1 text-left font-medium">SKU</th>
+                    <th className="px-1 py-1 text-left font-medium">
+                      SKU{" "}
+                      <span aria-hidden className="text-danger">
+                        *
+                      </span>
+                    </th>
                     <th className="px-1 py-1 text-left font-medium">Barcode</th>
-                    <th className="px-1 py-1 text-right font-medium">Sale price</th>
+                    <th className="px-1 py-1 text-right font-medium">
+                      Sale price{" "}
+                      <span aria-hidden className="text-danger">
+                        *
+                      </span>
+                    </th>
                     <th className="px-1 py-1 text-right font-medium">MRP</th>
                     <th className="px-1 py-1 text-right font-medium">Cost</th>
                     <th className="px-1 py-1 text-right font-medium">Reorder at</th>
@@ -557,6 +572,14 @@ function Editor({ product }: { product: Api.ProductDetail | null }) {
             )}
           </Section>
         </fieldset>
+        {canManage && (
+          <SaveBar
+            dirty={formState.isDirty}
+            saving={formState.isSubmitting}
+            onDiscard={() => reset(defaults)}
+            onSave={() => void save()}
+          />
+        )}
       </form>
     </Page>
   );

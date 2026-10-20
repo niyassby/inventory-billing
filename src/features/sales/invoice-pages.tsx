@@ -11,19 +11,22 @@ import { Input } from "@/components/ui/input";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { OfflineBadge, StatusBadge } from "@/components/app/badges";
 import type { ColumnDef } from "@/components/app/data-table";
+import { SearchInput } from "@/components/app/search-input";
 import { DataTable } from "@/components/app/data-table";
 import { confirm } from "@/components/app/dialogs";
 import { MoneyInput, QtyInput } from "@/components/app/inputs";
 import { Facts, Page, QueryView, Section } from "@/components/app/page";
 import { useDebounced } from "@/components/app/pickers";
+import { Timeline } from "@/components/app/timeline";
 import { call, requestId } from "@/api/v2";
 import { useMoney, usePublicSettings } from "@/lib/business";
-import { label, showDate, showQty } from "@/lib/format";
+import { label, showDate, showDateTime, showQty } from "@/lib/format";
 import { errorText, useAction, useCommand, useList } from "@/lib/queries";
 import { run } from "@/lib/run";
 import { useCan } from "@/stores/session";
 import type { Paper } from "./print";
 import { defaultPaper, documentHtml, printHtml } from "./print";
+import { invoiceEvents } from "./timeline";
 
 // ------------------------------------------------------------------------------------- invoices
 
@@ -95,7 +98,7 @@ export function InvoicesPage() {
       }
     >
       <div className="flex flex-wrap items-center gap-3">
-        <Input
+        <SearchInput
           aria-label="Search invoices"
           placeholder="Number, customer or phone"
           className="max-w-xs"
@@ -140,6 +143,7 @@ export function InvoicesPage() {
         />
       </div>
       <DataTable
+        viewKey="invoices"
         columns={columns}
         data={query.data?.items}
         loading={query.isPending}
@@ -245,6 +249,14 @@ export function PrintButtons({ invoice }: { invoice: Api.InvoiceDetail }) {
   );
 }
 
+const TIMELINE_TITLE = {
+  issued: "Invoice issued",
+  payment: "Payment received",
+  payment_voided: "Payment refunded",
+  return: "Items returned",
+  voided: "Invoice voided",
+} as const;
+
 export function InvoicePage() {
   const { id = "" } = useParams();
   const navigate = useNavigate();
@@ -324,9 +336,31 @@ export function InvoicePage() {
               {voided && <p className="mt-3 text-sm text-destructive">Voided: {inv.voidReason}</p>}
               {inv.notes && <p className="mt-3 text-sm text-muted-foreground">{inv.notes}</p>}
             </Section>
-            <Section title="Items">
-              <InvoiceLines invoice={inv} />
-            </Section>
+            <div className="grid gap-4 lg:grid-cols-3">
+              <Section title="Items" className="lg:col-span-2">
+                <InvoiceLines invoice={inv} />
+              </Section>
+              <Section title="Timeline">
+                <Timeline
+                  events={invoiceEvents(inv, returns.data ?? []).map((e) => ({
+                    key: e.key,
+                    tone:
+                      e.kind === "voided" || e.kind === "payment_voided"
+                        ? "danger"
+                        : e.kind === "payment"
+                          ? "success"
+                          : e.kind === "return"
+                            ? "warning"
+                            : "neutral",
+                    title: TIMELINE_TITLE[e.kind],
+                    when: e.kind === "issued" ? showDateTime(e.at) : showDate(e.at),
+                    detail: [e.amount !== undefined ? money(e.amount) : null, e.text]
+                      .filter(Boolean)
+                      .join(" · "),
+                  }))}
+                />
+              </Section>
+            </div>
             {inv.payments.length > 0 && (
               <Section title="Payments">
                 <ul className="text-sm">
@@ -420,7 +454,7 @@ export function ReturnsPage() {
       title="Sales returns"
       description="Credit notes. Start a return from the invoice it belongs to."
     >
-      <Input
+      <SearchInput
         aria-label="Search returns"
         placeholder="Number, customer or invoice"
         className="max-w-xs"
@@ -431,6 +465,7 @@ export function ReturnsPage() {
         }}
       />
       <DataTable
+        viewKey="sales-returns"
         columns={columns}
         data={query.data?.items}
         loading={query.isPending}

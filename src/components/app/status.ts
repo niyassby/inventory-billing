@@ -31,3 +31,12 @@ export function stockTone(stock: number, reorderLevel: number): StockTone {
   if (reorderLevel > 0 && stock <= reorderLevel) return "low";
   return "ok";
 }
+
+export type BalanceTone = "owed" | "advance" | "settled";
+
+/** Positive = still owed to you (or by you); negative = paid ahead; zero = settled. */
+export function balanceTone(owed: number): BalanceTone {
+  if (owed > 0) return "owed";
+  if (owed < 0) return "advance";
+  return "settled";
+}

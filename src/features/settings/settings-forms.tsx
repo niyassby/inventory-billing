@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import type { Api } from "@inventory/shared";
-import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
@@ -8,6 +7,7 @@ import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select"
 import { Textarea } from "@/components/ui/textarea";
 import { QtyInput, RateInput } from "@/components/app/inputs";
 import { QueryView, Section } from "@/components/app/page";
+import { SaveBar } from "@/components/app/save-bar";
 import { useAction, useCommand } from "@/lib/queries";
 import { useCan } from "@/stores/session";
 
@@ -213,16 +213,7 @@ export function SectionForm({
           ))}
         </div>
         {canEdit && (
-          <div className="flex items-center gap-3">
-            <Button type="submit" disabled={!dirty || save.isPending}>
-              {save.isPending ? "Saving…" : "Save"}
-            </Button>
-            {dirty && (
-              <Button type="button" variant="ghost" onClick={() => setDraft(original)}>
-                Undo changes
-              </Button>
-            )}
-          </div>
+          <SaveBar dirty={dirty} saving={save.isPending} onDiscard={() => setDraft(original)} />
         )}
       </form>
     </Section>

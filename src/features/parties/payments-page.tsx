@@ -10,10 +10,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { StatusBadge } from "@/components/app/badges";
 import type { ColumnDef } from "@/components/app/data-table";
+import { SearchInput } from "@/components/app/search-input";
 import { DataTable } from "@/components/app/data-table";
 import { confirm } from "@/components/app/dialogs";
 import { Facts, Page, QueryView } from "@/components/app/page";
@@ -153,7 +153,7 @@ export default function PaymentsPage() {
   return (
     <Page title="Payments" description="Money received from customers and paid to suppliers.">
       <div className="flex flex-wrap items-center gap-3">
-        <Input
+        <SearchInput
           aria-label="Search payments"
           placeholder="Number, party or reference"
           className="max-w-xs"
@@ -192,6 +192,7 @@ export default function PaymentsPage() {
         </NativeSelect>
       </div>
       <DataTable
+        viewKey="payments"
         columns={columns}
         data={query.data?.items}
         loading={query.isPending}

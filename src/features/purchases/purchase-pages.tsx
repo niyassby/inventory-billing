@@ -13,6 +13,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { StatusBadge } from "@/components/app/badges";
 import type { ColumnDef } from "@/components/app/data-table";
+import { SearchInput } from "@/components/app/search-input";
 import { DataTable } from "@/components/app/data-table";
 import { confirm } from "@/components/app/dialogs";
 import type { ItemLine } from "@/components/app/item-lines";
@@ -177,7 +178,7 @@ export function PurchasesPage() {
           ))}
         </TabsList>
       </Tabs>
-      <Input
+      <SearchInput
         aria-label="Search"
         placeholder="Number, supplier or their bill no."
         className="max-w-xs"
@@ -189,6 +190,7 @@ export function PurchasesPage() {
       />
       {tab === "goods_receipt" ? (
         <DataTable
+          viewKey="purchases"
           columns={receiptColumns}
           data={receipts.data?.items}
           loading={receipts.isPending}
@@ -204,6 +206,7 @@ export function PurchasesPage() {
         />
       ) : (
         <DataTable
+          viewKey="purchase-receipts"
           columns={docColumns}
           data={docs.data?.items}
           loading={docs.isPending}
