@@ -3,6 +3,7 @@ import type { Api } from "@inventory/shared";
 import { KeyRound, Plus, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Avatar } from "@/components/ui/avatar";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
@@ -17,6 +18,7 @@ import { Input } from "@/components/ui/input";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { confirm } from "@/components/app/dialogs";
 import { RateInput } from "@/components/app/inputs";
+import { PermissionGrid } from "./permission-grid";
 import { QueryView, Section } from "@/components/app/page";
 import { showDateTime } from "@/lib/format";
 import { run } from "@/lib/run";
@@ -285,19 +287,24 @@ export function UsersSection() {
             </thead>
             <tbody>
               {list.map((u) => (
-                <tr key={u.id} className="border-t border-border/40">
-                  <td className="py-1.5">
-                    <p className="font-medium">
-                      {u.name}{" "}
-                      {u.id === me?.id && (
-                        <span className="text-xs text-muted-foreground">(you)</span>
-                      )}
-                    </p>
-                    <p className="text-xs text-muted-foreground">{u.email}</p>
+                <tr key={u.id} className="border-t border-border/60">
+                  <td className="py-2">
+                    <div className="flex items-center gap-3">
+                      <Avatar name={u.name} />
+                      <div>
+                        <p className="font-medium">
+                          {u.name} {u.id === me?.id && <span className="text-caption">(you)</span>}
+                        </p>
+                        <p className="text-caption">{u.email}</p>
+                      </div>
+                    </div>
                   </td>
                   <td>
-                    {u.roleName} {!u.isActive && <Badge variant="outline">Disabled</Badge>}{" "}
-                    {u.mustChangePassword && <Badge variant="outline">New password due</Badge>}
+                    <span className="flex flex-wrap items-center gap-1.5">
+                      <Badge variant="default">{u.roleName}</Badge>
+                      {!u.isActive && <Badge variant="destructive">Disabled</Badge>}
+                      {u.mustChangePassword && <Badge variant="warning">New password due</Badge>}
+                    </span>
                   </td>
                   <td className="text-muted-foreground">
                     {u.lastLoginAt ? showDateTime(u.lastLoginAt) : "never"}
@@ -479,7 +486,7 @@ export function RolesSection() {
         )}
       </QueryView>
       <Dialog open={editing !== null} onOpenChange={(o) => !o && setEditing(null)}>
-        <DialogContent className="sm:max-w-2xl">
+        <DialogContent className="sm:max-w-3xl">
           {editing && (
             <form
               className="flex flex-col gap-4"
@@ -523,25 +530,11 @@ export function RolesSection() {
                   />
                 </Field>
               </div>
-              <div className="grid max-h-80 gap-1 overflow-auto rounded-xl border border-border/60 p-3 sm:grid-cols-2">
-                {permissions.data?.map((p) => (
-                  <label key={p.code} className="flex items-center gap-2 text-sm">
-                    <Checkbox
-                      checked={editing.permissions.has(p.code)}
-                      onCheckedChange={(on) => {
-                        const next = new Set(editing.permissions);
-                        if (on) next.add(p.code);
-                        else next.delete(p.code);
-                        setEditing({ ...editing, permissions: next });
-                      }}
-                    />
-                    <span>
-                      {p.description}
-                      <span className="ml-1 text-xs text-muted-foreground">{p.code}</span>
-                    </span>
-                  </label>
-                ))}
-              </div>
+              <PermissionGrid
+                permissions={permissions.data ?? []}
+                selected={editing.permissions}
+                onChange={(next) => setEditing({ ...editing, permissions: next })}
+              />
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={() => setEditing(null)}>
                   Cancel

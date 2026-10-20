@@ -28,3 +28,16 @@ export function useMoney(): (minor: number) => string {
   const locale = useLocale();
   return useMemo(() => (minor: number) => showMoney(minor, locale), [locale]);
 }
+
+/** `compact(1250000)` → "12.5K": for chart axes, where full amounts would not fit. */
+export function useCompactMoney(): (minor: number) => string {
+  const locale = useLocale();
+  return useMemo(() => {
+    const scale = 10 ** locale.currency.minorDigits;
+    const format = new Intl.NumberFormat(locale.locale, {
+      notation: "compact",
+      maximumFractionDigits: 1,
+    });
+    return (minor: number) => format.format(minor / scale);
+  }, [locale]);
+}

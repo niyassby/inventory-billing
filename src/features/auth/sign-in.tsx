@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { ReactNode } from "react";
 import { APP_NAME } from "@inventory/shared";
+import { ShieldCheck, Store, Users, WifiOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
@@ -9,6 +10,21 @@ import { call } from "@/api/v2";
 import { errorText } from "@/lib/queries";
 import { useSession } from "@/stores/session";
 
+const POINTS = [
+  [WifiOff, "Works offline", "Keep selling when the network is down; everything syncs later."],
+  [
+    Users,
+    "Many counters, one hub",
+    "Connect every till in the shop to one PC over your own network.",
+  ],
+  [
+    ShieldCheck,
+    "Careful with money",
+    "Every bill and payment is kept, signed and never silently edited.",
+  ],
+] as const;
+
+/** Sign-in, first-run setup and the forced password change share this frame. */
 export function AuthFrame({
   title,
   subtitle,
@@ -19,20 +35,51 @@ export function AuthFrame({
   children: ReactNode;
 }) {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-muted/30 p-4 font-sans">
-      <div className="w-full max-w-md rounded-3xl border border-border/60 bg-background p-8 shadow-sm">
-        <div className="mb-6 flex items-start justify-between gap-3">
-          <div>
-            <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-              {APP_NAME}
-            </p>
-            <h1 className="mt-1 font-heading text-2xl font-semibold">{title}</h1>
-            {subtitle && <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>}
-          </div>
-          <ConnectionBadge />
+    <div className="grid min-h-screen bg-background font-sans lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
+      <aside className="relative hidden flex-col justify-between overflow-hidden bg-primary p-10 text-primary-foreground lg:flex">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -top-24 -right-24 size-96 rounded-full bg-primary-foreground/10 blur-3xl"
+        />
+        <div className="relative flex items-center gap-3">
+          <span className="flex size-10 items-center justify-center rounded-lg bg-primary-foreground/15">
+            <Store className="size-5" aria-hidden />
+          </span>
+          <span className="text-lg font-semibold tracking-tight">{APP_NAME}</span>
         </div>
-        {children}
-      </div>
+        <div className="relative flex flex-col gap-8">
+          <h2 className="max-w-sm text-3xl leading-tight font-semibold tracking-tight">
+            Stock, billing and books for your shop.
+          </h2>
+          <ul className="flex max-w-sm flex-col gap-5">
+            {POINTS.map(([Icon, heading, text]) => (
+              <li key={heading} className="flex gap-3">
+                <Icon className="mt-0.5 size-5 shrink-0 opacity-90" aria-hidden />
+                <div>
+                  <p className="font-medium">{heading}</p>
+                  <p className="text-sm opacity-80">{text}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+        <p className="relative text-xs opacity-70">Your data stays on your own computers.</p>
+      </aside>
+      <main className="flex items-center justify-center p-6">
+        <div className="w-full max-w-md animate-fade-in">
+          <div className="mb-6 flex items-start justify-between gap-3">
+            <div>
+              <p className="text-caption font-medium tracking-wide uppercase lg:hidden">
+                {APP_NAME}
+              </p>
+              <h1 className="font-heading text-page-title">{title}</h1>
+              {subtitle && <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>}
+            </div>
+            <ConnectionBadge />
+          </div>
+          <div className="rounded-xl border border-border bg-card p-6 shadow-sm">{children}</div>
+        </div>
+      </main>
     </div>
   );
 }

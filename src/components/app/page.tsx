@@ -160,7 +160,7 @@ export function Facts({ items }: { items: [string, ReactNode][] }) {
       {items.map(([k, v]) => (
         <div key={k} className="min-w-0">
           <dt className="text-xs text-muted-foreground">{k}</dt>
-          <dd className="truncate font-medium">{v ?? "—"}</dd>
+          <dd className="truncate num font-medium">{v ?? "—"}</dd>
         </div>
       ))}
     </dl>

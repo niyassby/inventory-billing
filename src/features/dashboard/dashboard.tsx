@@ -19,7 +19,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { StatusBadge, StockBadge } from "@/components/app/badges";
 import { TrendChart } from "@/components/app/charts";
 import { EmptyState, ErrorState, Page, QueryView, Section } from "@/components/app/page";
-import { useLocale, useMoney, usePublicSettings } from "@/lib/business";
+import { useCompactMoney, useLocale, useMoney, usePublicSettings } from "@/lib/business";
 import { showDateTime, showQty } from "@/lib/format";
 import { useAction, useCommand } from "@/lib/queries";
 import { cn } from "@/lib/utils";
@@ -170,11 +170,7 @@ export default function Dashboard() {
 
   const points = salesByDay(trend.data, days);
   const todayPoint = points.at(-1);
-  const compact = new Intl.NumberFormat(locale.locale, {
-    notation: "compact",
-    maximumFractionDigits: 1,
-  });
-  const scale = 10 ** locale.currency.minorDigits;
+  const compact = useCompactMoney();
   const dayLabel = (iso: string) =>
     new Date(`${iso}T00:00:00Z`).toLocaleDateString(locale.locale, {
       day: "numeric",
@@ -289,7 +285,7 @@ export default function Dashboard() {
               <TrendChart
                 data={points.map((p) => ({ label: dayLabel(p.date), value: p.net }))}
                 format={money}
-                axisFormat={(v) => compact.format(v / scale)}
+                axisFormat={compact}
                 summary={`Net sales per day for the last 14 days, ${money(weekTotal)} in total`}
               />
             )}
