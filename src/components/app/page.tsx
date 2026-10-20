@@ -13,14 +13,29 @@ interface PageProps {
   actions?: ReactNode;
   /** Back link (detail and editor pages). */
   back?: { to: string; label: string };
+  /** Filters and search, directly under the title. */
+  toolbar?: ReactNode;
   children: ReactNode;
   className?: string;
 }
 
 /** The frame of every screen: title, actions, content. */
-export function Page({ title, description, actions, back, children, className }: PageProps) {
+export function Page({
+  title,
+  description,
+  actions,
+  back,
+  toolbar,
+  children,
+  className,
+}: PageProps) {
   return (
-    <div className={cn("mx-auto flex w-full max-w-7xl flex-col gap-5 p-4 md:p-6", className)}>
+    <div
+      className={cn(
+        "mx-auto flex w-full max-w-[90rem] animate-fade-in flex-col gap-5 p-4 md:p-6",
+        className,
+      )}
+    >
       {back && (
         <Link
           to={back.to}
@@ -32,11 +47,12 @@ export function Page({ title, description, actions, back, children, className }:
       )}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="font-heading text-2xl font-semibold tracking-tight">{title}</h1>
-          {description && <p className="mt-1 text-sm text-muted-foreground">{description}</p>}
+          <h1 className="font-heading text-page-title">{title}</h1>
+          {description && <p className="mt-0.5 text-sm text-muted-foreground">{description}</p>}
         </div>
         {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
       </div>
+      {toolbar && <div className="flex flex-wrap items-center gap-2">{toolbar}</div>}
       {children}
     </div>
   );
@@ -55,10 +71,10 @@ export function Section({
   className?: string;
 }) {
   return (
-    <section className={cn("rounded-2xl border border-border/60 bg-card p-4", className)}>
+    <section className={cn("rounded-xl border border-border bg-card p-4 shadow-xs", className)}>
       {(title ?? actions) && (
         <div className="mb-3 flex items-center justify-between gap-2">
-          {title && <h2 className="font-heading text-base font-semibold">{title}</h2>}
+          {title && <h2 className="font-heading text-section-title">{title}</h2>}
           {actions}
         </div>
       )}
@@ -77,9 +93,11 @@ export function EmptyState({
   action?: ReactNode;
 }) {
   return (
-    <div className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-border px-6 py-12 text-center">
-      <Inbox className="size-7 text-muted-foreground" strokeWidth={1.5} aria-hidden />
-      <p className="font-medium">{title}</p>
+    <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-card/50 px-6 py-12 text-center">
+      <span className="flex size-10 items-center justify-center rounded-full bg-muted text-muted-foreground">
+        <Inbox className="size-5" strokeWidth={1.5} aria-hidden />
+      </span>
+      <p className="text-section-title">{title}</p>
       {description && <p className="max-w-md text-sm text-muted-foreground">{description}</p>}
       {action && <div className="mt-2">{action}</div>}
     </div>
@@ -90,9 +108,9 @@ export function ErrorState({ error, onRetry }: { error: unknown; onRetry?: () =>
   return (
     <div
       role="alert"
-      className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-destructive/30 bg-destructive/5 px-6 py-10 text-center"
+      className="flex flex-col items-center justify-center gap-2 rounded-xl border border-danger/25 bg-danger-soft px-6 py-10 text-center"
     >
-      <TriangleAlert className="size-6 text-destructive" strokeWidth={1.5} aria-hidden />
+      <TriangleAlert className="size-6 text-danger" strokeWidth={1.5} aria-hidden />
       <p className="text-sm">{errorText(error)}</p>
       {onRetry && (
         <Button variant="outline" size="sm" onClick={onRetry}>

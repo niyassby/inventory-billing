@@ -36,7 +36,7 @@ export interface NavGroup {
 
 export const NAV: NavGroup[] = [
   {
-    label: "Overview",
+    label: "Home",
     items: [{ title: "Dashboard", to: "/", icon: House, permission: "dashboard.view" }],
   },
   {
@@ -75,14 +75,11 @@ export const NAV: NavGroup[] = [
         icon: Tags,
         permission: "products.view",
       },
+      { title: "Purchases", to: "/purchases", icon: Truck, permission: "purchases.view" },
     ],
   },
   {
-    label: "Buy",
-    items: [{ title: "Purchases", to: "/purchases", icon: Truck, permission: "purchases.view" }],
-  },
-  {
-    label: "People & money",
+    label: "Contacts",
     items: [
       { title: "Customers", to: "/parties/customers", icon: Users, permission: "parties.view" },
       {
@@ -91,12 +88,12 @@ export const NAV: NavGroup[] = [
         icon: ClipboardList,
         permission: "parties.view",
       },
-      { title: "Payments", to: "/payments", icon: HandCoins, permission: "payments.receive" },
     ],
   },
   {
-    label: "Accounts and reports",
+    label: "Money",
     items: [
+      { title: "Payments", to: "/payments", icon: HandCoins, permission: "payments.receive" },
       {
         title: "Expenses",
         to: "/accounting/expenses",
@@ -115,8 +112,11 @@ export const NAV: NavGroup[] = [
         icon: CalendarCheck,
         permission: "day_close.perform",
       },
-      { title: "Reports", to: "/reports", icon: ChartColumn, permission: "reports.view" },
     ],
+  },
+  {
+    label: "Insights",
+    items: [{ title: "Reports", to: "/reports", icon: ChartColumn, permission: "reports.view" }],
   },
   {
     label: "Admin",
@@ -143,4 +143,38 @@ export function activeItem(pathname: string): NavItem | undefined {
     if (matches && (!best || item.to.length > best.to.length)) best = item;
   }
   return best;
+}
+
+export interface Crumb {
+  label: string;
+  /** Present when the crumb is a link (not the page you are on). */
+  to?: string;
+}
+
+function humanize(segment: string): string {
+  if (segment === "new") return "New";
+  if (segment === "edit") return "Edit";
+  // Ids (UUIDs, document numbers) are not worth showing: "Details".
+  if (/^[0-9a-f-]{8,}$/i.test(segment) && /\d/.test(segment)) return "Details";
+  const text = segment.replace(/[-_]+/g, " ");
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+/** Group › screen › detail, for the top bar. Empty for paths outside the menu. */
+export function breadcrumbs(pathname: string): Crumb[] {
+  const item = activeItem(pathname);
+  if (!item) return [];
+  const group = NAV.find((g) => g.items.includes(item));
+  const rest = pathname
+    .slice(item.to === "/" ? 1 : item.to.length)
+    .split("/")
+    .filter(Boolean);
+  const crumbs: Crumb[] = [];
+  if (group && group.label !== "Home") crumbs.push({ label: group.label });
+  crumbs.push(rest.length > 0 ? { label: item.title, to: item.to } : { label: item.title });
+  if (rest.length > 0) {
+    const last = rest[rest.length - 1];
+    crumbs.push({ label: humanize(last === "edit" && rest.length > 1 ? "edit" : (last ?? "")) });
+  }
+  return crumbs;
 }

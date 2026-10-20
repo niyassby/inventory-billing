@@ -4,10 +4,10 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { cn } from "@/lib/utils";
 
 const DOT: Record<ConnectionTone, string> = {
-  ok: "bg-emerald-500",
-  busy: "bg-sky-500 animate-pulse",
-  warning: "bg-amber-500",
-  error: "bg-red-500",
+  ok: "bg-success",
+  busy: "bg-info animate-pulse",
+  warning: "bg-warning",
+  error: "bg-danger",
   neutral: "bg-muted-foreground/50",
 };
 
@@ -23,7 +23,7 @@ export function ConnectionBadge() {
           <span
             role="status"
             aria-live="polite"
-            className="inline-flex h-8 items-center gap-2 rounded-md border border-border/60 px-2.5 text-xs font-medium text-foreground"
+            className="inline-flex h-8 items-center gap-2 rounded-md border border-border bg-card px-2.5 text-xs font-medium text-foreground shadow-xs"
           />
         }
       >

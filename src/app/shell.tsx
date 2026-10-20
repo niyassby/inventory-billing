@@ -1,11 +1,10 @@
-import { useEffect, useRef } from "react";
+import { Fragment, useEffect, useRef } from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { APP_NAME } from "@inventory/shared";
-import { LogOut, Search, Store } from "lucide-react";
+import { Plus, Search, Store } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
-  SidebarFooter,
   SidebarGroup,
   SidebarGroupLabel,
   SidebarHeader,
@@ -17,46 +16,58 @@ import {
   SidebarRail,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { Kbd } from "@/components/ui/kbd";
 import { ConnectionBadge } from "@/components/connection-badge";
-import { ThemeButton } from "./appearance-menu";
-import { CommandPalette } from "./command-palette";
 import { usePublicSettings } from "@/lib/business";
 import { useSession } from "@/stores/session";
-import { activeItem, visibleNav } from "./nav";
+import { ThemeButton } from "./appearance-menu";
+import { CommandPalette } from "./command-palette";
+import { activeItem, breadcrumbs, visibleNav } from "./nav";
+import { UserMenu } from "./user-menu";
 
 function AppSidebar() {
   const { pathname } = useLocation();
   const user = useSession((s) => s.user);
-  const signOut = useSession((s) => s.signOut);
   const settings = usePublicSettings();
   const groups = visibleNav(user?.permissions ?? []);
   const active = activeItem(pathname);
   return (
-    <Sidebar collapsible="icon" className="da rk">
-      <SidebarHeader>
+    <Sidebar collapsible="icon">
+      <SidebarHeader className="border-b border-sidebar-border">
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton size="lg" render={<Link to="/" />}>
-              <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+            <SidebarMenuButton
+              size="lg"
+              render={<Link to="/" />}
+              className="data-active:before:hidden"
+            >
+              <div className="flex aspect-square size-8 items-center justify-center rounded-md bg-primary text-primary-foreground shadow-xs">
                 <Store className="size-4" aria-hidden />
               </div>
-              <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-semibold">
+              <div className="grid flex-1 text-left leading-tight">
+                <span className="truncate text-sm font-semibold">
                   {settings.data?.business.name || APP_NAME}
                 </span>
-                <span className="truncate text-xs text-muted-foreground">{APP_NAME}</span>
+                <span className="truncate text-caption">{APP_NAME}</span>
               </div>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
-      <SidebarContent>
+      <SidebarContent className="pt-1">
         {groups.map((group) => (
           <SidebarGroup key={group.label}>
-            <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
+            {group.label !== "Home" && <SidebarGroupLabel>{group.label}</SidebarGroupLabel>}
             <SidebarMenu>
               {group.items.map((item) => (
                 <SidebarMenuItem key={item.to}>
@@ -75,21 +86,6 @@ function AppSidebar() {
           </SidebarGroup>
         ))}
       </SidebarContent>
-      <SidebarFooter className="border-t">
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton tooltip="Sign out" onClick={() => void signOut()}>
-              <LogOut aria-hidden />
-              <span className="grid flex-1 text-left leading-tight">
-                <span className="truncate text-sm font-medium">{user?.name}</span>
-                <span className="truncate text-xs text-muted-foreground">
-                  {user?.roleName} · Sign out
-                </span>
-              </span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarFooter>
       <SidebarRail />
     </Sidebar>
   );
@@ -111,8 +107,34 @@ function useGlobalKeys() {
   }, [navigate, canSell]);
 }
 
+function Crumbs({ pathname }: { pathname: string }) {
+  const crumbs = breadcrumbs(pathname);
+  if (crumbs.length === 0) return null;
+  return (
+    <Breadcrumb>
+      <BreadcrumbList>
+        {crumbs.map((c, i) => (
+          <Fragment key={`${c.label}-${i}`}>
+            {i > 0 && <BreadcrumbSeparator />}
+            <BreadcrumbItem>
+              {i === crumbs.length - 1 ? (
+                <BreadcrumbPage>{c.label}</BreadcrumbPage>
+              ) : c.to ? (
+                <BreadcrumbLink render={<Link to={c.to} />}>{c.label}</BreadcrumbLink>
+              ) : (
+                <span className="text-muted-foreground">{c.label}</span>
+              )}
+            </BreadcrumbItem>
+          </Fragment>
+        ))}
+      </BreadcrumbList>
+    </Breadcrumb>
+  );
+}
+
 export function Shell() {
   const { pathname } = useLocation();
+  const canSell = useSession((s) => s.user?.permissions.includes("sales.create") ?? false);
   const item = activeItem(pathname);
   useGlobalKeys();
   const first = useRef(true);
@@ -134,28 +156,43 @@ export function Shell() {
       <CommandPalette />
       <AppSidebar />
       <SidebarInset className="min-h-screen font-sans">
-        <header className="sticky top-0 z-40 flex h-14 shrink-0 items-center gap-2 border-b border-border/40 bg-background/85 px-4 backdrop-blur-md">
-          <SidebarTrigger className="-ml-1" />
-          <Separator orientation="vertical" className="mx-1 h-5" />
-          <span className="text-sm font-medium">{item?.title ?? ""}</span>
-          <div className="ml-auto flex items-center gap-2">
+        <header className="sticky top-0 z-40 flex h-12 shrink-0 items-center gap-2 border-b border-border bg-background/85 px-3 backdrop-blur-md">
+          <SidebarTrigger className="-ml-1 text-muted-foreground" />
+          <Separator orientation="vertical" className="mx-1 h-4" />
+          <Crumbs pathname={pathname} />
+          <div className="ml-auto flex items-center gap-1.5">
             <Button
               variant="outline"
               size="sm"
-              className="hidden gap-2 text-muted-foreground sm:inline-flex"
+              className="hidden w-56 justify-start gap-2 font-normal text-muted-foreground lg:inline-flex"
               onClick={() =>
                 window.dispatchEvent(new KeyboardEvent("keydown", { key: "k", ctrlKey: true }))
               }
             >
               <Search aria-hidden />
               Search
-              <Kbd>Ctrl K</Kbd>
+              <Kbd className="ml-auto">Ctrl K</Kbd>
             </Button>
-            <ThemeButton />
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              className="lg:hidden"
+              aria-label="Search"
+              onClick={() =>
+                window.dispatchEvent(new KeyboardEvent("keydown", { key: "k", ctrlKey: true }))
+              }
+            >
+              <Search />
+            </Button>
             <ConnectionBadge />
-            <Button size="sm" render={<Link to="/pos" />} nativeButton={false}>
-              New sale
-            </Button>
+            <ThemeButton />
+            {canSell && (
+              <Button size="sm" render={<Link to="/pos" />} nativeButton={false}>
+                <Plus aria-hidden />
+                New sale
+              </Button>
+            )}
+            <UserMenu />
           </div>
         </header>
         <main id="main" tabIndex={-1} className="flex-1 outline-none">
