@@ -8,6 +8,7 @@ export function WarehouseSelect({
   onChange,
   label = "Store",
   allowDefault = true,
+  emptyLabel,
   exclude,
 }: {
   id?: string;
@@ -15,6 +16,8 @@ export function WarehouseSelect({
   onChange: (id: string) => void;
   label?: string;
   allowDefault?: boolean;
+  /** Text of the empty choice (default: "Main store", or "Choose…" without a default). */
+  emptyLabel?: string;
   exclude?: string;
 }) {
   const stores = useCommand("stock_warehouses", {});
@@ -26,8 +29,10 @@ export function WarehouseSelect({
       value={value}
       onChange={(e) => onChange(e.target.value)}
     >
-      {allowDefault && <NativeSelectOption value="">Main store</NativeSelectOption>}
-      {!allowDefault && <NativeSelectOption value="">Choose…</NativeSelectOption>}
+      {allowDefault && (
+        <NativeSelectOption value="">{emptyLabel ?? "Main store"}</NativeSelectOption>
+      )}
+      {!allowDefault && <NativeSelectOption value="">{emptyLabel ?? "Choose…"}</NativeSelectOption>}
       {stores.data
         ?.filter((w) => w.id !== exclude && (!allowDefault || !w.isDefault))
         .map((w) => (

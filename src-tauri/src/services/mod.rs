@@ -6,6 +6,7 @@
 //! * document-creating calls take an idempotency key (`idempotency`), so retries never duplicate;
 //! * money/qty/rates are integers (docs/DATABASE.md §2) and totals are always computed here.
 
+pub mod accounting;
 pub mod accounts;
 pub mod audit;
 pub mod auth;
@@ -24,6 +25,7 @@ pub mod parties;
 pub mod party_ledger;
 pub mod payments;
 pub mod purchases;
+pub mod reports;
 pub mod sales;
 pub mod settings;
 pub mod setup;

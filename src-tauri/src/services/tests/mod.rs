@@ -7,3 +7,4 @@ mod catalog_stock;
 mod documents;
 mod network;
 mod purchasing;
+mod reporting;

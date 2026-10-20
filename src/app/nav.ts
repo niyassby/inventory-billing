@@ -15,6 +15,8 @@ import {
   Undo2,
   Users,
   ClipboardList,
+  Wallet,
+  CalendarCheck,
 } from "lucide-react";
 
 export interface NavItem {
@@ -93,12 +95,32 @@ export const NAV: NavGroup[] = [
     ],
   },
   {
-    label: "Coming next",
+    label: "Accounts and reports",
     items: [
+      {
+        title: "Expenses",
+        to: "/accounting/expenses",
+        icon: Wallet,
+        permission: "expenses.manage",
+      },
+      {
+        title: "Accounts",
+        to: "/accounting/accounts",
+        icon: Landmark,
+        permission: "accounting.view",
+      },
+      {
+        title: "Day close",
+        to: "/accounting/day-close",
+        icon: CalendarCheck,
+        permission: "day_close.perform",
+      },
       { title: "Reports", to: "/reports", icon: ChartColumn, permission: "reports.view" },
-      { title: "Accounts", to: "/accounting", icon: Landmark, permission: "accounting.view" },
-      { title: "Settings", to: "/settings", icon: Settings, permission: "settings.view" },
     ],
+  },
+  {
+    label: "Admin",
+    items: [{ title: "Settings", to: "/settings", icon: Settings, permission: "settings.view" }],
   },
 ];
 

@@ -73,6 +73,22 @@ export type Rounding = "half_up" | "half_even";
 export interface ApiContract {
   approval: ApprovalInput;
   commands: {
+    accounts_list: {
+      input: NoInput;
+      output: AccountRow[];
+    };
+    accounts_save: {
+      input: MoneyAccountInput;
+      output: AccountRow;
+    };
+    audit_actions: {
+      input: NoInput;
+      output: string[];
+    };
+    audit_list: {
+      input: AuditQuery;
+      output: PageFor_AuditRow;
+    };
     auth_change_password: {
       input: ChangePasswordInput;
       output: null;
@@ -144,6 +160,18 @@ export interface ApiContract {
     client_sync_now: {
       input: NoInput;
       output: ClientStatus;
+    };
+    day_close: {
+      input: DayInput;
+      output: DaySummary;
+    };
+    day_closes_list: {
+      input: NoInput;
+      output: DayCloseRow[];
+    };
+    day_summary: {
+      input: DayInput;
+      output: DaySummary;
     };
     device_discover_hubs: {
       input: NoInput;
@@ -360,6 +388,10 @@ export interface ApiContract {
     register_open: {
       input: OpenRegisterInput;
       output: RegisterSession;
+    };
+    reports_run: {
+      input: ReportQuery;
+      output: ReportTable;
     };
     roles_delete: {
       input: IdInput;
@@ -598,6 +630,89 @@ export interface ApprovalInput {
   pin?: string | null;
 }
 /**
+ * Empty input for commands that take none.
+ *
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "NoInput".
+ */
+export interface NoInput {}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "AccountRow".
+ */
+export interface AccountRow {
+  /**
+   * asset, liability, equity, income or expense.
+   */
+  accountType: string;
+  /**
+   * Debit minus credit over all time (assets and expenses are positive).
+   */
+  balance: number;
+  bankAccountNo?: string | null;
+  bankName?: string | null;
+  code: string;
+  id: string;
+  isActive: boolean;
+  isSystem: boolean;
+  name: string;
+  subtype: string;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "MoneyAccountInput".
+ */
+export interface MoneyAccountInput {
+  bankAccountNo?: string | null;
+  bankIfsc?: string | null;
+  bankName?: string | null;
+  id?: string | null;
+  isActive?: boolean;
+  /**
+   * "cash" or "bank".
+   */
+  kind: string;
+  name: string;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "AuditQuery".
+ */
+export interface AuditQuery {
+  action?: string | null;
+  from?: string | null;
+  page?: number | null;
+  pageSize?: number | null;
+  search?: string | null;
+  to?: string | null;
+  userId?: string | null;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "Page_for_AuditRow".
+ */
+export interface PageFor_AuditRow {
+  items: AuditRow[];
+  page: number;
+  pageSize: number;
+  total: number;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "AuditRow".
+ */
+export interface AuditRow {
+  action: string;
+  approvedByName?: string | null;
+  deviceName?: string | null;
+  entityId?: string | null;
+  entityType: string;
+  id: string;
+  occurredAt: string;
+  summary?: string | null;
+  userName?: string | null;
+}
+/**
  * This interface was referenced by `ApiContract`'s JSON-Schema
  * via the `definition` "ChangePasswordInput".
  */
@@ -637,13 +752,6 @@ export interface SessionUser {
   roleCode: string;
   roleName: string;
 }
-/**
- * Empty input for commands that take none.
- *
- * This interface was referenced by `ApiContract`'s JSON-Schema
- * via the `definition` "NoInput".
- */
-export interface NoInput {}
 /**
  * This interface was referenced by `ApiContract`'s JSON-Schema
  * via the `definition` "PinLoginInput".
@@ -892,6 +1000,72 @@ export interface ClientStatus {
    * Offline sales the hub refused (a manager must retry or discard them).
    */
   rejected: number;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "DayInput".
+ */
+export interface DayInput {
+  /**
+   * Default: today.
+   */
+  businessDate?: string | null;
+  notes?: string | null;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "DaySummary".
+ */
+export interface DaySummary {
+  bills: number;
+  businessDate: string;
+  closedAt?: string | null;
+  closedBy?: string | null;
+  discountTotal: number;
+  expensesTotal: number;
+  notes?: string | null;
+  /**
+   * Till sessions still open (they must be closed before the day can be).
+   */
+  openTills: number;
+  paid: ModeAmount[];
+  purchasesTotal: number;
+  received: ModeAmount[];
+  returnsTotal: number;
+  salesTotal: number;
+  taxTotal: number;
+  tills: TillSummary[];
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "ModeAmount".
+ */
+export interface ModeAmount {
+  amount: number;
+  mode: string;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "TillSummary".
+ */
+export interface TillSummary {
+  countedBy?: string | null;
+  countedCash: number;
+  difference: number;
+  expectedCash: number;
+  register: string;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "DayCloseRow".
+ */
+export interface DayCloseRow {
+  bills: number;
+  businessDate: string;
+  closedAt: string;
+  closedBy: string;
+  notes?: string | null;
+  salesTotal: number;
 }
 /**
  * This interface was referenced by `ApiContract`'s JSON-Schema
@@ -2049,6 +2223,65 @@ export interface RegisterSession {
 export interface OpenRegisterInput {
   openingFloat: number;
   registerId?: string | null;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "ReportQuery".
+ */
+export interface ReportQuery {
+  /**
+   * Cash and bank book: one account (default: all cash, or all bank, accounts).
+   */
+  accountId?: string | null;
+  /**
+   * First day (YYYY-MM-DD); default: the start of the current month.
+   */
+  from?: string | null;
+  /**
+   * Party balances: "customer" or "supplier".
+   */
+  partyType?: string | null;
+  report: string;
+  /**
+   * Last day; default: today.
+   */
+  to?: string | null;
+  /**
+   * Stock reports: one store only.
+   */
+  warehouseId?: string | null;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "ReportTable".
+ */
+export interface ReportTable {
+  columns: Column[];
+  from: string;
+  report: string;
+  rows: unknown[][];
+  title: string;
+  to: string;
+  /**
+   * One value per column (null where a total makes no sense).
+   */
+  totals?: unknown[] | null;
+  /**
+   * More rows existed than are shown.
+   */
+  truncated: boolean;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "Column".
+ */
+export interface Column {
+  key: string;
+  /**
+   * "text", "date", "money", "qty", "rate", "count" or "percent" (ppm).
+   */
+  kind: string;
+  label: string;
 }
 /**
  * This interface was referenced by `ApiContract`'s JSON-Schema

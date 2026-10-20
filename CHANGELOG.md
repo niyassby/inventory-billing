@@ -5,6 +5,33 @@ All notable changes to this project. The format follows
 
 ## [Unreleased]
 
+### Phase 6: reports, accounting-lite and settings (2026-10-20)
+
+#### Added
+- **Reports (13):** sales summary, item profit, purchases, expenses, stock valuation, stock
+  movement, receivables, payables, tax summary (with net payable), profit and loss, trial balance,
+  day book, cash book and bank book. One screen for all: period presets (today to financial
+  year), store and account filters, totals, print / PDF, CSV and Excel export.
+- **Accounting-lite:** expenses (new, categories, void, paid now or on credit), chart of accounts
+  with balances and cash/bank accounts you can add, day close with a daily summary and till
+  counts, audit log viewer (filters, who approved what).
+- **Settings:** business profile, tax and pricing, invoices and printing, inventory, security,
+  network and offline sales, backup schedule; users (create, edit, reset password, remove) and
+  roles with per-permission checkboxes; this PC's role, hub status, pairing codes, paired
+  counters, offline sales to review; backups (now, passphrase, check a file, restore).
+- Backend: `reports_run`, `accounts_list/save`, `day_summary/close`, `day_closes_list`,
+  `audit_list/actions`; typed contract and TypeScript types regenerated.
+- 5 more Rust tests (figures checked against the documents that made them, books in balance,
+  access rules, day close, bank accounts, audit log); 6 more TypeScript tests (export, ranges).
+
+#### Changed
+- Navigation: Expenses, Accounts, Day close and Reports under "Accounts and reports"; Settings
+  under "Admin". The "coming in the next update" page is gone.
+
+#### Notes
+- The v1 pages for accounting, reports and settings in `src/pages` are no longer needed; leads
+  and barcode labels are not rebuilt (see ASSUMPTIONS A-14, A-71).
+
 ### Phase 5: core modules on the v2 backend (2026-10-19)
 
 #### Added

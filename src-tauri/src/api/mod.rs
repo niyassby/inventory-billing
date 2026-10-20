@@ -221,8 +221,8 @@ macro_rules! commands {
 }
 
 use crate::services::{
-    backup, catalog, common::Page, devices, documents, expenses, notifications, parties, payments,
-    purchases, sales, settings, setup, stock, sync, upgrade, users,
+    accounting, backup, catalog, common::Page, devices, documents, expenses, notifications,
+    parties, payments, purchases, reports, sales, settings, setup, stock, sync, upgrade, users,
 };
 
 fn legacy_database_found(state: &AppState) -> bool {
@@ -341,6 +341,15 @@ commands! {
     authed purchases_list_receipts(documents::ReceiptListQuery) -> Page<documents::ReceiptListItem> = |ctx: &mut Ctx<'_>, q: &documents::ReceiptListQuery| documents::list_goods_receipts(ctx, q);
     authed purchases_get_receipt(users::IdInput) -> purchases::GoodsReceiptDetail = |ctx: &mut Ctx<'_>, i: &users::IdInput| documents::get_goods_receipt(ctx, i);
     authed purchases_get_return(users::IdInput) -> purchases::PurchaseDocDetail = |ctx: &mut Ctx<'_>, i: &users::IdInput| documents::get_purchase_return(ctx, i);
+
+    authed reports_run(reports::ReportQuery) -> reports::ReportTable = |ctx: &mut Ctx<'_>, q: &reports::ReportQuery| reports::run(ctx, q);
+    authed accounts_list(NoInput) -> Vec<accounting::AccountRow> = |ctx: &mut Ctx<'_>, _: &NoInput| accounting::list_accounts(ctx);
+    authed accounts_save(accounting::MoneyAccountInput) -> accounting::AccountRow = accounting::save_money_account;
+    authed day_summary(accounting::DayInput) -> accounting::DaySummary = |ctx: &mut Ctx<'_>, i: &accounting::DayInput| accounting::day_summary(ctx, i);
+    authed day_close(accounting::DayInput) -> accounting::DaySummary = accounting::close_day;
+    authed day_closes_list(NoInput) -> Vec<accounting::DayCloseRow> = |ctx: &mut Ctx<'_>, _: &NoInput| accounting::list_day_closes(ctx);
+    authed audit_list(accounting::AuditQuery) -> Page<accounting::AuditRow> = |ctx: &mut Ctx<'_>, q: &accounting::AuditQuery| accounting::list_audit(ctx, q);
+    authed audit_actions(NoInput) -> Vec<String> = |ctx: &mut Ctx<'_>, _: &NoInput| accounting::audit_actions(ctx);
 
     authed devices_pairing_code(NoInput) -> devices::PairingCode = |ctx: &mut Ctx<'_>, _: &NoInput| devices::create_pairing_code(ctx);
     authed devices_list(NoInput) -> Vec<devices::DeviceSummary> = |ctx: &mut Ctx<'_>, _: &NoInput| devices::list(ctx);

@@ -28,7 +28,7 @@ src/
   components/app/          page frame, DataTable, inputs (money/qty/rate), pickers, dialogs, line editor
   components/ui/           shadcn primitives (TSX for everything the v2 screens use)
   features/<module>/       screens per module: auth, dashboard, pos, sales, inventory, parties, purchases
-  pages/**                 v1 pages kept only as reference for Phase 6 (accounts, reports, settings, leads, labels)
+  pages/**                 v1 pages, no longer routed (leads and barcode labels were not rebuilt, A-14); removed in Phase 8
 src-tauri/src/
   api/                     v2 commands (one macro: IPC, LAN dispatch, contract) + contract.rs (JSON schema)
   api/local.rs             commands about this PC (role, pairing, outbox); never forwarded to the hub
@@ -184,5 +184,6 @@ backend in debug mode).
 | App shell, sign-in, setup | ✅ TS (rewritten on v2) | Phase 5 |
 | shadcn primitives used by the v2 screens (25 files) | ✅ TS | Phases 1 and 5 |
 | Inventory, sales/POS, purchases, customers and suppliers, payments, dashboard | ✅ TS (rebuilt on v2) | Phase 5 |
-| Accounting, reports, settings, leads, barcode labels | JS (v1, not routed) | Phase 6 (rebuilt) |
+| Reports, expenses, accounts, day close, settings, users, audit | ✅ TS (new) | Phase 6 |
+| Leads, barcode labels | JS (v1, not routed) | not rebuilt (A-14, A-71) |
 | Remaining shadcn primitives | JS | Phase 7 (design system) |

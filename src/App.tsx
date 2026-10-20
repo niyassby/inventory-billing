@@ -14,7 +14,24 @@ import "@/stores/approval";
 // Route-level code splitting: each screen loads on first visit.
 const Dashboard = lazy(() => import("@/features/dashboard/dashboard"));
 const PosPage = lazy(() => import("@/features/pos/pos-page"));
-const ComingSoon = lazy(() => import("@/features/coming-soon"));
+const Reports = {
+  Index: lazy(() =>
+    import("@/features/reports/reports").then((m) => ({ default: m.ReportsIndex })),
+  ),
+  View: lazy(() => import("@/features/reports/reports").then((m) => ({ default: m.ReportPage }))),
+};
+const Accounting = {
+  Expenses: lazy(() =>
+    import("@/features/accounting/accounting-pages").then((m) => ({ default: m.ExpensesPage })),
+  ),
+  Accounts: lazy(() =>
+    import("@/features/accounting/accounting-pages").then((m) => ({ default: m.AccountsPage })),
+  ),
+  DayClose: lazy(() =>
+    import("@/features/accounting/accounting-pages").then((m) => ({ default: m.DayClosePage })),
+  ),
+};
+const SettingsPage = lazy(() => import("@/features/settings/settings-page"));
 const ProductsPage = lazy(() => import("@/features/inventory/products-page"));
 const ProductEditor = lazy(() => import("@/features/inventory/product-editor"));
 const MastersPage = lazy(() => import("@/features/inventory/masters-page"));
@@ -212,9 +229,13 @@ function AppRoutes() {
           />
           <Route path="parties/:id" element={<Parties.Detail />} />
           <Route path="payments" element={<Parties.Payments />} />
-          <Route path="reports/*" element={<ComingSoon title="Reports" />} />
-          <Route path="accounting/*" element={<ComingSoon title="Accounts" />} />
-          <Route path="settings/*" element={<ComingSoon title="Settings" />} />
+          <Route path="reports" element={<Reports.Index />} />
+          <Route path="reports/:name" element={<Reports.View />} />
+          <Route path="accounting/expenses" element={<Accounting.Expenses />} />
+          <Route path="accounting/accounts" element={<Accounting.Accounts />} />
+          <Route path="accounting/day-close" element={<Accounting.DayClose />} />
+          <Route path="settings" element={<SettingsPage />} />
+          <Route path="settings/:section" element={<SettingsPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Route>

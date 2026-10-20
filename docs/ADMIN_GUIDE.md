@@ -125,3 +125,17 @@ Restore only works on the hub or standalone PC itself, never from a counter.
 | Backups fail | Folder missing, read-only or full; USB drive unplugged (only the second copy fails then). |
 
 Logs for support are in `%LOCALAPPDATA%\com.niyas.tauri-app\logs` (one file per day, 14 days).
+
+## 6. Reports, day close and settings
+
+- **Reports** (sidebar, *Reports*): pick a report, choose the period and, where it applies, the
+  store or account. *Print / PDF* opens the print dialog (choose "Save as PDF"); *CSV* and *Excel*
+  need the `reports.export` permission. Tax summary ends with the net tax payable.
+- **Expenses** record money paid out (now or on credit). A voided expense reverses its entries.
+- **Accounts** shows balances; add bank or cash accounts here.
+- **Day close** (*Accounts and reports → Day close*): count each till, check the summary and
+  close the day. It refuses while a till is open. It is a record, not a lock (A-70).
+- **Settings** (owner and permitted roles): business, tax, invoices, inventory, security,
+  network, backup. Changes apply at once and are written to the audit log with before and after
+  values. **Users and roles** are owner-only; the Owner role can't be edited.
+- **Audit log** lists who did what and who approved it; it can't be edited or deleted.
