@@ -187,3 +187,13 @@ backend in debug mode).
 | Reports, expenses, accounts, day close, settings, users, audit | ✅ TS (new) | Phase 6 |
 | Leads, barcode labels | JS (v1, not routed) | not rebuilt (A-14, A-71) |
 | Remaining shadcn primitives | JS | Phase 7 (design system) |
+
+## Performance benchmark
+
+`src-tauri/src/services/tests/perf.rs` loads 50,000 products and 150,000 stock movements with SQL
+and times search, barcode scan, the product list and the stock reports against the targets in the
+Master Prompt (§12). It is ignored in normal runs; in a release build:
+
+```bash
+cargo test --release --lib perf -- --ignored --nocapture
+```

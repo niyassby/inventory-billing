@@ -9,8 +9,8 @@ offline. Multi-counter shops connect their devices to one **hub** PC over the lo
 > package), Phase 2 (v2 database schema and the v1 data migration), Phase 3 (v2 backend
 > services, permissions and tests), Phase 4 (LAN hub, offline counters, backups) and Phase 5
 > (point of sale, sales, products and stock, purchases, customers and suppliers on the new
-> backend) and Phase 6 (reports, accounting-lite, settings) are done. UI polish, accessibility and
-> performance follow in Phase 7. Read [docs/AUDIT.md](docs/AUDIT.md) for its known
+> backend) and Phase 6 (reports, accounting-lite, settings) and Phase 7 (polish, accessibility,
+> performance) are done. Testing, packaging and the production checklist follow in Phase 8. Read [docs/AUDIT.md](docs/AUDIT.md) for its known
 > issues before using it with real data.
 
 ## Stack

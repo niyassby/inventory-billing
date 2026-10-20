@@ -1,7 +1,7 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { APP_NAME } from "@inventory/shared";
-import { LogOut, Store } from "lucide-react";
+import { LogOut, Search, Store } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -21,6 +21,8 @@ import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { Kbd } from "@/components/ui/kbd";
 import { ConnectionBadge } from "@/components/connection-badge";
+import { ThemeButton } from "./appearance-menu";
+import { CommandPalette } from "./command-palette";
 import { usePublicSettings } from "@/lib/business";
 import { useSession } from "@/stores/session";
 import { activeItem, visibleNav } from "./nav";
@@ -113,8 +115,23 @@ export function Shell() {
   const { pathname } = useLocation();
   const item = activeItem(pathname);
   useGlobalKeys();
+  const first = useRef(true);
+  // Each screen names the window, and focus moves to it so keyboard and screen-reader users
+  // start at the top of the new page instead of on the link they used.
+  useEffect(() => {
+    document.title = item ? `${item.title} · ${APP_NAME}` : APP_NAME;
+    if (first.current) {
+      first.current = false;
+      return;
+    }
+    document.getElementById("main")?.focus({ preventScroll: true });
+  }, [pathname, item]);
   return (
     <SidebarProvider>
+      <a href="#main" className="skip-link">
+        Skip to content
+      </a>
+      <CommandPalette />
       <AppSidebar />
       <SidebarInset className="min-h-screen font-sans">
         <header className="sticky top-0 z-40 flex h-14 shrink-0 items-center gap-2 border-b border-border/40 bg-background/85 px-4 backdrop-blur-md">
@@ -122,13 +139,26 @@ export function Shell() {
           <Separator orientation="vertical" className="mx-1 h-5" />
           <span className="text-sm font-medium">{item?.title ?? ""}</span>
           <div className="ml-auto flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="hidden gap-2 text-muted-foreground sm:inline-flex"
+              onClick={() =>
+                window.dispatchEvent(new KeyboardEvent("keydown", { key: "k", ctrlKey: true }))
+              }
+            >
+              <Search aria-hidden />
+              Search
+              <Kbd>Ctrl K</Kbd>
+            </Button>
+            <ThemeButton />
             <ConnectionBadge />
             <Button size="sm" render={<Link to="/pos" />} nativeButton={false}>
               New sale
             </Button>
           </div>
         </header>
-        <main className="flex-1">
+        <main id="main" tabIndex={-1} className="flex-1 outline-none">
           <Outlet />
         </main>
       </SidebarInset>

@@ -5,6 +5,28 @@ All notable changes to this project. The format follows
 
 ## [Unreleased]
 
+### Phase 7: polish, accessibility and performance (2026-10-20)
+
+#### Added
+- Dark theme (it could not be switched on before): follows the system, with a header button to
+  cycle system, light and dark. Compact spacing option.
+- Ctrl+K palette: jump to any screen you may open, find a product by name, SKU or barcode,
+  switch theme or spacing.
+- Accessibility: skip link, visible focus outline, reduced-motion support, darker focus ring,
+  window title and focus move to the page on every navigation.
+- `services/tests/perf.rs`: ignored benchmark on 50,000 products and 150,000 stock movements.
+
+#### Changed
+- Stock movement report: 3.1 s to 0.35 s (sums per item first). Product list: 342 ms to 211 ms
+  (stock looked up per row of the page, not for every product).
+- First-load script 650 kB to 265 kB (vendor code in cached chunks).
+- `command.jsx` is now typed TypeScript.
+
+#### Not done
+- Billing-screen shortcut review, saved table views and column toggles, an onboarding printer
+  test, and benchmarks for invoice save, app start and a year of documents: see ASSUMPTIONS A-75
+  and A-76; planned for Phase 8 or as suggestions.
+
 ### Phase 6: reports, accounting-lite and settings (2026-10-20)
 
 #### Added

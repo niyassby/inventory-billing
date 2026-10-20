@@ -417,25 +417,27 @@ fn stock_movement(
         }
         None => "",
     };
+    // Add up the movements per variant first (one pass over the index), then name and sort only
+    // the variants that moved.
     let rows = query_rows(
         conn,
         &format!(
-            "SELECT p.name || coalesce(' — ' || v.variant_name, ''), v.sku,
-                coalesce(sum(CASE WHEN m.business_date < ?1 THEN m.qty END), 0),
-                coalesce(sum(CASE WHEN m.business_date BETWEEN ?1 AND ?2 AND m.qty > 0 THEN m.qty END), 0),
-                coalesce(sum(CASE WHEN m.business_date BETWEEN ?1 AND ?2 AND m.qty < 0 THEN -m.qty END), 0),
-                coalesce(sum(CASE WHEN m.business_date <= ?2 THEN m.qty END), 0)
-             FROM stock_movements m JOIN product_variants v ON v.id = m.variant_id JOIN products p ON p.id = v.product_id
-             WHERE m.business_date <= ?2 {filter}
-             GROUP BY v.id ORDER BY lower(p.name)"
+            "SELECT p.name || coalesce(' — ' || v.variant_name, ''), v.sku, t.opening, t.qty_in, t.qty_out, t.closing
+             FROM (
+               SELECT m.variant_id,
+                 coalesce(sum(CASE WHEN m.business_date < ?1 THEN m.qty END), 0) AS opening,
+                 coalesce(sum(CASE WHEN m.business_date >= ?1 AND m.qty > 0 THEN m.qty END), 0) AS qty_in,
+                 coalesce(sum(CASE WHEN m.business_date >= ?1 AND m.qty < 0 THEN -m.qty END), 0) AS qty_out,
+                 sum(m.qty) AS closing
+               FROM stock_movements m WHERE m.business_date <= ?2 {filter} GROUP BY m.variant_id
+             ) t
+             JOIN product_variants v ON v.id = t.variant_id JOIN products p ON p.id = v.product_id
+             WHERE t.opening <> 0 OR t.qty_in <> 0 OR t.qty_out <> 0 OR t.closing <> 0
+             ORDER BY lower(p.name)"
         ),
         &args,
         6,
     )?;
-    let rows: Vec<_> = rows
-        .into_iter()
-        .filter(|r| r[2..6].iter().any(|v| v.as_i64().unwrap_or(0) != 0))
-        .collect();
     Ok(finish(
         q,
         "Stock movement",

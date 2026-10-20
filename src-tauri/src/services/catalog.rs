@@ -1055,7 +1055,7 @@ pub fn list_products(ctx: &Ctx<'_>, query: &ProductListQuery) -> AppResult<Page<
         args.push(brand.to_string().into());
     }
     if query.low_stock_only {
-        filters.push("v.reorder_level > 0 AND coalesce(s.qty, 0) <= v.reorder_level");
+        filters.push("v.reorder_level > 0 AND (SELECT coalesce(sum(qty), 0) FROM stock_levels l WHERE l.variant_id = v.id) <= v.reorder_level");
     }
     if let Some(term) = query
         .search
@@ -1080,7 +1080,6 @@ pub fn list_products(ctx: &Ctx<'_>, query: &ProductListQuery) -> AppResult<Page<
          LEFT JOIN categories c ON c.id = p.category_id
          LEFT JOIN brands b ON b.id = p.brand_id
          LEFT JOIN tax_rates t ON t.id = p.tax_rate_id
-         LEFT JOIN (SELECT variant_id, sum(qty) AS qty FROM stock_levels GROUP BY variant_id) s ON s.variant_id = v.id
          WHERE {}",
         filters.join(" AND ")
     );
@@ -1092,7 +1091,9 @@ pub fn list_products(ctx: &Ctx<'_>, query: &ProductListQuery) -> AppResult<Page<
     let order = match query.sort.as_deref() {
         Some("sku") => "lower(v.sku)",
         Some("price") => "v.sale_price",
-        Some("stock") => "coalesce(s.qty, 0)",
+        Some("stock") => {
+            "(SELECT coalesce(sum(qty), 0) FROM stock_levels l WHERE l.variant_id = v.id)"
+        }
         Some("updated") => "max(p.updated_at, v.updated_at)",
         _ => "lower(p.name), lower(coalesce(v.variant_name, ''))",
     };
@@ -1102,7 +1103,8 @@ pub fn list_products(ctx: &Ctx<'_>, query: &ProductListQuery) -> AppResult<Page<
     page_args.extend([limit.into(), offset.into()]);
     let mut stmt = ctx.conn.prepare(&format!(
         "SELECT p.id, v.id, p.name || coalesce(' — ' || v.variant_name, ''), v.sku, v.barcode, c.name, b.name, u.code,
-                v.sale_price, v.mrp, v.cost_price, coalesce(t.rate, 0), coalesce(s.qty, 0), v.reorder_level,
+                v.sale_price, v.mrp, v.cost_price, coalesce(t.rate, 0),
+                (SELECT coalesce(sum(qty), 0) FROM stock_levels l WHERE l.variant_id = v.id), v.reorder_level,
                 p.is_active AND v.is_active, max(p.updated_at, v.updated_at)
          {from} ORDER BY {order} {direction}, v.id LIMIT ? OFFSET ?"
     ))?;
