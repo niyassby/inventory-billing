@@ -2,11 +2,12 @@ import * as React from "react";
 
 import { cn } from "@/lib/utils";
 
+// Decorative, so no green, amber or red (those mean paid, due, overdue elsewhere).
 const TINTS = [
-  "bg-chart-1/15 text-chart-1",
-  "bg-chart-2/20 text-chart-2",
-  "bg-chart-3/25 text-warning",
-  "bg-chart-4/15 text-chart-4",
+  "bg-primary-soft text-primary",
+  "bg-info-soft text-info",
+  "bg-accent text-accent-foreground",
+  "bg-secondary text-secondary-foreground",
   "bg-muted text-muted-foreground",
 ] as const;
 

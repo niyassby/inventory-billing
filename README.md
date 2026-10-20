@@ -56,5 +56,6 @@ The first run creates the database in `%LOCALAPPDATA%\com.niyas.tauri-app\invent
 - [docs/ASSUMPTIONS.md](docs/ASSUMPTIONS.md): decisions and defaults
 - [docs/DEVELOPER.md](docs/DEVELOPER.md): project layout, conventions and workflow
 - [CHANGELOG.md](CHANGELOG.md)
+- [docs/FRONTEND_REDESIGN.md](docs/FRONTEND_REDESIGN.md): the design system and the redesign report
 - [docs/RELEASE.md](docs/RELEASE.md): build, release checklist, code signing, auto-update
 - [docs/SECURITY_REVIEW.md](docs/SECURITY_REVIEW.md): security review and dependency audit

@@ -5,6 +5,30 @@ All notable changes to this project. The format follows
 
 ## [Unreleased]
 
+### Frontend redesign (2026-10-20)
+
+Frontend only; behaviour unchanged. Details and before/after: [docs/FRONTEND_REDESIGN.md](docs/FRONTEND_REDESIGN.md).
+
+#### Added
+- Design tokens for light and dark (surface, raised, status colours, chart ramp, radius, shadow,
+  motion, type scale), spacing option (comfortable / compact), `Alert` and `Avatar`.
+- Shell: grouped sidebar, breadcrumbs, account menu, search button.
+- Dashboard: six KPI cards, 14-day sales chart, top sellers, low stock, quick actions.
+- Till: customer chip, offline notice, quick-tender buttons; invoice timeline; balance chips;
+  stock badges; column choice on lists; sticky save bar; role permissions as an area-by-action grid;
+  trend chart on one-row-per-day reports; branded sign-in.
+- `e2e/a11y.spec.ts`: axe scan of the main screens in both themes.
+
+#### Changed
+- Status chips use colour by meaning (paid, due, void, low or out of stock).
+- All UI primitives are TypeScript; icons are lucide only.
+
+#### Fixed
+- Dark theme contrast and low-contrast labels found by axe.
+
+#### Removed
+- 29 unused UI primitives and 9 unused dependencies (`hugeicons`, `vaul`, `date-fns`, …).
+
 ### Phase 8: testing, packaging and documentation (2026-10-20)
 
 #### Added

@@ -205,3 +205,12 @@ the web app into `dist-e2e/` and serves it with the packaged app's Content-Secur
 drives installed Chrome through `e2e/*.spec.ts`. The first run compiles the bridge (about 15
 minutes in a debug build); later runs take about a minute. `e2e/global-setup.ts` creates the
 item the test sells through the same API the screens use.
+
+## UI design system
+
+Tokens live in `src/index.css`; components use semantic classes (`bg-card`, `text-muted-foreground`,
+`bg-success-soft`, `shadow-sm`, `rounded-lg`, `num`, `text-page-title`) and never a raw palette
+colour. Status colours mean something (success = paid, warning = due or low stock, danger = void or
+out of stock, info = informational): do not use them for decoration. `/dev/ui` (dev builds only)
+shows every primitive in both themes. Icons: lucide only. Add primitives with `npx shadcn add`
+(the config is TSX + lucide) and convert nothing to JS. See [FRONTEND_REDESIGN.md](FRONTEND_REDESIGN.md).

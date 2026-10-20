@@ -380,7 +380,7 @@ function SidebarGroupLabel({ className, render, ...props }: useRender.ComponentP
     props: mergeProps(
       {
         className: cn(
-          "flex h-7 shrink-0 items-center rounded-md px-2.5 text-[0.6875rem] font-semibold tracking-wider text-sidebar-foreground/55 uppercase ring-sidebar-ring outline-hidden transition-[margin,opacity] duration-200 ease-linear group-data-[collapsible=icon]:-mt-8 group-data-[collapsible=icon]:opacity-0 focus-visible:ring-2 [&>svg]:size-4 [&>svg]:shrink-0",
+          "flex h-7 shrink-0 items-center rounded-md px-2.5 text-[0.6875rem] font-semibold tracking-wider text-sidebar-foreground/75 uppercase ring-sidebar-ring outline-hidden transition-[margin,opacity] duration-200 ease-linear group-data-[collapsible=icon]:-mt-8 group-data-[collapsible=icon]:opacity-0 focus-visible:ring-2 [&>svg]:size-4 [&>svg]:shrink-0",
           className,
         ),
       },

@@ -57,13 +57,15 @@ export function AuthFrame({
                 <Icon className="mt-0.5 size-5 shrink-0 opacity-90" aria-hidden />
                 <div>
                   <p className="font-medium">{heading}</p>
-                  <p className="text-sm opacity-80">{text}</p>
+                  <p className="text-sm text-primary-foreground/90">{text}</p>
                 </div>
               </li>
             ))}
           </ul>
         </div>
-        <p className="relative text-xs opacity-70">Your data stays on your own computers.</p>
+        <p className="relative text-xs text-primary-foreground/85">
+          Your data stays on your own computers.
+        </p>
       </aside>
       <main className="flex items-center justify-center p-6">
         <div className="w-full max-w-md animate-fade-in">
