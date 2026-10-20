@@ -121,7 +121,7 @@ function SearchSelectInner<T>(
         <ul
           id={listId}
           role="listbox"
-          className="absolute z-50 mt-1 max-h-80 w-full overflow-auto rounded-xl border border-border bg-popover p-1 shadow-lg"
+          className="absolute z-50 mt-1 max-h-80 w-full overflow-auto rounded-lg border border-border bg-popover p-1 shadow-md"
         >
           {list.length === 0 ? (
             <li className="px-3 py-2 text-sm text-muted-foreground">
@@ -134,8 +134,8 @@ function SearchSelectInner<T>(
                 role="option"
                 aria-selected={index === active}
                 className={cn(
-                  "cursor-pointer rounded-lg px-3 py-2 text-sm",
-                  index === active && "bg-muted",
+                  "cursor-pointer rounded-md px-2.5 py-1.5 text-sm",
+                  index === active && "bg-accent text-accent-foreground",
                 )}
                 onMouseEnter={() => setActive(index)}
                 onMouseDown={(e) => {

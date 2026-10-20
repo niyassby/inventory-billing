@@ -267,7 +267,7 @@ export function ReceiptDialog({
           </div>
         )}
         {invoice?.warnings && invoice.warnings.length > 0 && (
-          <p className="text-sm text-amber-600">
+          <p className="text-sm text-warning">
             Stock went below zero for {invoice.warnings.map((w) => w.name).join(", ")}.
           </p>
         )}

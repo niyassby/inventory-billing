@@ -118,7 +118,7 @@ export function PurchasesPage() {
         header: "Bill",
         accessorFn: (r) => r.billDocNo ?? "",
         cell: ({ row }) =>
-          row.original.billDocNo ?? <span className="text-amber-600">not billed yet</span>,
+          row.original.billDocNo ?? <span className="text-warning">not billed yet</span>,
       },
       {
         header: "Value",

@@ -175,9 +175,7 @@ export function InvoiceLines({ invoice }: { invoice: Api.InvoiceDetail }) {
             <td className="py-1.5">
               <span className="font-medium">{l.itemName}</span>
               {l.returnedQty > 0 && (
-                <span className="ml-2 text-xs text-amber-600">
-                  {showQty(l.returnedQty)} returned
-                </span>
+                <span className="ml-2 text-xs text-warning">{showQty(l.returnedQty)} returned</span>
               )}
             </td>
             <td className="text-right tabular-nums">

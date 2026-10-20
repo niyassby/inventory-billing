@@ -684,7 +684,7 @@ export function DayClosePage() {
                   </Button>
                 </div>
                 {s.openTills > 0 && (
-                  <p className="mt-2 text-sm text-amber-600">
+                  <p className="mt-2 text-sm text-warning">
                     Close every till first (Point of sale → Close till).
                   </p>
                 )}

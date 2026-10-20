@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import type { ReactNode } from "react";
-import type { ColumnDef, SortingState } from "@tanstack/react-table";
+import type { ColumnDef, SortingState, VisibilityState } from "@tanstack/react-table";
 import {
   flexRender,
   getCoreRowModel,
@@ -8,8 +8,17 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { ArrowUpDown, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowUpDown, ChevronLeft, ChevronRight, Columns3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { useAppearance } from "@/lib/appearance";
 import { cn } from "@/lib/utils";
 import { EmptyState, ErrorState, LoadingRows } from "./page";
 
@@ -42,10 +51,23 @@ interface DataTableProps<T> {
   virtualizeAbove?: number;
   /** Height of the scroll area when virtualised. */
   height?: number;
+  /** Lets people hide columns; their choice is remembered under this key. */
+  viewKey?: string;
   className?: string;
 }
 
-const ROW_HEIGHT = 44;
+/** Row heights for the two densities (px). */
+const ROW_HEIGHT = { comfortable: 44, compact: 36 } as const;
+
+function readVisibility(key: string | undefined): VisibilityState {
+  if (!key) return {};
+  try {
+    const raw = localStorage.getItem(`columns:${key}`);
+    return raw ? (JSON.parse(raw) as VisibilityState) : {};
+  } catch {
+    return {};
+  }
+}
 
 function alignClass(meta: unknown): string {
   const m = meta as ColumnMeta | undefined;
@@ -72,14 +94,31 @@ export function DataTable<T>({
   empty,
   virtualizeAbove = 120,
   height = 560,
+  viewKey,
   className,
 }: DataTableProps<T>) {
   const [sorting, setSorting] = useState<SortingState>([]);
+  const [visibility, setVisibility] = useState<VisibilityState>(() => readVisibility(viewKey));
+  const density = useAppearance((s) => s.density);
+  const rowHeight = ROW_HEIGHT[density];
   const table = useReactTable({
     data: data ?? [],
     columns,
-    state: { sorting },
+    state: { sorting, columnVisibility: visibility },
     onSortingChange: setSorting,
+    onColumnVisibilityChange: (updater) => {
+      setVisibility((current) => {
+        const next = typeof updater === "function" ? updater(current) : updater;
+        if (viewKey) {
+          try {
+            localStorage.setItem(`columns:${viewKey}`, JSON.stringify(next));
+          } catch {
+            // Not remembered in private mode; the choice still applies.
+          }
+        }
+        return next;
+      });
+    },
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getRowId: (row) => rowKey(row),
@@ -90,7 +129,7 @@ export function DataTable<T>({
   const virtualizer = useVirtualizer({
     count: rows.length,
     getScrollElement: () => scrollRef.current,
-    estimateSize: () => ROW_HEIGHT,
+    estimateSize: () => rowHeight,
     overscan: 12,
     enabled: virtual,
   });
@@ -112,20 +151,52 @@ export function DataTable<T>({
     : rows.map((row, index) => ({ row, index, start: 0 }));
   const padTop = virtual ? (items[0]?.start ?? 0) : 0;
   const padBottom = virtual
-    ? virtualizer.getTotalSize() - ((items.at(-1)?.start ?? 0) + ROW_HEIGHT)
+    ? virtualizer.getTotalSize() - ((items.at(-1)?.start ?? 0) + rowHeight)
     : 0;
 
+  const hideable = viewKey
+    ? table
+        .getAllLeafColumns()
+        .filter((c) => c.getCanHide() && typeof c.columnDef.header === "string")
+    : [];
   return (
     <div className={cn("flex flex-col gap-2", className)}>
+      {hideable.length > 1 && (
+        <div className="flex justify-end">
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={<Button variant="outline" size="sm" />}
+              aria-label="Choose columns"
+            >
+              <Columns3 aria-hidden />
+              Columns
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="min-w-44">
+              <DropdownMenuGroup>
+                <DropdownMenuLabel>Show columns</DropdownMenuLabel>
+                {hideable.map((c) => (
+                  <DropdownMenuCheckboxItem
+                    key={c.id}
+                    checked={c.getIsVisible()}
+                    onCheckedChange={(v) => c.toggleVisibility(v)}
+                  >
+                    {c.columnDef.header as string}
+                  </DropdownMenuCheckboxItem>
+                ))}
+              </DropdownMenuGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      )}
       <div
         ref={scrollRef}
-        className="overflow-auto rounded-2xl border border-border/60 bg-card"
+        className="overflow-auto rounded-xl border border-border bg-card shadow-xs"
         style={virtual ? { height } : undefined}
       >
-        <table className="w-full caption-bottom text-sm">
-          <thead className="sticky top-0 z-10 bg-card">
+        <table className="w-full caption-bottom text-table">
+          <thead className="sticky top-0 z-10 bg-muted/80 backdrop-blur-sm">
             {table.getHeaderGroups().map((group) => (
-              <tr key={group.id} className="border-b border-border/60">
+              <tr key={group.id} className="border-b border-border">
                 {group.headers.map((header) => {
                   const sortable = header.column.getCanSort();
                   return (
@@ -133,7 +204,7 @@ export function DataTable<T>({
                       key={header.id}
                       scope="col"
                       className={cn(
-                        "h-10 px-3 text-left align-middle text-xs font-medium whitespace-nowrap text-muted-foreground",
+                        "h-9 px-3 text-left align-middle text-xs font-medium whitespace-nowrap text-muted-foreground",
                         alignClass(header.column.columnDef.meta),
                       )}
                       aria-sort={
@@ -186,11 +257,11 @@ export function DataTable<T>({
                     }
                   }}
                   className={cn(
-                    "border-b border-border/40 transition-colors last:border-0",
+                    "border-b border-border/60 transition-colors last:border-0",
                     onRowClick &&
-                      "cursor-pointer hover:bg-muted/50 focus-visible:bg-muted focus-visible:outline-none",
+                      "cursor-pointer hover:bg-muted/50 focus-visible:bg-accent focus-visible:outline-none",
                   )}
-                  style={{ height: ROW_HEIGHT }}
+                  style={{ height: rowHeight }}
                 >
                   {row.getVisibleCells().map((cell) => (
                     <td

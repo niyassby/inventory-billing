@@ -448,7 +448,7 @@ export function ReportPage() {
           <>
             <ReportTableView table={table} />
             {table.truncated && (
-              <p className="text-sm text-amber-600">
+              <p className="text-sm text-warning">
                 Only the first rows are shown. Narrow the period, or export for the full list.
               </p>
             )}

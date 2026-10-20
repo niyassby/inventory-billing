@@ -135,7 +135,7 @@ export function BackupSection() {
                           r.fileExists ? (
                             ""
                           ) : (
-                            <span className="text-amber-600">file removed</span>
+                            <span className="text-warning">file removed</span>
                           )
                         ) : (
                           <Badge variant="destructive">Failed</Badge>

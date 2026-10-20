@@ -97,7 +97,7 @@ export default function Dashboard() {
                         className={
                           n.severity === "error"
                             ? "mt-0.5 size-4 text-destructive"
-                            : "mt-0.5 size-4 text-amber-500"
+                            : "mt-0.5 size-4 text-warning"
                         }
                         aria-hidden
                       />

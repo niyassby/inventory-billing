@@ -303,7 +303,7 @@ export default function PosPage() {
                           <p className="text-xs text-muted-foreground">
                             {line.item.sku} · {line.item.unitCode}
                             {!line.item.isService && line.qty > line.item.stock && (
-                              <span className="ml-1 text-amber-600">
+                              <span className="ml-1 text-warning">
                                 · only {showQty(line.item.stock)} in stock
                               </span>
                             )}
@@ -313,7 +313,7 @@ export default function PosPage() {
                         <td className="px-3 py-2 text-right tabular-nums">
                           {money(line.unitPrice ?? line.item.salePrice)}
                           {line.unitPrice !== null && (
-                            <span className="block text-xs text-amber-600">changed</span>
+                            <span className="block text-xs text-warning">changed</span>
                           )}
                         </td>
                         <td className="px-3 py-2 text-right tabular-nums">

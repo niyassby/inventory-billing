@@ -2,14 +2,16 @@ import { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import type { Api } from "@inventory/shared";
 import { Plus } from "lucide-react";
+import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import type { ColumnDef } from "@/components/app/data-table";
 import { DataTable } from "@/components/app/data-table";
+import { StockBadge } from "@/components/app/badges";
 import { Page } from "@/components/app/page";
+import { SearchInput } from "@/components/app/search-input";
 import { useDebounced } from "@/components/app/pickers";
 import { useMoney } from "@/lib/business";
 import { showQty, showRate } from "@/lib/format";
@@ -44,19 +46,22 @@ export default function ProductsPage() {
         header: "Item",
         accessorKey: "name",
         cell: ({ row }) => (
-          <div className="min-w-0">
-            <p className="truncate font-medium">
-              {row.original.name}
-              {!row.original.isActive && (
-                <Badge variant="outline" className="ml-2">
-                  Inactive
-                </Badge>
-              )}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              {row.original.sku}
-              {row.original.barcode ? ` · ${row.original.barcode}` : ""}
-            </p>
+          <div className="flex min-w-0 items-center gap-3">
+            <Avatar name={row.original.name} size="sm" />
+            <div className="min-w-0">
+              <p className="truncate font-medium">
+                {row.original.name}
+                {!row.original.isActive && (
+                  <Badge variant="outline" className="ml-2">
+                    Inactive
+                  </Badge>
+                )}
+              </p>
+              <p className="text-caption">
+                {row.original.sku}
+                {row.original.barcode ? ` · ${row.original.barcode}` : ""}
+              </p>
+            </div>
           </div>
         ),
       },
@@ -70,8 +75,11 @@ export default function ProductsPage() {
         accessorKey: "stock",
         meta: { align: "right" },
         cell: ({ row }) => (
-          <span className={row.original.isLowStock ? "font-medium text-amber-600" : ""}>
-            {showQty(row.original.stock)} {row.original.unitCode}
+          <span className="inline-flex items-center justify-end gap-2">
+            <StockBadge stock={row.original.stock} reorderLevel={row.original.reorderLevel} />
+            <span className="num">
+              {showQty(row.original.stock)} {row.original.unitCode}
+            </span>
           </span>
         ),
       },
@@ -108,55 +116,57 @@ export default function ProductsPage() {
           </Button>
         )
       }
+      toolbar={
+        <>
+          <SearchInput
+            aria-label="Search products"
+            placeholder="Search name, SKU or barcode"
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1);
+            }}
+          />
+          <NativeSelect
+            aria-label="Category"
+            value={categoryId}
+            onChange={(e) => {
+              setCategoryId(e.target.value);
+              setPage(1);
+            }}
+          >
+            <NativeSelectOption value="">All categories</NativeSelectOption>
+            {categories.data?.map((c) => (
+              <NativeSelectOption key={c.id} value={c.id}>
+                {c.name}
+              </NativeSelectOption>
+            ))}
+          </NativeSelect>
+          <label className="flex items-center gap-2 text-sm">
+            <Checkbox
+              checked={lowStockOnly}
+              onCheckedChange={(v) => {
+                setLowStockOnly(v);
+                setPage(1);
+              }}
+            />
+            Low stock only
+          </label>
+          <label className="flex items-center gap-2 text-sm">
+            <Checkbox
+              checked={includeInactive}
+              onCheckedChange={(v) => {
+                setIncludeInactive(v);
+                setPage(1);
+              }}
+            />
+            Show inactive
+          </label>
+        </>
+      }
     >
-      <div className="flex flex-wrap items-center gap-3">
-        <Input
-          aria-label="Search products"
-          placeholder="Search name, SKU or barcode"
-          className="max-w-xs"
-          value={search}
-          onChange={(e) => {
-            setSearch(e.target.value);
-            setPage(1);
-          }}
-        />
-        <NativeSelect
-          aria-label="Category"
-          value={categoryId}
-          onChange={(e) => {
-            setCategoryId(e.target.value);
-            setPage(1);
-          }}
-        >
-          <NativeSelectOption value="">All categories</NativeSelectOption>
-          {categories.data?.map((c) => (
-            <NativeSelectOption key={c.id} value={c.id}>
-              {c.name}
-            </NativeSelectOption>
-          ))}
-        </NativeSelect>
-        <label className="flex items-center gap-2 text-sm">
-          <Checkbox
-            checked={lowStockOnly}
-            onCheckedChange={(v) => {
-              setLowStockOnly(v);
-              setPage(1);
-            }}
-          />
-          Low stock only
-        </label>
-        <label className="flex items-center gap-2 text-sm">
-          <Checkbox
-            checked={includeInactive}
-            onCheckedChange={(v) => {
-              setIncludeInactive(v);
-              setPage(1);
-            }}
-          />
-          Show inactive
-        </label>
-      </div>
       <DataTable
+        viewKey="products"
         columns={columns}
         data={query.data?.items}
         loading={query.isPending}

@@ -72,13 +72,13 @@ export function ItemLines<L extends ItemLine>({
         />
       )}
       {lines.length === 0 ? (
-        <p className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+        <p className="rounded-xl border border-dashed border-border bg-card/50 p-6 text-center text-sm text-muted-foreground">
           {emptyText}
         </p>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-border/60">
-          <table className="w-full text-sm">
-            <thead className="bg-muted/40 text-xs text-muted-foreground">
+        <div className="overflow-x-auto rounded-xl border border-border bg-card shadow-xs">
+          <table className="w-full text-table">
+            <thead className="bg-muted/60 text-xs text-muted-foreground">
               <tr>
                 <th className="px-3 py-2 text-left font-medium">Item</th>
                 {showStock && <th className="px-3 py-2 text-right font-medium">In stock</th>}
@@ -100,15 +100,15 @@ export function ItemLines<L extends ItemLine>({
             </thead>
             <tbody>
               {lines.map((l) => (
-                <tr key={l.key} className="border-t border-border/40 align-middle">
+                <tr key={l.key} className="border-t border-border/60 align-middle">
                   <td className="px-3 py-1.5">
                     <p className="font-medium">{l.item.name}</p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-caption">
                       {[l.item.sku, l.item.unitCode].filter(Boolean).join(" · ")}
                     </p>
                   </td>
                   {showStock && (
-                    <td className="px-3 py-1.5 text-right tabular-nums">{showQty(l.item.stock)}</td>
+                    <td className="px-3 py-1.5 text-right num">{showQty(l.item.stock)}</td>
                   )}
                   <td className="px-3 py-1.5">
                     <QtyInput
