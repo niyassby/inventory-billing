@@ -82,15 +82,20 @@ drawer, menubar, navigation-menu, pagination, resizable, select, slider, switch,
 - Screens were checked in Chrome at 1366×768, 1024×640 and 1920×1080 and by axe in both themes; **not
   inside the packaged Tauri window** (A-80 still applies) and not with a screen reader.
 
-## 5. Backend-dependent ideas (not implemented)
+## 5. Backend-dependent ideas
+
+Still to do: 1, 2, 3, 6, 7 and 8. Done: 4 and 5.
 
 1. A single `dashboard_summary` command (KPIs, trend, top sellers, low stock): the dashboard now
    makes seven requests, which a hub or a slow LAN notices.
 2. Overdue ageing for receivables (due dates on invoices, buckets) so "overdue" can be a real status.
 3. Per-user preferences on the hub (theme, density, saved table views, POS favourites and recent
    items), instead of per-PC browser storage.
-4. Server-side sort and filter keys for every list, so sorting works across pages.
-5. Product images (the schema has `image_path`; there is no upload or serve command).
+4. ~~Server-side sort and filter keys for every list, so sorting works across pages.~~ **Done**: every list
+   command takes `sort` (a whitelisted key, never a column name) and `descending`, plus page and page
+   size; the tables keep that state in the address (A-91).
+5. ~~Product images (the schema has `image_path`; there is no upload or serve command).~~ **Done**: upload,
+   replace, remove, thumbnails in the list, search, till and dashboard, served through the hub (A-90).
 6. A customer "recent documents and last payment" endpoint for the party page header.
 7. Stock history per item for sparklines on the product page.
 8. A "restore on first start" screen (A-79).

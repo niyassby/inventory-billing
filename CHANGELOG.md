@@ -5,6 +5,27 @@ All notable changes to this project. The format follows
 
 ## [Unreleased]
 
+### Lists, pictures, shortcuts, controls and an Accounts audit (2026-10-21)
+
+No schema change and no migration: product pictures use the existing `products.image_path`.
+Accounts findings and tests: [docs/ACCOUNTS_AUDIT.md](docs/ACCOUNTS_AUDIT.md).
+
+#### Added
+- Server-side sorting, searching, filtering and paging on every list command (whitelisted sort keys);
+  tables show the page, page size (10/25/50/100) and total, and keep their state in the address.
+- Product pictures: upload (type and size checked, scaled, re-encoded), replace, remove, served
+  through the hub; thumbnails in the product list, search, till cart and dashboard; orphan clean-up.
+- Customizable till shortcuts (per PC and user) in Settings and in the till, with conflict and
+  reserved-key checks, reset, and live hints in the till.
+- shadcn `Select` and `DatePicker` everywhere instead of native controls.
+- 23 Accounts audit scenarios and list, picture and shortcut tests.
+
+#### Fixed
+- The till's expected cash ignored cash refunds, cash expenses, receipts on account and supplier
+  cash payments.
+- A customer-and-supplier ("both") party broke the receivables/payables reconciliation and showed a
+  negative payable.
+
 ### Frontend redesign (2026-10-20)
 
 Frontend only; behaviour unchanged. Details and before/after: [docs/FRONTEND_REDESIGN.md](docs/FRONTEND_REDESIGN.md).

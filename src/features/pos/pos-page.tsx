@@ -36,6 +36,12 @@ import { useShortcuts } from "./shortcut-store";
 import { ShortcutsDialog } from "./shortcuts-dialog";
 import { SHORTCUT_ACTIONS, formatBinding, matchesEvent } from "./shortcuts";
 
+/** The key on a narrow button: long bindings ("Ctrl + Delete") stay in the hint bar and the tooltip. */
+function ButtonKey({ binding }: { binding: string }) {
+  const text = formatBinding(binding);
+  return text.length > 5 ? null : <Kbd className="ml-1">{text}</Kbd>;
+}
+
 function useBillPreview() {
   const cart = usePos((s) => s.cart);
   const input = useDebounced(previewInput(cart), 120);
@@ -472,22 +478,28 @@ export default function PosPage() {
               onChange={(e) => pos.setNotes(e.target.value)}
             />
             <div className="grid grid-cols-3 gap-2">
-              <Button variant="outline" onClick={() => setBillDiscountOpen(true)}>
-                <Percent /> Discount <Kbd className="ml-1">{formatBinding(bindings.discount)}</Kbd>
+              <Button
+                variant="outline"
+                title={formatBinding(bindings.discount)}
+                onClick={() => setBillDiscountOpen(true)}
+              >
+                <Percent /> Discount <ButtonKey binding={bindings.discount} />
               </Button>
               <Button
                 variant="outline"
+                title={formatBinding(bindings.hold)}
                 disabled={cart.lines.length === 0}
                 onClick={() => void hold()}
               >
-                <Pause /> Hold <Kbd className="ml-1">{formatBinding(bindings.hold)}</Kbd>
+                <Pause /> Hold <ButtonKey binding={bindings.hold} />
               </Button>
               <Button
                 variant="outline"
+                title={formatBinding(bindings.clear)}
                 disabled={cart.lines.length === 0}
                 onClick={() => void clear()}
               >
-                <Trash2 /> Clear <Kbd className="ml-1">{formatBinding(bindings.clear)}</Kbd>
+                <Trash2 /> Clear <ButtonKey binding={bindings.clear} />
               </Button>
             </div>
             <Button

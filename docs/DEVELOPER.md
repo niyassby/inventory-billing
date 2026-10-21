@@ -173,6 +173,15 @@ backend in debug mode).
 - `APPROVAL_REQUIRED` needs no code: `call` opens the manager-approval dialog and retries.
 - Totals shown before saving come from the backend (`sales_preview`); the screen never computes
   tax.
+- Lists are sorted, filtered and paged in the database. Backend: take `PageQuery` and build the
+  `ORDER BY` with `page.order_by(&KEYS, default, tiebreak)`, where `KEYS` maps a public key to a SQL
+  expression; never interpolate a request value. Frontend: `useTableState(key, defaults)` keeps page,
+  size, sort and filters in the address; give columns `meta.sortKey` and pass `sortProps` as the
+  table's `sort` prop.
+- Use `SelectField` / `DatePicker` (`components/ui`), never a native `<select>` or
+  `<input type="date">`. Dates are `YYYY-MM-DD` strings.
+- Product pictures live in `services/images.rs` and are fetched with `products_image_get`
+  (base64), so they work from a counter; show them with `ProductImage`.
 - Business rules belong in the backend or in `packages/shared`, never in a component. Pure
   screen logic (like the POS cart in `features/pos/cart.ts`) lives in a `.ts` file with tests.
 
