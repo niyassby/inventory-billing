@@ -592,3 +592,76 @@ fn only_managers_pair_devices_and_review_offline_sales() {
         0
     );
 }
+
+/// A picture sent from a counter lands on the hub and any counter can fetch it from there; only
+/// someone who manages products can change it; offline, it is simply not available.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn pictures_travel_through_the_hub() {
+    use base64::engine::general_purpose::STANDARD;
+    use base64::Engine;
+    use image::{ImageFormat, Rgba, RgbaImage};
+
+    let (kit, rice) = shop(3);
+    let product: String = kit
+        .conn()
+        .query_row(
+            "SELECT product_id FROM product_variants WHERE id = ?1",
+            [&rice],
+            |r| r.get(0),
+        )
+        .unwrap();
+    let cashier = cashier(&kit);
+    let server = start(&kit, localhost()).await;
+    let office = counter(&kit, &server, "Back office", OWNER_EMAIL).await;
+    let till = counter(&kit, &server, "Till 2", &cashier).await;
+
+    let mut bytes = Vec::new();
+    RgbaImage::from_pixel(1_200, 900, Rgba([30, 120, 200, 255]))
+        .write_to(&mut std::io::Cursor::new(&mut bytes), ImageFormat::Png)
+        .unwrap();
+    let saved = office
+        .runtime
+        .call(
+            "products_image_set",
+            json!({ "token": office.token, "input": { "productId": product, "data": STANDARD.encode(&bytes) } }),
+        )
+        .await
+        .unwrap();
+    let key = saved["imageKey"].as_str().unwrap().to_string();
+    // The file is on the hub, in the hub's images folder.
+    assert!(crate::services::images::images_dir(&kit.state)
+        .join(format!("{key}.jpg"))
+        .is_file());
+
+    // The cashier's till gets it through the hub, but may not change it.
+    let fetched = till
+        .runtime
+        .call(
+            "products_image_get",
+            json!({ "token": till.token, "input": { "productId": product, "size": "thumb" } }),
+        )
+        .await
+        .unwrap();
+    assert_eq!(fetched["contentType"], "image/jpeg");
+    assert!(!fetched["data"].as_str().unwrap().is_empty());
+    let denied = till
+        .runtime
+        .call(
+            "products_image_remove",
+            json!({ "token": till.token, "input": { "productId": product } }),
+        )
+        .await;
+    assert_eq!(denied.unwrap_err().code, ErrorCode::Forbidden);
+
+    // With the hub off, a picture is just not available; nothing breaks.
+    server.kill();
+    go_offline(&till).await;
+    let offline = till
+        .runtime
+        .call(
+            "products_image_get",
+            json!({ "token": till.token, "input": { "productId": product } }),
+        )
+        .await;
+    assert!(offline.is_err());
+}

@@ -221,7 +221,7 @@ macro_rules! commands {
 }
 
 use crate::services::{
-    accounting, backup, catalog, common::Page, devices, documents, expenses, notifications,
+    accounting, backup, catalog, common::Page, devices, documents, expenses, images, notifications,
     parties, payments, purchases, reports, sales, settings, setup, stock, sync, upgrade, users,
 };
 
@@ -271,7 +271,6 @@ commands! {
     authed products_list(catalog::ProductListQuery) -> Page<catalog::ProductListItem> = |ctx: &mut Ctx<'_>, q: &catalog::ProductListQuery| catalog::list_products(ctx, q);
     authed products_get(users::IdInput) -> catalog::ProductDetail = |ctx: &mut Ctx<'_>, i: &users::IdInput| catalog::get_product(ctx, i);
     authed products_save(catalog::ProductInput) -> catalog::ProductDetail = catalog::save_product;
-    authed products_delete(users::IdInput) -> () = catalog::delete_product;
     authed products_search(catalog::SearchQuery) -> Vec<catalog::SearchItem> = |ctx: &mut Ctx<'_>, q: &catalog::SearchQuery| catalog::search(ctx, q);
     authed products_lookup(catalog::SearchQuery) -> Option<catalog::SearchItem> = |ctx: &mut Ctx<'_>, q: &catalog::SearchQuery| catalog::lookup_code(ctx, q);
 
@@ -371,6 +370,10 @@ commands! {
     stateful backup_verify(backup::RestoreInput) -> backup::VerifiedBackup = |state: &AppState, ctx: &mut Ctx<'_>, input: &backup::RestoreInput| backup::verify(state, ctx, input);
     stateful backup_restore(backup::RestoreInput) -> backup::RestoreResult = backup::restore;
     stateful backup_set_passphrase(backup::SetPassphraseInput) -> () = backup::set_passphrase;
+    stateful products_delete(users::IdInput) -> () = images::delete_product;
+    stateful products_image_set(images::ImageSetInput) -> images::ImageSaved = images::set;
+    stateful products_image_remove(images::ImageRemoveInput) -> images::ImageSaved = images::remove;
+    stateful products_image_get(images::ImageGetInput) -> Option<images::ImageData> = images::get;
 }
 
 /// A command sent by a paired device over the LAN (crate::hub). Same commands, same checks; the

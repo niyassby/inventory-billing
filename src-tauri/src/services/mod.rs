@@ -18,6 +18,7 @@ pub mod devices;
 pub mod documents;
 pub mod expenses;
 pub mod idempotency;
+pub mod images;
 pub mod journal;
 pub mod notifications;
 pub mod numbering;

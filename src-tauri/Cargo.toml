@@ -58,6 +58,9 @@ mdns-sd = "0.11"
 ipnet = "2"
 aes-gcm = "0.10"
 zstd = "0.13"
+# Product pictures: decode, scale and re-encode (pure Rust).
+image = { version = "0.25", default-features = false, features = ["jpeg", "png", "webp", "gif"] }
+base64 = "0.22"
 
 [target.'cfg(windows)'.dependencies]
 keyring = { version = "3", features = ["windows-native"] }

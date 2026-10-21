@@ -470,6 +470,8 @@ pub struct ProductDetail {
     pub is_service: bool,
     pub is_active: bool,
     pub updated_at: String,
+    /// The picture's name (see `services::images`), or null; also the screen's cache key.
+    pub image_key: Option<String>,
     pub variants: Vec<VariantDetail>,
     pub unit_conversions: Vec<UnitConversionDetail>,
 }
@@ -508,6 +510,7 @@ pub struct ProductListItem {
     pub is_active: bool,
     pub is_low_stock: bool,
     pub updated_at: String,
+    pub image_key: Option<String>,
 }
 
 fn validate_code(field: &str, value: Option<&str>, min: usize) -> AppResult<Option<String>> {
@@ -934,7 +937,7 @@ fn get_product_unchecked(conn: &Connection, id: &str) -> AppResult<ProductDetail
     let mut detail = conn
         .query_row(
             "SELECT p.id, p.name, p.description, p.category_id, c.name, p.brand_id, b.name, p.base_unit_id, u.code,
-                    p.tax_rate_id, coalesce(t.rate, 0), p.hsn_sac, p.track_batches, p.track_expiry, p.is_service, p.is_active, p.updated_at
+                    p.tax_rate_id, coalesce(t.rate, 0), p.hsn_sac, p.track_batches, p.track_expiry, p.is_service, p.is_active, p.updated_at, p.image_path
              FROM products p
              JOIN units u ON u.id = p.base_unit_id
              LEFT JOIN categories c ON c.id = p.category_id
@@ -961,6 +964,7 @@ fn get_product_unchecked(conn: &Connection, id: &str) -> AppResult<ProductDetail
                     is_service: r.get(14)?,
                     is_active: r.get(15)?,
                     updated_at: r.get(16)?,
+                    image_key: r.get(17)?,
                     variants: Vec::new(),
                     unit_conversions: Vec::new(),
                 })
@@ -1107,7 +1111,7 @@ pub fn list_products(ctx: &Ctx<'_>, query: &ProductListQuery) -> AppResult<Page<
         "SELECT p.id, v.id, p.name || coalesce(' — ' || v.variant_name, ''), v.sku, v.barcode, c.name, b.name, u.code,
                 v.sale_price, v.mrp, v.cost_price, coalesce(t.rate, 0),
                 (SELECT coalesce(sum(qty), 0) FROM stock_levels l WHERE l.variant_id = v.id), v.reorder_level,
-                p.is_active AND v.is_active, max(p.updated_at, v.updated_at)
+                p.is_active AND v.is_active, max(p.updated_at, v.updated_at), p.image_path
          {from} ORDER BY {order} LIMIT ? OFFSET ?"
     ))?;
     let items = stmt
@@ -1132,6 +1136,7 @@ pub fn list_products(ctx: &Ctx<'_>, query: &ProductListQuery) -> AppResult<Page<
                 is_active: r.get(14)?,
                 is_low_stock: reorder > 0 && stock <= reorder,
                 updated_at: r.get(15)?,
+                image_key: r.get(16)?,
             })
         })?
         .collect::<Result<_, _>>()?;
@@ -1173,12 +1178,15 @@ pub struct SearchItem {
     pub stock: i64,
     pub is_service: bool,
     pub track_batches: bool,
+    /// The picture's name, or null.
+    #[serde(default)]
+    pub image_key: Option<String>,
 }
 
 const SEARCH_SELECT: &str = "SELECT v.id, p.id, p.name || coalesce(' — ' || v.variant_name, ''), v.sku, v.barcode,
     u.id, u.code, v.sale_price, v.mrp, p.tax_rate_id, coalesce(t.rate, 0), t.tax_type, coalesce(t.cess_rate, 0), p.hsn_sac,
     coalesce((SELECT sum(qty) FROM stock_levels l WHERE l.variant_id = v.id AND l.warehouse_id = ?1), 0),
-    p.is_service, p.track_batches
+    p.is_service, p.track_batches, p.image_path
     FROM product_variants v JOIN products p ON p.id = v.product_id JOIN units u ON u.id = p.base_unit_id
     LEFT JOIN tax_rates t ON t.id = p.tax_rate_id
     WHERE v.deleted_at IS NULL AND p.deleted_at IS NULL AND v.is_active = 1 AND p.is_active = 1";
@@ -1204,6 +1212,7 @@ fn map_search(r: &rusqlite::Row<'_>) -> rusqlite::Result<SearchItem> {
         stock: r.get(14)?,
         is_service: r.get(15)?,
         track_batches: r.get(16)?,
+        image_key: r.get(17)?,
     })
 }
 

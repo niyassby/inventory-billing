@@ -5,6 +5,7 @@ mod backup_jobs;
 mod billing;
 mod catalog_stock;
 mod documents;
+mod images;
 mod lists;
 mod network;
 mod perf;

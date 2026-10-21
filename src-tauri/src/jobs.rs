@@ -10,8 +10,8 @@ use rusqlite::{params, Connection, OptionalExtension};
 use crate::app::AppState;
 use crate::domain::ids::new_id;
 use crate::error::{AppError, AppResult};
-use crate::services::backup;
 use crate::services::settings::{self, Settings};
+use crate::services::{backup, images};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Job {
@@ -267,7 +267,11 @@ fn run(state: &AppState, job: Job) -> AppResult<String> {
         }
         Job::LowStock => low_stock(&*state.conn()?, now),
         Job::Integrity => integrity(&*state.conn()?, now),
-        Job::Cleanup => cleanup(&*state.conn()?, now),
+        Job::Cleanup => {
+            let report = cleanup(&*state.conn()?, now)?;
+            let pictures = images::sweep_orphans(state)?;
+            Ok(format!("{report}, {pictures} stray picture files removed"))
+        }
     }
 }
 

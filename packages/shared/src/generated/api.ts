@@ -313,6 +313,18 @@ export interface ApiContract {
       input: IdInput;
       output: ProductDetail;
     };
+    products_image_get: {
+      input: ImageGetInput;
+      output: ImageData | null;
+    };
+    products_image_remove: {
+      input: ImageRemoveInput;
+      output: ImageSaved;
+    };
+    products_image_set: {
+      input: ImageSetInput;
+      output: ImageSaved;
+    };
     products_list: {
       input: ProductListQuery;
       output: PageFor_ProductListItem;
@@ -1735,6 +1747,10 @@ export interface ProductDetail {
   description?: string | null;
   hsnSac?: string | null;
   id: string;
+  /**
+   * The picture's name (see `services::images`), or null; also the screen's cache key.
+   */
+  imageKey?: string | null;
   isActive: boolean;
   isService: boolean;
   name: string;
@@ -1786,6 +1802,61 @@ export interface WarehouseStock {
 }
 /**
  * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "ImageGetInput".
+ */
+export interface ImageGetInput {
+  productId: string;
+  /**
+   * "thumb" (default) or "full".
+   */
+  size?: string | null;
+  /**
+   * The product's `imageKey`: only a cache key for the screen, the server ignores it.
+   */
+  version?: string | null;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "ImageData".
+ */
+export interface ImageData {
+  contentType: string;
+  /**
+   * The JPEG file, base64 encoded.
+   */
+  data: string;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "ImageRemoveInput".
+ */
+export interface ImageRemoveInput {
+  productId: string;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "ImageSaved".
+ */
+export interface ImageSaved {
+  /**
+   * The new `imageKey` (null after a removal).
+   */
+  imageKey?: string | null;
+  productId: string;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "ImageSetInput".
+ */
+export interface ImageSetInput {
+  /**
+   * The picture file, base64 encoded (no `data:` prefix).
+   */
+  data: string;
+  productId: string;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
  * via the `definition` "ProductListQuery".
  */
 export interface ProductListQuery {
@@ -1824,6 +1895,7 @@ export interface ProductListItem {
   brandName?: string | null;
   categoryName?: string | null;
   costPrice: number;
+  imageKey?: string | null;
   isActive: boolean;
   isLowStock: boolean;
   mrp?: number | null;
@@ -1862,6 +1934,10 @@ export interface SearchItem {
   factorDen: number;
   factorNum: number;
   hsnSac?: string | null;
+  /**
+   * The picture's name, or null.
+   */
+  imageKey?: string | null;
   isService: boolean;
   mrp?: number | null;
   name: string;

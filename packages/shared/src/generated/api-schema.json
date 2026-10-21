@@ -2096,6 +2096,92 @@
       ],
       "type": "object"
     },
+    "ImageData": {
+      "properties": {
+        "contentType": {
+          "type": "string"
+        },
+        "data": {
+          "description": "The JPEG file, base64 encoded.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "contentType",
+        "data"
+      ],
+      "type": "object"
+    },
+    "ImageGetInput": {
+      "properties": {
+        "productId": {
+          "type": "string"
+        },
+        "size": {
+          "description": "\"thumb\" (default) or \"full\".",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "version": {
+          "description": "The product's `imageKey`: only a cache key for the screen, the server ignores it.",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "productId"
+      ],
+      "type": "object"
+    },
+    "ImageRemoveInput": {
+      "properties": {
+        "productId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "productId"
+      ],
+      "type": "object"
+    },
+    "ImageSaved": {
+      "properties": {
+        "imageKey": {
+          "description": "The new `imageKey` (null after a removal).",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "productId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "productId"
+      ],
+      "type": "object"
+    },
+    "ImageSetInput": {
+      "properties": {
+        "data": {
+          "description": "The picture file, base64 encoded (no `data:` prefix).",
+          "type": "string"
+        },
+        "productId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "data",
+        "productId"
+      ],
+      "type": "object"
+    },
     "ImportLegacyInput": {
       "properties": {
         "dryRun": {
@@ -4547,6 +4633,13 @@
         "id": {
           "type": "string"
         },
+        "imageKey": {
+          "description": "The picture's name (see `services::images`), or null; also the screen's cache key.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "isActive": {
           "type": "boolean"
         },
@@ -4715,6 +4808,12 @@
         "costPrice": {
           "format": "int64",
           "type": "integer"
+        },
+        "imageKey": {
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "isActive": {
           "type": "boolean"
@@ -6710,6 +6809,14 @@
           "type": "integer"
         },
         "hsnSac": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "imageKey": {
+          "default": null,
+          "description": "The picture's name, or null.",
           "type": [
             "string",
             "null"
@@ -9442,6 +9549,61 @@
           ],
           "type": "object"
         },
+        "products_image_get": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/ImageGetInput"
+            },
+            "output": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/ImageData"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "products_image_remove": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/ImageRemoveInput"
+            },
+            "output": {
+              "$ref": "#/definitions/ImageSaved"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "products_image_set": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/ImageSetInput"
+            },
+            "output": {
+              "$ref": "#/definitions/ImageSaved"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
         "products_list": {
           "additionalProperties": false,
           "properties": {
@@ -10630,6 +10792,9 @@
         "permissions_list",
         "products_delete",
         "products_get",
+        "products_image_get",
+        "products_image_remove",
+        "products_image_set",
         "products_list",
         "products_lookup",
         "products_save",
