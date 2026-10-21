@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import type { Api } from "@inventory/shared";
 import { Plus } from "lucide-react";
@@ -6,38 +6,34 @@ import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
+import { SelectField } from "@/components/ui/select-field";
 import type { ColumnDef } from "@/components/app/data-table";
 import { DataTable } from "@/components/app/data-table";
 import { StockBadge } from "@/components/app/badges";
 import { Page } from "@/components/app/page";
 import { SearchInput } from "@/components/app/search-input";
-import { useDebounced } from "@/components/app/pickers";
 import { useMoney } from "@/lib/business";
 import { showQty, showRate } from "@/lib/format";
 import { useCommand, useList } from "@/lib/queries";
+import { useSearchFilter, useTableState } from "@/lib/table-state";
 import { useCan } from "@/stores/session";
-
-const PAGE_SIZE = 100;
 
 export default function ProductsPage() {
   const navigate = useNavigate();
   const money = useMoney();
   const canManage = useCan("products.manage");
-  const [search, setSearch] = useState("");
-  const [categoryId, setCategoryId] = useState("");
-  const [lowStockOnly, setLowStockOnly] = useState(false);
-  const [includeInactive, setIncludeInactive] = useState(false);
-  const [page, setPage] = useState(1);
-  const term = useDebounced(search.trim(), 200);
+  const table = useTableState("products", {
+    filters: { q: "", category: "", low: "", inactive: "" },
+  });
+  const [search, setSearch] = useSearchFilter(table);
+  const term = table.filter("q");
   const categories = useCommand("categories_list", {});
   const query = useList("products_list", {
     search: term || null,
-    categoryId: categoryId || null,
-    lowStockOnly,
-    includeInactive,
-    page,
-    pageSize: PAGE_SIZE,
+    categoryId: table.filter("category") || null,
+    lowStockOnly: table.filter("low") === "1",
+    includeInactive: table.filter("inactive") === "1",
+    ...table.input,
   });
 
   const columns = useMemo<ColumnDef<Api.ProductListItem>[]>(
@@ -45,6 +41,7 @@ export default function ProductsPage() {
       {
         header: "Item",
         accessorKey: "name",
+        meta: { sortKey: "name" },
         cell: ({ row }) => (
           <div className="flex min-w-0 items-center gap-3">
             <Avatar name={row.original.name} size="sm" />
@@ -68,12 +65,13 @@ export default function ProductsPage() {
       {
         header: "Category",
         accessorFn: (r) => r.categoryName ?? "",
+        meta: { sortKey: "category" },
         cell: ({ row }) => row.original.categoryName ?? "",
       },
       {
         header: "Stock",
         accessorKey: "stock",
-        meta: { align: "right" },
+        meta: { align: "right", sortKey: "stock" },
         cell: ({ row }) => (
           <span className="inline-flex items-center justify-end gap-2">
             <StockBadge stock={row.original.stock} reorderLevel={row.original.reorderLevel} />
@@ -86,19 +84,19 @@ export default function ProductsPage() {
       {
         header: "Price",
         accessorKey: "salePrice",
-        meta: { align: "right" },
+        meta: { align: "right", sortKey: "price" },
         cell: ({ row }) => money(row.original.salePrice),
       },
       {
         header: "Cost",
         accessorKey: "costPrice",
-        meta: { align: "right" },
+        meta: { align: "right", sortKey: "cost" },
         cell: ({ row }) => money(row.original.costPrice),
       },
       {
         header: "Tax",
         accessorKey: "taxRate",
-        meta: { align: "right" },
+        meta: { align: "right", sortKey: "tax" },
         cell: ({ row }) => showRate(row.original.taxRate),
       },
     ],
@@ -122,43 +120,29 @@ export default function ProductsPage() {
             aria-label="Search products"
             placeholder="Search name, SKU or barcode"
             value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(1);
-            }}
+            onChange={(e) => setSearch(e.target.value)}
           />
-          <NativeSelect
+          <SelectField
             aria-label="Category"
-            value={categoryId}
-            onChange={(e) => {
-              setCategoryId(e.target.value);
-              setPage(1);
-            }}
-          >
-            <NativeSelectOption value="">All categories</NativeSelectOption>
-            {categories.data?.map((c) => (
-              <NativeSelectOption key={c.id} value={c.id}>
-                {c.name}
-              </NativeSelectOption>
-            ))}
-          </NativeSelect>
+            className="w-48"
+            value={table.filter("category")}
+            onValueChange={(v) => table.setFilter("category", v)}
+            options={[
+              { value: "", label: "All categories" },
+              ...(categories.data ?? []).map((c) => ({ value: c.id, label: c.name })),
+            ]}
+          />
           <label className="flex items-center gap-2 text-sm">
             <Checkbox
-              checked={lowStockOnly}
-              onCheckedChange={(v) => {
-                setLowStockOnly(v);
-                setPage(1);
-              }}
+              checked={table.filter("low") === "1"}
+              onCheckedChange={(v) => table.setFilter("low", v ? "1" : "")}
             />
             Low stock only
           </label>
           <label className="flex items-center gap-2 text-sm">
             <Checkbox
-              checked={includeInactive}
-              onCheckedChange={(v) => {
-                setIncludeInactive(v);
-                setPage(1);
-              }}
+              checked={table.filter("inactive") === "1"}
+              onCheckedChange={(v) => table.setFilter("inactive", v ? "1" : "")}
             />
             Show inactive
           </label>
@@ -167,6 +151,7 @@ export default function ProductsPage() {
     >
       <DataTable
         viewKey="products"
+        sort={table.sortProps}
         columns={columns}
         data={query.data?.items}
         loading={query.isPending}
@@ -176,7 +161,13 @@ export default function ProductsPage() {
         onRowClick={(r) => void navigate(`/inventory/products/${r.productId}`)}
         paging={
           query.data
-            ? { page, pageSize: PAGE_SIZE, total: query.data.total, onPage: setPage }
+            ? {
+                page: table.state.page,
+                pageSize: table.state.size,
+                total: query.data.total,
+                onPage: table.setPage,
+                onPageSize: table.setSize,
+              }
             : undefined
         }
         empty={{

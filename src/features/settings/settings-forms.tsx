@@ -1,9 +1,9 @@
+import { SelectField } from "@/components/ui/select-field";
 import { useEffect, useState } from "react";
 import type { Api } from "@inventory/shared";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
 import { QtyInput, RateInput } from "@/components/app/inputs";
 import { QueryView, Section } from "@/components/app/page";
@@ -57,19 +57,13 @@ function FieldInput({
       return (
         <Field>
           <FieldLabel htmlFor={id}>{spec.label}</FieldLabel>
-          <NativeSelect
+          <SelectField
             id={id}
-            className="w-full"
             disabled={disabled}
             value={text(value)}
-            onChange={(e) => onChange(e.target.value)}
-          >
-            {spec.options.map(([v, t]) => (
-              <NativeSelectOption key={v} value={v}>
-                {t}
-              </NativeSelectOption>
-            ))}
-          </NativeSelect>
+            onValueChange={(v) => onChange(v)}
+            options={spec.options.map(([v, t]) => ({ value: v, label: t }))}
+          />
           {spec.help && <FieldDescription>{spec.help}</FieldDescription>}
         </Field>
       );

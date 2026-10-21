@@ -1,3 +1,6 @@
+import { DatePicker } from "@/components/ui/date-picker";
+import { SelectField } from "@/components/ui/select-field";
+import { useSearchFilter, useTableState } from "@/lib/table-state";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
@@ -8,7 +11,6 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { StatusBadge } from "@/components/app/badges";
@@ -20,7 +22,7 @@ import type { ItemLine } from "@/components/app/item-lines";
 import { ItemLines, lineKey } from "@/components/app/item-lines";
 import { MoneyInput, QtyInput, RateInput } from "@/components/app/inputs";
 import { Facts, Page, QueryView, Section } from "@/components/app/page";
-import { PartyPicker, useDebounced } from "@/components/app/pickers";
+import { PartyPicker } from "@/components/app/pickers";
 import { WarehouseSelect } from "@/components/app/warehouse-select";
 import { call, requestId } from "@/api/v2";
 import { useMoney } from "@/lib/business";
@@ -52,19 +54,18 @@ export function PurchasesPage() {
   const money = useMoney();
   const canManage = useCan("purchases.manage");
   const canReceive = useCan("purchases.receive");
-  const [params, setParams] = useSearchParams();
-  const tab = (params.get("tab") ?? "purchase_order") as Tab;
-  const [search, setSearch] = useState("");
-  const [page, setPage] = useState(1);
-  const term = useDebounced(search.trim(), 200);
+  const table = useTableState("purchases", { filters: { tab: "purchase_order", q: "" } });
+  const [search, setSearch] = useSearchFilter(table);
+  const tab = (table.filter("tab") || "purchase_order") as Tab;
+  const term = table.filter("q");
   const docs = useList(
     "purchases_list",
-    { kind: tab, search: term || null, page, pageSize: 100 },
+    { kind: tab, search: term || null, ...table.input },
     { enabled: tab !== "goods_receipt" },
   );
   const receipts = useList(
     "purchases_list_receipts",
-    { search: term || null, page, pageSize: 100 },
+    { search: term || null, ...table.input },
     { enabled: tab === "goods_receipt" },
   );
   const docColumns = useMemo<ColumnDef<Api.PurchaseListItem>[]>(
@@ -72,30 +73,37 @@ export function PurchasesPage() {
       {
         header: "Number",
         accessorKey: "docNo",
+        meta: { sortKey: "docNo" },
         cell: ({ row }) => <span className="font-medium">{row.original.docNo}</span>,
       },
       {
         header: "Date",
         accessorKey: "businessDate",
+        meta: { sortKey: "date" },
         cell: ({ row }) => showDate(row.original.businessDate),
       },
-      { header: "Supplier", accessorKey: "supplierName" },
-      { header: "Their bill no.", accessorFn: (r) => r.supplierInvoiceNo ?? "" },
+      { header: "Supplier", accessorKey: "supplierName", meta: { sortKey: "supplier" } },
+      {
+        header: "Their bill no.",
+        accessorFn: (r) => r.supplierInvoiceNo ?? "",
+        meta: { sortKey: "supplierInvoiceNo" },
+      },
       {
         header: "Status",
         accessorKey: "status",
+        meta: { sortKey: "status" },
         cell: ({ row }) => <StatusBadge status={row.original.status} />,
       },
       {
         header: "Total",
         accessorKey: "total",
-        meta: { align: "right" },
+        meta: { align: "right", sortKey: "total" },
         cell: ({ row }) => money(row.original.total),
       },
       {
         header: tab === "purchase_return" ? "Refunded" : "Paid",
         accessorKey: "amountPaid",
-        meta: { align: "right" },
+        meta: { align: "right", sortKey: "paid" },
         cell: ({ row }) => (tab === "purchase_order" ? "" : money(row.original.amountPaid)),
       },
     ],
@@ -106,15 +114,17 @@ export function PurchasesPage() {
       {
         header: "Number",
         accessorKey: "docNo",
+        meta: { sortKey: "docNo" },
         cell: ({ row }) => <span className="font-medium">{row.original.docNo}</span>,
       },
       {
         header: "Date",
         accessorKey: "businessDate",
+        meta: { sortKey: "date" },
         cell: ({ row }) => showDate(row.original.businessDate),
       },
-      { header: "Supplier", accessorKey: "supplierName" },
-      { header: "Order", accessorFn: (r) => r.orderDocNo ?? "" },
+      { header: "Supplier", accessorKey: "supplierName", meta: { sortKey: "supplier" } },
+      { header: "Order", accessorFn: (r) => r.orderDocNo ?? "", meta: { sortKey: "order" } },
       {
         header: "Bill",
         accessorFn: (r) => r.billDocNo ?? "",
@@ -163,13 +173,7 @@ export function PurchasesPage() {
         </>
       }
     >
-      <Tabs
-        value={tab}
-        onValueChange={(v) => {
-          setParams({ tab: String(v) });
-          setPage(1);
-        }}
-      >
+      <Tabs value={tab} onValueChange={(v) => table.setFilter("tab", String(v))}>
         <TabsList>
           {TABS.map(([value, text]) => (
             <TabsTrigger key={value} value={value}>
@@ -183,39 +187,32 @@ export function PurchasesPage() {
         placeholder="Number, supplier or their bill no."
         className="max-w-xs"
         value={search}
-        onChange={(e) => {
-          setSearch(e.target.value);
-          setPage(1);
-        }}
+        onChange={(e) => setSearch(e.target.value)}
       />
       {tab === "goods_receipt" ? (
         <DataTable
-          viewKey="purchases"
+          viewKey="purchase-receipts"
+          sort={table.sortProps}
           columns={receiptColumns}
           data={receipts.data?.items}
           loading={receipts.isPending}
           error={receipts.error}
           rowKey={(r) => r.id}
           onRowClick={(r) => void navigate(`/purchases/receipts/${r.id}`)}
-          paging={
-            receipts.data
-              ? { page, pageSize: 100, total: receipts.data.total, onPage: setPage }
-              : undefined
-          }
+          paging={receipts.data ? table.paging(receipts.data.total) : undefined}
           empty={empty}
         />
       ) : (
         <DataTable
-          viewKey="purchase-receipts"
+          viewKey="purchases"
+          sort={table.sortProps}
           columns={docColumns}
           data={docs.data?.items}
           loading={docs.isPending}
           error={docs.error}
           rowKey={(r) => r.id}
           onRowClick={(r) => void navigate(`/purchases/${PATHS[tab]}/${r.id}`)}
-          paging={
-            docs.data ? { page, pageSize: 100, total: docs.data.total, onPage: setPage } : undefined
-          }
+          paging={docs.data ? table.paging(docs.data.total) : undefined}
           empty={empty}
         />
       )}
@@ -497,12 +494,7 @@ export function PurchaseEditor({ mode }: { mode: Mode }) {
           {mode === "order" && (
             <Field>
               <FieldLabel htmlFor="buy-expected">Expected by</FieldLabel>
-              <Input
-                id="buy-expected"
-                type="date"
-                value={expectedDate}
-                onChange={(e) => setExpectedDate(e.target.value)}
-              />
+              <DatePicker id="buy-expected" value={expectedDate} onChange={setExpectedDate} />
             </Field>
           )}
           {mode === "receipt" && (
@@ -527,21 +519,11 @@ export function PurchaseEditor({ mode }: { mode: Mode }) {
               </Field>
               <Field>
                 <FieldLabel htmlFor="buy-invdate">Their bill date</FieldLabel>
-                <Input
-                  id="buy-invdate"
-                  type="date"
-                  value={invoiceDate}
-                  onChange={(e) => setInvoiceDate(e.target.value)}
-                />
+                <DatePicker id="buy-invdate" value={invoiceDate} onChange={setInvoiceDate} />
               </Field>
               <Field>
                 <FieldLabel htmlFor="buy-due">Pay by</FieldLabel>
-                <Input
-                  id="buy-due"
-                  type="date"
-                  value={dueDate}
-                  onChange={(e) => setDueDate(e.target.value)}
-                />
+                <DatePicker id="buy-due" value={dueDate} onChange={setDueDate} />
               </Field>
               <label className="flex items-center gap-2 self-end pb-2 text-sm">
                 <Checkbox checked={pricesIncludeTax} onCheckedChange={setPricesIncludeTax} /> Costs
@@ -611,11 +593,10 @@ export function PurchaseEditor({ mode }: { mode: Mode }) {
                             value={l.batchNo}
                             onChange={(e) => update({ batchNo: e.target.value })}
                           />
-                          <Input
+                          <DatePicker
                             aria-label="Expiry date"
-                            type="date"
                             value={l.expiryDate}
-                            onChange={(e) => update({ expiryDate: e.target.value })}
+                            onChange={(v) => update({ expiryDate: v })}
                           />
                         </div>
                       ) : null,
@@ -668,21 +649,22 @@ export function PurchaseEditor({ mode }: { mode: Mode }) {
                     setCharges((all) => all.map((x, j) => (j === i ? { ...x, amount } : x)))
                   }
                 />
-                <NativeSelect
+                <SelectField
                   aria-label="Spread over items by"
                   value={c.allocation}
-                  onChange={(e) =>
+                  onValueChange={(v) =>
                     setCharges((all) =>
                       all.map((x, j) =>
-                        j === i ? { ...x, allocation: e.target.value as Charge["allocation"] } : x,
+                        j === i ? { ...x, allocation: v as Charge["allocation"] } : x,
                       ),
                     )
                   }
-                >
-                  <NativeSelectOption value="value">spread by value</NativeSelectOption>
-                  <NativeSelectOption value="qty">spread by quantity</NativeSelectOption>
-                  <NativeSelectOption value="none">expense, not item cost</NativeSelectOption>
-                </NativeSelect>
+                  options={[
+                    { value: "value", label: "spread by value" },
+                    { value: "qty", label: "spread by quantity" },
+                    { value: "none", label: "expense, not item cost" },
+                  ]}
+                />
                 <Button
                   variant="ghost"
                   size="icon-sm"
@@ -724,18 +706,18 @@ export function PurchaseEditor({ mode }: { mode: Mode }) {
               </Field>
               <Field>
                 <FieldLabel htmlFor="buy-paymode">Paid by</FieldLabel>
-                <NativeSelect
+                <SelectField
                   id="buy-paymode"
                   className="w-full"
                   value={payMode}
-                  onChange={(e) => setPayMode(e.target.value)}
-                >
-                  {["cash", "bank_transfer", "upi", "cheque"].map((m) => (
-                    <NativeSelectOption key={m} value={m}>
-                      {label(m)}
-                    </NativeSelectOption>
-                  ))}
-                </NativeSelect>
+                  onValueChange={setPayMode}
+                  options={[
+                    ...["cash", "bank_transfer", "upi", "cheque"].map((m) => ({
+                      value: m,
+                      label: label(m),
+                    })),
+                  ]}
+                />
               </Field>
             </>
           )}

@@ -1,3 +1,4 @@
+import { SelectField } from "@/components/ui/select-field";
 import { useEffect, useMemo } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { Controller, useFieldArray, useForm } from "react-hook-form";
@@ -9,7 +10,6 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
 import { confirm } from "@/components/app/dialogs";
 import { MoneyInput, QtyInput } from "@/components/app/inputs";
@@ -282,52 +282,85 @@ function Editor({ product }: { product: Api.ProductDetail | null }) {
               </Field>
               <Field>
                 <FieldLabel htmlFor="categoryId">Category</FieldLabel>
-                <NativeSelect id="categoryId" className="w-full" {...register("categoryId")}>
-                  <NativeSelectOption value="">None</NativeSelectOption>
-                  {categories.data?.map((c) => (
-                    <NativeSelectOption key={c.id} value={c.id}>
-                      {c.name}
-                    </NativeSelectOption>
-                  ))}
-                </NativeSelect>
+                <Controller
+                  control={control}
+                  name="categoryId"
+                  render={({ field }) => (
+                    <SelectField
+                      id="categoryId"
+                      value={field.value}
+                      onValueChange={field.onChange}
+                      options={[
+                        { value: "", label: "None" },
+                        ...(categories.data ?? []).map((c) => ({ value: c.id, label: c.name })),
+                      ]}
+                    />
+                  )}
+                />
               </Field>
               <Field>
                 <FieldLabel htmlFor="brandId">Brand</FieldLabel>
-                <NativeSelect id="brandId" className="w-full" {...register("brandId")}>
-                  <NativeSelectOption value="">None</NativeSelectOption>
-                  {brands.data?.map((b) => (
-                    <NativeSelectOption key={b.id} value={b.id}>
-                      {b.name}
-                    </NativeSelectOption>
-                  ))}
-                </NativeSelect>
+                <Controller
+                  control={control}
+                  name="brandId"
+                  render={({ field }) => (
+                    <SelectField
+                      id="brandId"
+                      value={field.value}
+                      onValueChange={field.onChange}
+                      options={[
+                        { value: "", label: "None" },
+                        ...(brands.data ?? []).map((b) => ({ value: b.id, label: b.name })),
+                      ]}
+                    />
+                  )}
+                />
               </Field>
               <Field data-invalid={Boolean(err("baseUnitId")) || undefined}>
                 <FieldLabel htmlFor="baseUnitId" required>
                   Unit
                 </FieldLabel>
-                <NativeSelect id="baseUnitId" className="w-full" {...register("baseUnitId")}>
-                  <NativeSelectOption value="">Choose…</NativeSelectOption>
-                  {units.data?.map((u) => (
-                    <NativeSelectOption key={u.id} value={u.id}>
-                      {u.name} ({u.code})
-                    </NativeSelectOption>
-                  ))}
-                </NativeSelect>
+                <Controller
+                  control={control}
+                  name="baseUnitId"
+                  render={({ field }) => (
+                    <SelectField
+                      id="baseUnitId"
+                      required
+                      invalid={Boolean(err("baseUnitId"))}
+                      value={field.value}
+                      onValueChange={field.onChange}
+                      options={[
+                        { value: "", label: "Choose…" },
+                        ...(units.data ?? []).map((u) => ({
+                          value: u.id,
+                          label: `${u.name} (${u.code})`,
+                        })),
+                      ]}
+                    />
+                  )}
+                />
                 <FieldError>{err("baseUnitId")}</FieldError>
               </Field>
               <Field>
                 <FieldLabel htmlFor="taxRateId">Tax</FieldLabel>
-                <NativeSelect id="taxRateId" className="w-full" {...register("taxRateId")}>
-                  <NativeSelectOption value="">No tax</NativeSelectOption>
-                  {taxRates.data
-                    ?.filter((t) => t.isActive)
-                    .map((t) => (
-                      <NativeSelectOption key={t.id} value={t.id}>
-                        {t.name} ({showRate(t.rate)})
-                      </NativeSelectOption>
-                    ))}
-                </NativeSelect>
+                <Controller
+                  control={control}
+                  name="taxRateId"
+                  render={({ field }) => (
+                    <SelectField
+                      id="taxRateId"
+                      value={field.value}
+                      onValueChange={field.onChange}
+                      options={[
+                        { value: "", label: "No tax" },
+                        ...(taxRates.data ?? [])
+                          .filter((t) => t.isActive)
+                          .map((t) => ({ value: t.id, label: `${t.name} (${showRate(t.rate)})` })),
+                      ]}
+                    />
+                  )}
+                />
               </Field>
               <Field className="md:col-span-2">
                 <FieldLabel htmlFor="description">Description</FieldLabel>
@@ -527,16 +560,24 @@ function Editor({ product }: { product: Api.ProductDetail | null }) {
                 {packs.fields.map((f, i) => (
                   <div key={f.id} className="flex flex-wrap items-center gap-2 text-sm">
                     <span>1</span>
-                    <NativeSelect aria-label="Pack unit" {...register(`packs.${i}.fromUnitId`)}>
-                      <NativeSelectOption value="">unit…</NativeSelectOption>
-                      {units.data
-                        ?.filter((u) => u.id !== watch("baseUnitId"))
-                        .map((u) => (
-                          <NativeSelectOption key={u.id} value={u.id}>
-                            {u.name}
-                          </NativeSelectOption>
-                        ))}
-                    </NativeSelect>
+                    <Controller
+                      control={control}
+                      name={`packs.${i}.fromUnitId`}
+                      render={({ field }) => (
+                        <SelectField
+                          aria-label="Pack unit"
+                          className="w-40"
+                          value={field.value}
+                          onValueChange={field.onChange}
+                          options={[
+                            { value: "", label: "unit…" },
+                            ...(units.data ?? [])
+                              .filter((u) => u.id !== watch("baseUnitId"))
+                              .map((u) => ({ value: u.id, label: u.name })),
+                          ]}
+                        />
+                      )}
+                    />
                     <span>=</span>
                     <Controller
                       control={control}

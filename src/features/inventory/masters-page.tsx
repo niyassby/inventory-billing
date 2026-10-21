@@ -1,3 +1,4 @@
+import { SelectField } from "@/components/ui/select-field";
 import { useState } from "react";
 import type { ReactNode } from "react";
 import { Pencil, Plus, Trash2 } from "lucide-react";
@@ -11,7 +12,6 @@ import {
 } from "@/components/ui/dialog";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { confirm } from "@/components/app/dialogs";
 import { RateInput } from "@/components/app/inputs";
@@ -373,31 +373,33 @@ export default function MastersPage() {
             {editing?.kind === "units" && (
               <Field>
                 <FieldLabel htmlFor="m-dec">Decimals allowed</FieldLabel>
-                <NativeSelect
+                <SelectField
                   id="m-dec"
                   value={String(editing.decimals)}
-                  onChange={(e) => setEditing({ ...editing, decimals: Number(e.target.value) })}
-                >
-                  <NativeSelectOption value="0">0 (pieces)</NativeSelectOption>
-                  <NativeSelectOption value="1">1</NativeSelectOption>
-                  <NativeSelectOption value="2">2</NativeSelectOption>
-                  <NativeSelectOption value="3">3 (kg, litres)</NativeSelectOption>
-                </NativeSelect>
+                  onValueChange={(v) => setEditing({ ...editing, decimals: Number(v) })}
+                  options={[
+                    { value: "0", label: "0 (pieces)" },
+                    { value: "1", label: "1" },
+                    { value: "2", label: "2" },
+                    { value: "3", label: "3 (kg, litres)" },
+                  ]}
+                />
               </Field>
             )}
             {editing?.kind === "tax" && (
               <div className="grid grid-cols-3 gap-3">
                 <Field>
                   <FieldLabel htmlFor="m-type">Type</FieldLabel>
-                  <NativeSelect
+                  <SelectField
                     id="m-type"
                     value={editing.taxType}
-                    onChange={(e) => setEditing({ ...editing, taxType: e.target.value })}
-                  >
-                    <NativeSelectOption value="gst">GST</NativeSelectOption>
-                    <NativeSelectOption value="vat">VAT</NativeSelectOption>
-                    <NativeSelectOption value="other">Other</NativeSelectOption>
-                  </NativeSelect>
+                    onValueChange={(v) => setEditing({ ...editing, taxType: v })}
+                    options={[
+                      { value: "gst", label: "GST" },
+                      { value: "vat", label: "VAT" },
+                      { value: "other", label: "Other" },
+                    ]}
+                  />
                 </Field>
                 <Field>
                   <FieldLabel htmlFor="m-rate">Rate</FieldLabel>

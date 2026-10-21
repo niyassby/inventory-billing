@@ -1,5 +1,6 @@
+import { SelectField } from "@/components/ui/select-field";
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import type { Api } from "@inventory/shared";
@@ -8,7 +9,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { call } from "@/api/v2";
 import { errorText } from "@/lib/queries";
@@ -106,11 +106,22 @@ function NewBusiness({ onDone }: { onDone: () => void }) {
       <div className="grid grid-cols-2 gap-3">
         <Field>
           <FieldLabel htmlFor="taxRegime">Tax</FieldLabel>
-          <NativeSelect id="taxRegime" className="w-full" {...register("taxRegime")}>
-            <NativeSelectOption value="gst">GST (India)</NativeSelectOption>
-            <NativeSelectOption value="vat">VAT</NativeSelectOption>
-            <NativeSelectOption value="none">No tax</NativeSelectOption>
-          </NativeSelect>
+          <Controller
+            control={form.control}
+            name="taxRegime"
+            render={({ field }) => (
+              <SelectField
+                id="taxRegime"
+                value={field.value}
+                onValueChange={field.onChange}
+                options={[
+                  { value: "gst", label: "GST (India)" },
+                  { value: "vat", label: "VAT" },
+                  { value: "none", label: "No tax" },
+                ]}
+              />
+            )}
+          />
         </Field>
         <Field orientation="horizontal" className="items-center self-end pb-2">
           <Checkbox

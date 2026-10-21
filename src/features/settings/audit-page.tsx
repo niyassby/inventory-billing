@@ -1,34 +1,32 @@
-import { useMemo, useState } from "react";
+import { DatePicker } from "@/components/ui/date-picker";
+import { SelectField } from "@/components/ui/select-field";
+import { useSearchFilter, useTableState } from "@/lib/table-state";
+import { useMemo } from "react";
 import type { Api } from "@inventory/shared";
-import { Input } from "@/components/ui/input";
-import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import type { ColumnDef } from "@/components/app/data-table";
 import { SearchInput } from "@/components/app/search-input";
 import { DataTable } from "@/components/app/data-table";
 import { Section } from "@/components/app/page";
-import { useDebounced } from "@/components/app/pickers";
 import { showDateTime } from "@/lib/format";
 import { useCommand, useList } from "@/lib/queries";
 import { useCan } from "@/stores/session";
 
 export function AuditSection() {
   const canView = useCan("audit.view");
-  const [search, setSearch] = useState("");
-  const [action, setAction] = useState("");
-  const [from, setFrom] = useState("");
-  const [to, setTo] = useState("");
-  const [page, setPage] = useState(1);
-  const term = useDebounced(search.trim(), 250);
+  const table = useTableState("audit", {
+    size: 100,
+    filters: { q: "", action: "", from: "", to: "" },
+  });
+  const [search, setSearch] = useSearchFilter(table);
   const actions = useCommand("audit_actions", {}, { enabled: canView });
   const query = useList(
     "audit_list",
     {
-      search: term || null,
-      action: action || null,
-      from: from || null,
-      to: to || null,
-      page,
-      pageSize: 100,
+      search: table.filter("q") || null,
+      action: table.filter("action") || null,
+      from: table.filter("from") || null,
+      to: table.filter("to") || null,
+      ...table.input,
     },
     { enabled: canView },
   );
@@ -37,11 +35,13 @@ export function AuditSection() {
       {
         header: "When",
         accessorKey: "occurredAt",
+        meta: { sortKey: "when" },
         cell: ({ row }) => showDateTime(row.original.occurredAt),
       },
       {
         header: "Who",
         accessorFn: (r) => r.userName ?? "system",
+        meta: { sortKey: "who" },
         cell: ({ row }) => (
           <span>
             {row.original.userName ?? "system"}
@@ -60,11 +60,13 @@ export function AuditSection() {
       {
         header: "Action",
         accessorKey: "action",
+        meta: { sortKey: "action" },
         cell: ({ row }) => <span className="font-medium">{row.original.action}</span>,
       },
       {
         header: "Details",
         accessorFn: (r) => r.summary ?? "",
+        meta: { sortKey: "details" },
         cell: ({ row }) => (
           <span
             className="block max-w-xl truncate text-muted-foreground"
@@ -88,59 +90,47 @@ export function AuditSection() {
         <SearchInput
           aria-label="Search the log"
           placeholder="Search"
-          className="max-w-xs"
           value={search}
-          onChange={(e) => {
-            setSearch(e.target.value);
-            setPage(1);
-          }}
+          onChange={(e) => setSearch(e.target.value)}
         />
-        <NativeSelect
+        <SelectField
           aria-label="Action"
-          value={action}
-          onChange={(e) => {
-            setAction(e.target.value);
-            setPage(1);
-          }}
-        >
-          <NativeSelectOption value="">All actions</NativeSelectOption>
-          {actions.data?.map((a) => (
-            <NativeSelectOption key={a} value={a}>
-              {a}
-            </NativeSelectOption>
-          ))}
-        </NativeSelect>
-        <Input
-          type="date"
-          aria-label="From"
-          className="w-40"
-          value={from}
-          onChange={(e) => {
-            setFrom(e.target.value);
-            setPage(1);
-          }}
+          className="w-56"
+          value={table.filter("action")}
+          onValueChange={(v) => table.setFilter("action", v)}
+          options={[
+            { value: "", label: "All actions" },
+            ...(actions.data ?? []).map((a) => ({ value: a, label: a })),
+          ]}
         />
-        <Input
-          type="date"
+        <DatePicker
+          aria-label="From"
+          className="w-44"
+          placeholder="From"
+          clearable
+          value={table.filter("from")}
+          max={table.filter("to") || undefined}
+          onChange={(v) => table.setFilter("from", v)}
+        />
+        <DatePicker
           aria-label="To"
-          className="w-40"
-          value={to}
-          onChange={(e) => {
-            setTo(e.target.value);
-            setPage(1);
-          }}
+          className="w-44"
+          placeholder="To"
+          clearable
+          value={table.filter("to")}
+          min={table.filter("from") || undefined}
+          onChange={(v) => table.setFilter("to", v)}
         />
       </div>
       <DataTable
         viewKey="audit"
+        sort={table.sortProps}
         columns={columns}
         data={query.data?.items}
         loading={query.isPending}
         error={query.error}
         rowKey={(r) => r.id}
-        paging={
-          query.data ? { page, pageSize: 100, total: query.data.total, onPage: setPage } : undefined
-        }
+        paging={query.data ? table.paging(query.data.total) : undefined}
         empty={{ title: "Nothing matches" }}
       />
     </Section>

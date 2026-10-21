@@ -1,3 +1,5 @@
+import { DatePicker } from "@/components/ui/date-picker";
+import { SelectField } from "@/components/ui/select-field";
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import type { Api } from "@inventory/shared";
@@ -14,8 +16,6 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { TrendChart } from "@/components/app/charts";
 import { Page, QueryView, Section } from "@/components/app/page";
 import { WarehouseSelect } from "@/components/app/warehouse-select";
@@ -422,49 +422,42 @@ export function ReportPage() {
         <div className="flex flex-wrap items-end gap-3">
           {!entry.asOf ? (
             <>
-              <NativeSelect
+              <SelectField
                 aria-label="Period"
+                className="w-44"
                 value={preset}
-                onChange={(e) =>
-                  e.target.value !== "custom" && choose(e.target.value as RangePreset)
-                }
-              >
-                {PRESETS.map(([value, text]) => (
-                  <NativeSelectOption key={value} value={value}>
-                    {text}
-                  </NativeSelectOption>
-                ))}
-                <NativeSelectOption value="custom">Custom dates</NativeSelectOption>
-              </NativeSelect>
-              <Input
-                type="date"
+                onValueChange={(v) => v !== "custom" && choose(v as RangePreset)}
+                options={[
+                  ...PRESETS.map(([value, text]) => ({ value, label: text })),
+                  { value: "custom", label: "Custom dates" },
+                ]}
+              />
+              <DatePicker
                 aria-label="From"
                 className="w-40"
                 value={range.from}
-                onChange={(e) => {
+                onChange={(v) => {
                   setPreset("custom");
-                  setRange((r) => ({ ...r, from: e.target.value }));
+                  setRange((r) => ({ ...r, from: v }));
                 }}
               />
-              <Input
-                type="date"
+              <DatePicker
                 aria-label="To"
                 className="w-40"
                 value={range.to}
-                onChange={(e) => {
+                onChange={(v) => {
                   setPreset("custom");
-                  setRange((r) => ({ ...r, to: e.target.value }));
+                  setRange((r) => ({ ...r, to: v }));
                 }}
               />
             </>
           ) : (
             entry.report === "trial_balance" && (
-              <Input
-                type="date"
+              <DatePicker
                 aria-label="As of"
                 className="w-40"
                 value={range.to}
-                onChange={(e) => setRange((r) => ({ ...r, to: e.target.value }))}
+                onChange={(v) => setRange((r) => ({ ...r, to: v }))}
               />
             )
           )}
@@ -480,20 +473,17 @@ export function ReportPage() {
             </div>
           )}
           {bookReport && (
-            <NativeSelect
+            <SelectField
               aria-label="Account"
               value={accountId}
-              onChange={(e) => setAccountId(e.target.value)}
-            >
-              <NativeSelectOption value="">All {subtype} accounts</NativeSelectOption>
-              {accounts.data
-                ?.filter((a) => a.subtype === subtype && a.isActive)
-                .map((a) => (
-                  <NativeSelectOption key={a.id} value={a.id}>
-                    {a.name}
-                  </NativeSelectOption>
-                ))}
-            </NativeSelect>
+              onValueChange={setAccountId}
+              options={[
+                { value: "", label: `All ${subtype} accounts` },
+                ...(accounts.data ?? [])
+                  .filter((a) => a.subtype === subtype && a.isActive)
+                  .map((a) => ({ value: a.id, label: a.name })),
+              ]}
+            />
           )}
         </div>
       </Section>

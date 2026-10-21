@@ -1,3 +1,6 @@
+import { DatePicker } from "@/components/ui/date-picker";
+import { SelectField } from "@/components/ui/select-field";
+import { useSearchFilter, useTableState } from "@/lib/table-state";
 import { useMemo, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
@@ -8,7 +11,6 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { OfflineBadge, StatusBadge } from "@/components/app/badges";
 import type { ColumnDef } from "@/components/app/data-table";
 import { SearchInput } from "@/components/app/search-input";
@@ -16,7 +18,6 @@ import { DataTable } from "@/components/app/data-table";
 import { confirm } from "@/components/app/dialogs";
 import { MoneyInput, QtyInput } from "@/components/app/inputs";
 import { Facts, Page, QueryView, Section } from "@/components/app/page";
-import { useDebounced } from "@/components/app/pickers";
 import { Timeline } from "@/components/app/timeline";
 import { call, requestId } from "@/api/v2";
 import { useMoney, usePublicSettings } from "@/lib/business";
@@ -33,35 +34,35 @@ import { invoiceEvents } from "./timeline";
 export function InvoicesPage() {
   const navigate = useNavigate();
   const money = useMoney();
-  const [search, setSearch] = useState("");
-  const [paymentStatus, setPaymentStatus] = useState("");
-  const [from, setFrom] = useState("");
-  const [to, setTo] = useState("");
-  const [page, setPage] = useState(1);
-  const term = useDebounced(search.trim(), 200);
+  const table = useTableState("invoices", {
+    filters: { q: "", status: "", from: "", to: "" },
+  });
+  const [search, setSearch] = useSearchFilter(table);
   const query = useList("sales_list_invoices", {
-    search: term || null,
-    paymentStatus: paymentStatus || null,
-    from: from || null,
-    to: to || null,
-    page,
-    pageSize: 100,
+    search: table.filter("q") || null,
+    paymentStatus: table.filter("status") || null,
+    from: table.filter("from") || null,
+    to: table.filter("to") || null,
+    ...table.input,
   });
   const columns = useMemo<ColumnDef<Api.InvoiceListItem>[]>(
     () => [
       {
         header: "Number",
         accessorKey: "docNo",
+        meta: { sortKey: "docNo" },
         cell: ({ row }) => <span className="font-medium">{row.original.docNo}</span>,
       },
       {
         header: "Date",
         accessorKey: "businessDate",
+        meta: { sortKey: "date" },
         cell: ({ row }) => showDate(row.original.businessDate),
       },
-      { header: "Customer", accessorKey: "customerName" },
+      { header: "Customer", accessorKey: "customerName", meta: { sortKey: "customer" } },
       {
         header: "Status",
+        meta: { sortKey: "status" },
         accessorKey: "paymentStatus",
         cell: ({ row }) => (
           <StatusBadge
@@ -72,13 +73,13 @@ export function InvoicesPage() {
       {
         header: "Total",
         accessorKey: "total",
-        meta: { align: "right" },
+        meta: { align: "right", sortKey: "total" },
         cell: ({ row }) => money(row.original.total),
       },
       {
         header: "Due",
         accessorKey: "balanceDue",
-        meta: { align: "right" },
+        meta: { align: "right", sortKey: "due" },
         cell: ({ row }) =>
           row.original.balanceDue > 0 && row.original.status !== "voided"
             ? money(row.original.balanceDue)
@@ -87,7 +88,6 @@ export function InvoicesPage() {
     ],
     [money],
   );
-  const reset = () => setPage(1);
   return (
     <Page
       title="Invoices"
@@ -103,47 +103,42 @@ export function InvoicesPage() {
           placeholder="Number, customer or phone"
           className="max-w-xs"
           value={search}
-          onChange={(e) => {
-            setSearch(e.target.value);
-            reset();
-          }}
+          onChange={(e) => setSearch(e.target.value)}
         />
-        <NativeSelect
+        <SelectField
           aria-label="Payment status"
-          value={paymentStatus}
-          onChange={(e) => {
-            setPaymentStatus(e.target.value);
-            reset();
-          }}
-        >
-          <NativeSelectOption value="">Paid and unpaid</NativeSelectOption>
-          <NativeSelectOption value="unpaid">Unpaid</NativeSelectOption>
-          <NativeSelectOption value="partial">Part paid</NativeSelectOption>
-          <NativeSelectOption value="paid">Paid</NativeSelectOption>
-        </NativeSelect>
-        <Input
-          type="date"
-          aria-label="From"
-          className="w-40"
-          value={from}
-          onChange={(e) => {
-            setFrom(e.target.value);
-            reset();
-          }}
+          className="w-44"
+          value={table.filter("status")}
+          onValueChange={(v) => table.setFilter("status", v)}
+          options={[
+            { value: "", label: "Paid and unpaid" },
+            { value: "unpaid", label: "Unpaid" },
+            { value: "partial", label: "Part paid" },
+            { value: "paid", label: "Paid" },
+          ]}
         />
-        <Input
-          type="date"
+        <DatePicker
+          aria-label="From"
+          className="w-44"
+          placeholder="From"
+          clearable
+          value={table.filter("from")}
+          max={table.filter("to") || undefined}
+          onChange={(v) => table.setFilter("from", v)}
+        />
+        <DatePicker
           aria-label="To"
-          className="w-40"
-          value={to}
-          onChange={(e) => {
-            setTo(e.target.value);
-            reset();
-          }}
+          className="w-44"
+          placeholder="To"
+          clearable
+          value={table.filter("to")}
+          min={table.filter("from") || undefined}
+          onChange={(v) => table.setFilter("to", v)}
         />
       </div>
       <DataTable
         viewKey="invoices"
+        sort={table.sortProps}
         columns={columns}
         data={query.data?.items}
         loading={query.isPending}
@@ -151,7 +146,15 @@ export function InvoicesPage() {
         rowKey={(r) => r.id}
         onRowClick={(r) => void navigate(`/sales/invoices/${r.id}`)}
         paging={
-          query.data ? { page, pageSize: 100, total: query.data.total, onPage: setPage } : undefined
+          query.data
+            ? {
+                page: table.state.page,
+                pageSize: table.state.size,
+                total: query.data.total,
+                onPage: table.setPage,
+                onPageSize: table.setSize,
+              }
+            : undefined
         }
         empty={{ title: "No invoices", description: "Bills made at the till appear here." }}
       />
@@ -229,16 +232,17 @@ export function PrintButtons({ invoice }: { invoice: Api.InvoiceDetail }) {
   const [paper, setPaper] = useState<Paper>(defaultPaper(settings.data));
   return (
     <div className="flex items-center gap-1">
-      <NativeSelect
+      <SelectField
         aria-label="Paper"
         size="sm"
         value={paper}
-        onChange={(e) => setPaper(e.target.value as Paper)}
-      >
-        <NativeSelectOption value="thermal_80">80 mm</NativeSelectOption>
-        <NativeSelectOption value="thermal_58">58 mm</NativeSelectOption>
-        <NativeSelectOption value="a4">A4 / PDF</NativeSelectOption>
-      </NativeSelect>
+        onValueChange={(v) => setPaper(v as Paper)}
+        options={[
+          { value: "thermal_80", label: "80 mm" },
+          { value: "thermal_58", label: "58 mm" },
+          { value: "a4", label: "A4 / PDF" },
+        ]}
+      />
       <Button
         variant="outline"
         onClick={() => printHtml(documentHtml(invoice, settings.data, paper))}
@@ -416,34 +420,38 @@ export function InvoicePage() {
 export function ReturnsPage() {
   const navigate = useNavigate();
   const money = useMoney();
-  const [search, setSearch] = useState("");
-  const [page, setPage] = useState(1);
-  const term = useDebounced(search.trim(), 200);
-  const query = useList("sales_list_returns", { search: term || null, page, pageSize: 100 });
+  const table = useTableState("sales-returns", { filters: { q: "" } });
+  const [search, setSearch] = useSearchFilter(table);
+  const query = useList("sales_list_returns", {
+    search: table.filter("q") || null,
+    ...table.input,
+  });
   const columns = useMemo<ColumnDef<Api.ReturnListItem>[]>(
     () => [
       {
         header: "Credit note",
         accessorKey: "docNo",
+        meta: { sortKey: "docNo" },
         cell: ({ row }) => <span className="font-medium">{row.original.docNo}</span>,
       },
       {
         header: "Date",
         accessorKey: "businessDate",
+        meta: { sortKey: "date" },
         cell: ({ row }) => showDate(row.original.businessDate),
       },
-      { header: "Customer", accessorKey: "customerName" },
-      { header: "Invoice", accessorFn: (r) => r.invoiceDocNo ?? "" },
+      { header: "Customer", accessorKey: "customerName", meta: { sortKey: "customer" } },
+      { header: "Invoice", accessorFn: (r) => r.invoiceDocNo ?? "", meta: { sortKey: "invoice" } },
       {
         header: "Total",
         accessorKey: "total",
-        meta: { align: "right" },
+        meta: { align: "right", sortKey: "total" },
         cell: ({ row }) => money(row.original.total),
       },
       {
         header: "Refunded",
         accessorKey: "amountRefunded",
-        meta: { align: "right" },
+        meta: { align: "right", sortKey: "refunded" },
         cell: ({ row }) => money(row.original.amountRefunded),
       },
     ],
@@ -459,22 +467,18 @@ export function ReturnsPage() {
         placeholder="Number, customer or invoice"
         className="max-w-xs"
         value={search}
-        onChange={(e) => {
-          setSearch(e.target.value);
-          setPage(1);
-        }}
+        onChange={(e) => setSearch(e.target.value)}
       />
       <DataTable
         viewKey="sales-returns"
+        sort={table.sortProps}
         columns={columns}
         data={query.data?.items}
         loading={query.isPending}
         error={query.error}
         rowKey={(r) => r.id}
         onRowClick={(r) => void navigate(`/sales/returns/${r.id}`)}
-        paging={
-          query.data ? { page, pageSize: 100, total: query.data.total, onPage: setPage } : undefined
-        }
+        paging={query.data ? table.paging(query.data.total) : undefined}
         empty={{ title: "No returns", description: "Open an invoice and choose “Return items”." }}
       />
     </Page>
@@ -718,18 +722,18 @@ export function NewReturnPage() {
                 )}
                 <Field>
                   <FieldLabel htmlFor="ret-mode">Refund by</FieldLabel>
-                  <NativeSelect
+                  <SelectField
                     id="ret-mode"
                     className="w-full"
                     value={mode}
-                    onChange={(e) => setMode(e.target.value)}
-                  >
-                    {["cash", "upi", "card", "bank_transfer"].map((m) => (
-                      <NativeSelectOption key={m} value={m}>
-                        {label(m)}
-                      </NativeSelectOption>
-                    ))}
-                  </NativeSelect>
+                    onValueChange={setMode}
+                    options={[
+                      ...["cash", "upi", "card", "bank_transfer"].map((m) => ({
+                        value: m,
+                        label: label(m),
+                      })),
+                    ]}
+                  />
                 </Field>
               </div>
             </Section>

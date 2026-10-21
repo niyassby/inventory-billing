@@ -1,3 +1,4 @@
+import { SelectField } from "@/components/ui/select-field";
 import { useEffect, useState } from "react";
 import type { Api } from "@inventory/shared";
 import { KeyRound, Plus, Trash2 } from "lucide-react";
@@ -15,7 +16,6 @@ import {
 } from "@/components/ui/dialog";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { confirm } from "@/components/app/dialogs";
 import { RateInput } from "@/components/app/inputs";
 import { PermissionGrid } from "./permission-grid";
@@ -135,18 +135,13 @@ function UserDialog({
             </Field>
             <Field>
               <FieldLabel htmlFor="u-role">Role</FieldLabel>
-              <NativeSelect
+              <SelectField
                 id="u-role"
                 className="w-full"
                 value={d.roleId}
-                onChange={(e) => set({ roleId: e.target.value })}
-              >
-                {roles.map((r) => (
-                  <NativeSelectOption key={r.id} value={r.id}>
-                    {r.name}
-                  </NativeSelectOption>
-                ))}
-              </NativeSelect>
+                onValueChange={(v) => set({ roleId: v })}
+                options={[...roles.map((r) => ({ value: r.id, label: r.name }))]}
+              />
             </Field>
           </div>
           {!d.id && (

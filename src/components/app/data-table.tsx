@@ -8,7 +8,16 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { ArrowUpDown, ChevronLeft, ChevronRight, Columns3 } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+  Columns3,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -18,7 +27,9 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { SelectField } from "@/components/ui/select-field";
 import { useAppearance } from "@/lib/appearance";
+import { PAGE_SIZES } from "@/lib/table-state";
 import { cn } from "@/lib/utils";
 import { EmptyState, ErrorState, LoadingRows } from "./page";
 
@@ -28,6 +39,15 @@ export type { ColumnDef };
 export interface ColumnMeta {
   align?: "right" | "center";
   className?: string;
+  /** The key the server sorts this column by. Without one, the column is not sortable. */
+  sortKey?: string;
+}
+
+/** Sorting done by the server across every page (see `useTableState`). */
+export interface ServerSort {
+  key: string | null;
+  descending: boolean;
+  onChange: (key: string) => void;
 }
 
 interface Paging {
@@ -35,6 +55,8 @@ interface Paging {
   pageSize: number;
   total: number;
   onPage: (page: number) => void;
+  /** Shows the "rows per page" choice. */
+  onPageSize?: (size: number) => void;
 }
 
 interface DataTableProps<T> {
@@ -53,6 +75,8 @@ interface DataTableProps<T> {
   height?: number;
   /** Lets people hide columns; their choice is remembered under this key. */
   viewKey?: string;
+  /** Sort by the server, across all pages. Columns declare their `meta.sortKey`. */
+  sort?: ServerSort;
   className?: string;
 }
 
@@ -67,6 +91,10 @@ function readVisibility(key: string | undefined): VisibilityState {
   } catch {
     return {};
   }
+}
+
+function metaOf(meta: unknown): ColumnMeta | undefined {
+  return meta as ColumnMeta | undefined;
 }
 
 function alignClass(meta: unknown): string {
@@ -95,6 +123,7 @@ export function DataTable<T>({
   virtualizeAbove = 120,
   height = 560,
   viewKey,
+  sort,
   className,
 }: DataTableProps<T>) {
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -120,7 +149,8 @@ export function DataTable<T>({
       });
     },
     getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
+    ...(sort ? {} : { getSortedRowModel: getSortedRowModel() }),
+    manualSorting: Boolean(sort),
     getRowId: (row) => rowKey(row),
   });
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -198,7 +228,24 @@ export function DataTable<T>({
             {table.getHeaderGroups().map((group) => (
               <tr key={group.id} className="border-b border-border">
                 {group.headers.map((header) => {
-                  const sortable = header.column.getCanSort();
+                  const sortKey = metaOf(header.column.columnDef.meta)?.sortKey;
+                  const serverSorted = sort && sortKey !== undefined && sort.key === sortKey;
+                  const sortable = sort ? sortKey !== undefined : header.column.getCanSort();
+                  const direction = serverSorted
+                    ? sort.descending
+                      ? "descending"
+                      : "ascending"
+                    : header.column.getIsSorted() === "asc"
+                      ? "ascending"
+                      : header.column.getIsSorted() === "desc"
+                        ? "descending"
+                        : undefined;
+                  const Arrow =
+                    direction === "ascending"
+                      ? ArrowUp
+                      : direction === "descending"
+                        ? ArrowDown
+                        : ArrowUpDown;
                   return (
                     <th
                       key={header.id}
@@ -207,22 +254,26 @@ export function DataTable<T>({
                         "h-9 px-3 text-left align-middle text-xs font-medium whitespace-nowrap text-muted-foreground",
                         alignClass(header.column.columnDef.meta),
                       )}
-                      aria-sort={
-                        header.column.getIsSorted() === "asc"
-                          ? "ascending"
-                          : header.column.getIsSorted() === "desc"
-                            ? "descending"
-                            : undefined
-                      }
+                      aria-sort={direction}
                     >
                       {header.isPlaceholder ? null : sortable ? (
                         <button
                           type="button"
-                          className="inline-flex items-center gap-1 hover:text-foreground"
-                          onClick={header.column.getToggleSortingHandler()}
+                          className={cn(
+                            "inline-flex items-center gap-1 hover:text-foreground",
+                            direction && "text-foreground",
+                          )}
+                          onClick={
+                            sort && sortKey !== undefined
+                              ? () => sort.onChange(sortKey)
+                              : header.column.getToggleSortingHandler()
+                          }
                         >
                           {flexRender(header.column.columnDef.header, header.getContext())}
-                          <ArrowUpDown className="size-3 opacity-60" aria-hidden />
+                          <Arrow
+                            className={cn("size-3", direction ? "opacity-100" : "opacity-50")}
+                            aria-hidden
+                          />
                         </button>
                       ) : (
                         flexRender(header.column.columnDef.header, header.getContext())
@@ -290,40 +341,74 @@ export function DataTable<T>({
   );
 }
 
-export function Pager({ page, pageSize, total, onPage }: Paging) {
+export function Pager({ page, pageSize, total, onPage, onPageSize }: Paging) {
   const pages = Math.max(1, Math.ceil(total / pageSize));
-  if (total <= pageSize && page === 1) {
-    return <p className="px-1 text-xs text-muted-foreground">{total} in total</p>;
+  const smallest = Math.min(...PAGE_SIZES);
+  if (total <= smallest && page === 1) {
+    return <p className="px-1 text-caption">{total} in total</p>;
   }
-  const first = (page - 1) * pageSize + 1;
+  const first = total === 0 ? 0 : (page - 1) * pageSize + 1;
   const last = Math.min(page * pageSize, total);
   return (
-    <div className="flex items-center justify-between px-1 text-xs text-muted-foreground">
-      <span>
+    <div className="flex flex-wrap items-center justify-between gap-3 px-1 text-xs text-muted-foreground">
+      <span className="num" aria-live="polite">
         {first}–{last} of {total}
       </span>
-      <div className="flex items-center gap-1">
-        <Button
-          variant="outline"
-          size="icon-sm"
-          aria-label="Previous page"
-          disabled={page <= 1}
-          onClick={() => onPage(page - 1)}
-        >
-          <ChevronLeft />
-        </Button>
-        <span className="px-2">
-          Page {page} of {pages}
-        </span>
-        <Button
-          variant="outline"
-          size="icon-sm"
-          aria-label="Next page"
-          disabled={page >= pages}
-          onClick={() => onPage(page + 1)}
-        >
-          <ChevronRight />
-        </Button>
+      <div className="flex items-center gap-3">
+        {onPageSize && (
+          <label className="flex items-center gap-2">
+            Rows per page
+            <SelectField
+              size="sm"
+              aria-label="Rows per page"
+              className="w-[4.5rem] min-w-0"
+              value={String(pageSize)}
+              onValueChange={(v) => onPageSize(Number(v))}
+              options={PAGE_SIZES.map((n) => ({ value: String(n), label: String(n) }))}
+            />
+          </label>
+        )}
+        <div className="flex items-center gap-1">
+          <Button
+            variant="outline"
+            size="icon-sm"
+            aria-label="First page"
+            disabled={page <= 1}
+            onClick={() => onPage(1)}
+          >
+            <ChevronsLeft />
+          </Button>
+          <Button
+            variant="outline"
+            size="icon-sm"
+            aria-label="Previous page"
+            disabled={page <= 1}
+            onClick={() => onPage(page - 1)}
+          >
+            <ChevronLeft />
+          </Button>
+          <span className="px-2 num">
+            Page {page} of {pages}
+          </span>
+          <Button
+            variant="outline"
+            size="icon-sm"
+            aria-label="Next page"
+            disabled={page >= pages}
+            onClick={() => onPage(page + 1)}
+          >
+            <ChevronRight />
+          </Button>
+          <Button
+            variant="outline"
+            size="icon-sm"
+            aria-label="Last page"
+            disabled={page >= pages}
+            onClick={() => onPage(pages)}
+          >
+            <ChevronsRight />
+          </Button>
+        </div>
       </div>
     </div>
   );

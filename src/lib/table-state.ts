@@ -92,8 +92,18 @@ export interface UseTableState {
   setSize: (size: number) => void;
   toggleSort: (key: string) => void;
   setFilter: (name: string, value: string) => void;
+  /** The current value of one filter ("" when unset). */
+  filter: (name: string) => string;
   /** What to spread into a list command's input. */
   input: { page: number; pageSize: number; sort?: string; descending?: boolean };
+  /** For `DataTable`'s `paging` prop. */
+  paging: (total: number) => {
+    page: number;
+    pageSize: number;
+    total: number;
+    onPage: (page: number) => void;
+    onPageSize: (size: number) => void;
+  };
   /** For `DataTable`'s `sort` prop. */
   sortProps: { key: string | null; descending: boolean; onChange: (key: string) => void };
 }
@@ -151,14 +161,18 @@ export function useTableState(
   const commit = useCallback(
     (next: TableState) => {
       const written = writeTableState(next, defaults);
-      setParams(written, { replace: true });
+      // Query parameters that are not table state (a screen's own) are left as they are.
+      const merged = new URLSearchParams(params);
+      for (const name of [...RESERVED, ...Object.keys(defaults.filters)]) merged.delete(name);
+      for (const [name, value] of written) merged.set(name, value);
+      setParams(merged, { replace: true });
       try {
         sessionStorage.setItem(savedKey(key), written.toString());
       } catch {
         // Not remembered in private mode; the URL still carries the state.
       }
     },
-    [defaults, key, setParams],
+    [defaults, key, params, setParams],
   );
 
   return {
@@ -168,6 +182,14 @@ export function useTableState(
     toggleSort: (column) => commit({ ...state, ...nextSort(state, column, defaults), page: 1 }),
     setFilter: (name, value) =>
       commit({ ...state, page: 1, filters: { ...state.filters, [name]: value } }),
+    filter: (name) => state.filters[name] ?? "",
+    paging: (total) => ({
+      page: state.page,
+      pageSize: state.size,
+      total,
+      onPage: (page) => commit({ ...state, page: Math.max(1, page) }),
+      onPageSize: (size) => commit({ ...state, size, page: 1 }),
+    }),
     input: {
       page: state.page,
       pageSize: state.size,

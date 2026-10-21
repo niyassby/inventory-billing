@@ -1,4 +1,7 @@
-import { useMemo, useState } from "react";
+import { DatePicker } from "@/components/ui/date-picker";
+import { SelectField } from "@/components/ui/select-field";
+import { useSearchFilter, useTableState } from "@/lib/table-state";
+import { useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import type { Api } from "@inventory/shared";
 import { Ban } from "lucide-react";
@@ -10,14 +13,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { StatusBadge } from "@/components/app/badges";
 import type { ColumnDef } from "@/components/app/data-table";
 import { SearchInput } from "@/components/app/search-input";
 import { DataTable } from "@/components/app/data-table";
 import { confirm } from "@/components/app/dialogs";
 import { Facts, Page, QueryView } from "@/components/app/page";
-import { useDebounced } from "@/components/app/pickers";
 import { useMoney } from "@/lib/business";
 import { label, showDate } from "@/lib/format";
 import { useAction, useCommand, useList } from "@/lib/queries";
@@ -104,41 +105,49 @@ function PaymentView({ id, onClose }: { id: string; onClose: () => void }) {
 export default function PaymentsPage() {
   const money = useMoney();
   const [params, setParams] = useSearchParams();
-  const [direction, setDirection] = useState("");
-  const [mode, setMode] = useState("");
-  const [search, setSearch] = useState("");
-  const [page, setPage] = useState(1);
-  const term = useDebounced(search.trim(), 200);
+  const table = useTableState("payments", {
+    filters: { q: "", direction: "", mode: "", from: "", to: "" },
+  });
+  const [search, setSearch] = useSearchFilter(table);
   const query = useList("payments_list", {
-    direction: direction || null,
-    mode: mode || null,
-    search: term || null,
-    page,
-    pageSize: 100,
+    direction: table.filter("direction") || null,
+    mode: table.filter("mode") || null,
+    from: table.filter("from") || null,
+    to: table.filter("to") || null,
+    search: table.filter("q") || null,
+    ...table.input,
   });
   const columns = useMemo<ColumnDef<Api.PaymentListItem>[]>(
     () => [
       {
         header: "Number",
         accessorKey: "docNo",
+        meta: { sortKey: "docNo" },
         cell: ({ row }) => <span className="font-medium">{row.original.docNo}</span>,
       },
       {
         header: "Date",
         accessorKey: "businessDate",
+        meta: { sortKey: "date" },
         cell: ({ row }) => showDate(row.original.businessDate),
       },
-      { header: "Party", accessorFn: (r) => r.partyName ?? "" },
-      { header: "Mode", accessorKey: "mode", cell: ({ row }) => label(row.original.mode) },
+      { header: "Party", accessorFn: (r) => r.partyName ?? "", meta: { sortKey: "party" } },
+      {
+        header: "Mode",
+        accessorKey: "mode",
+        meta: { sortKey: "mode" },
+        cell: ({ row }) => label(row.original.mode),
+      },
       {
         header: "Status",
         accessorKey: "status",
+        meta: { sortKey: "status" },
         cell: ({ row }) => <StatusBadge status={row.original.status} />,
       },
       {
         header: "Amount",
         accessorKey: "amount",
-        meta: { align: "right" },
+        meta: { align: "right", sortKey: "amount" },
         cell: ({ row }) => (
           <span className={row.original.direction === "out" ? "text-destructive" : ""}>
             {row.original.direction === "out" ? "−" : ""}
@@ -158,56 +167,84 @@ export default function PaymentsPage() {
           placeholder="Number, party or reference"
           className="max-w-xs"
           value={search}
-          onChange={(e) => {
-            setSearch(e.target.value);
-            setPage(1);
-          }}
+          onChange={(e) => setSearch(e.target.value)}
         />
-        <NativeSelect
+        <SelectField
           aria-label="Direction"
-          value={direction}
-          onChange={(e) => {
-            setDirection(e.target.value);
-            setPage(1);
-          }}
-        >
-          <NativeSelectOption value="">In and out</NativeSelectOption>
-          <NativeSelectOption value="in">Received</NativeSelectOption>
-          <NativeSelectOption value="out">Paid</NativeSelectOption>
-        </NativeSelect>
-        <NativeSelect
+          className="w-40"
+          value={table.filter("direction")}
+          onValueChange={(v) => table.setFilter("direction", v)}
+          options={[
+            { value: "", label: "In and out" },
+            { value: "in", label: "Received" },
+            { value: "out", label: "Paid" },
+          ]}
+        />
+        <SelectField
           aria-label="Mode"
-          value={mode}
-          onChange={(e) => {
-            setMode(e.target.value);
-            setPage(1);
-          }}
-        >
-          <NativeSelectOption value="">All modes</NativeSelectOption>
-          {["cash", "upi", "card", "bank_transfer", "cheque", "wallet", "other"].map((m) => (
-            <NativeSelectOption key={m} value={m}>
-              {label(m)}
-            </NativeSelectOption>
-          ))}
-        </NativeSelect>
+          className="w-40"
+          value={table.filter("mode")}
+          onValueChange={(v) => table.setFilter("mode", v)}
+          options={[
+            { value: "", label: "All modes" },
+            ...["cash", "upi", "card", "bank_transfer", "cheque", "wallet", "other"].map((m) => ({
+              value: m,
+              label: label(m),
+            })),
+          ]}
+        />
+        <DatePicker
+          aria-label="From"
+          className="w-44"
+          placeholder="From"
+          clearable
+          value={table.filter("from")}
+          max={table.filter("to") || undefined}
+          onChange={(v) => table.setFilter("from", v)}
+        />
+        <DatePicker
+          aria-label="To"
+          className="w-44"
+          placeholder="To"
+          clearable
+          value={table.filter("to")}
+          min={table.filter("from") || undefined}
+          onChange={(v) => table.setFilter("to", v)}
+        />
       </div>
       <DataTable
         viewKey="payments"
+        sort={table.sortProps}
         columns={columns}
         data={query.data?.items}
         loading={query.isPending}
         error={query.error}
         rowKey={(r) => r.id}
-        onRowClick={(r) => setParams({ id: r.id })}
-        paging={
-          query.data ? { page, pageSize: 100, total: query.data.total, onPage: setPage } : undefined
+        onRowClick={(r) =>
+          setParams((current) => {
+            const next = new URLSearchParams(current);
+            next.set("id", r.id);
+            return next;
+          })
         }
+        paging={query.data ? table.paging(query.data.total) : undefined}
         empty={{
           title: "No payments",
           description: "Receive or pay from a customer's or supplier's page.",
         }}
       />
-      {openId && <PaymentView id={openId} onClose={() => setParams({})} />}
+      {openId && (
+        <PaymentView
+          id={openId}
+          onClose={() =>
+            setParams((current) => {
+              const next = new URLSearchParams(current);
+              next.delete("id");
+              return next;
+            })
+          }
+        />
+      )}
     </Page>
   );
 }

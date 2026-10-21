@@ -1,4 +1,4 @@
-import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
+import { SelectField } from "@/components/ui/select-field";
 import { useCommand } from "@/lib/queries";
 
 /** Store chooser. Empty value = the main store. */
@@ -22,24 +22,19 @@ export function WarehouseSelect({
 }) {
   const stores = useCommand("stock_warehouses", {});
   return (
-    <NativeSelect
+    <SelectField
       id={id}
       aria-label={label}
       className="w-full"
       value={value}
-      onChange={(e) => onChange(e.target.value)}
-    >
-      {allowDefault && (
-        <NativeSelectOption value="">{emptyLabel ?? "Main store"}</NativeSelectOption>
-      )}
-      {!allowDefault && <NativeSelectOption value="">{emptyLabel ?? "Choose…"}</NativeSelectOption>}
-      {stores.data
-        ?.filter((w) => w.id !== exclude && (!allowDefault || !w.isDefault))
-        .map((w) => (
-          <NativeSelectOption key={w.id} value={w.id}>
-            {w.name}
-          </NativeSelectOption>
-        ))}
-    </NativeSelect>
+      onValueChange={onChange}
+      options={[
+        ...(allowDefault ? [{ value: "", label: emptyLabel ?? "Main store" }] : []),
+        ...(!allowDefault ? [{ value: "", label: emptyLabel ?? "Choose…" }] : []),
+        ...(stores.data ?? [])
+          .filter((w) => w.id !== exclude && (!allowDefault || !w.isDefault))
+          .map((w) => ({ value: w.id, label: w.name })),
+      ]}
+    />
   );
 }

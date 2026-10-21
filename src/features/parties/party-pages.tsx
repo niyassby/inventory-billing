@@ -1,3 +1,5 @@
+import { DatePicker } from "@/components/ui/date-picker";
+import { SelectField } from "@/components/ui/select-field";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
@@ -16,7 +18,6 @@ import {
 } from "@/components/ui/dialog";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
 import type { ColumnDef } from "@/components/app/data-table";
 import { SearchInput } from "@/components/app/search-input";
@@ -25,7 +26,7 @@ import { DataTable } from "@/components/app/data-table";
 import { confirm } from "@/components/app/dialogs";
 import { MoneyInput } from "@/components/app/inputs";
 import { Facts, Page, QueryView, Section } from "@/components/app/page";
-import { useDebounced } from "@/components/app/pickers";
+import { useSearchFilter, useTableState } from "@/lib/table-state";
 import { call, requestId } from "@/api/v2";
 import { useMoney } from "@/lib/business";
 import { label, showDate } from "@/lib/format";
@@ -188,16 +189,17 @@ export function PartyDialog({
             </Field>
             <Field>
               <FieldLabel htmlFor="p-type">Type</FieldLabel>
-              <NativeSelect
+              <SelectField
                 id="p-type"
                 className="w-full"
                 value={d.partyType}
-                onChange={(e) => set({ partyType: e.target.value })}
-              >
-                <NativeSelectOption value="customer">Customer</NativeSelectOption>
-                <NativeSelectOption value="supplier">Supplier</NativeSelectOption>
-                <NativeSelectOption value="both">Both</NativeSelectOption>
-              </NativeSelect>
+                onValueChange={(v) => set({ partyType: v })}
+                options={[
+                  { value: "customer", label: "Customer" },
+                  { value: "supplier", label: "Supplier" },
+                  { value: "both", label: "Both" },
+                ]}
+              />
             </Field>
             <Field className="sm:col-span-2">
               <FieldLabel htmlFor="p-address">Address</FieldLabel>
@@ -270,17 +272,15 @@ export function PartiesPage({ partyType }: { partyType: PartyType }) {
   const navigate = useNavigate();
   const money = useMoney();
   const canManage = useCan("parties.manage");
-  const [search, setSearch] = useState("");
-  const [withBalanceOnly, setWithBalanceOnly] = useState(false);
-  const [page, setPage] = useState(1);
+  const table = useTableState(`parties-${partyType}`, { filters: { q: "", balance: "" } });
+  const [search, setSearch] = useSearchFilter(table);
   const [creating, setCreating] = useState(false);
-  const term = useDebounced(search.trim(), 200);
+  const term = table.filter("q");
   const query = useList("parties_list", {
     partyType,
     search: term || null,
-    withBalanceOnly,
-    page,
-    pageSize: 100,
+    withBalanceOnly: table.filter("balance") === "1",
+    ...table.input,
   });
   const title = partyType === "customer" ? "Customers" : "Suppliers";
   const columns = useMemo<ColumnDef<Api.PartyListItem>[]>(
@@ -288,14 +288,15 @@ export function PartiesPage({ partyType }: { partyType: PartyType }) {
       {
         header: "Name",
         accessorKey: "name",
+        meta: { sortKey: "name" },
         cell: ({ row }) => <span className="font-medium">{row.original.name}</span>,
       },
-      { header: "Phone", accessorFn: (r) => r.phone ?? "" },
-      { header: "GSTIN", accessorFn: (r) => r.gstin ?? "" },
+      { header: "Phone", accessorFn: (r) => r.phone ?? "", meta: { sortKey: "phone" } },
+      { header: "GSTIN", accessorFn: (r) => r.gstin ?? "", meta: { sortKey: "gstin" } },
       {
         header: partyType === "customer" ? "They owe" : "You owe",
         accessorKey: "balance",
-        meta: { align: "right" },
+        meta: { align: "right", sortKey: "balance" },
         cell: ({ row }) => {
           const b = partyType === "customer" ? row.original.balance : -row.original.balance;
           return (
@@ -308,7 +309,7 @@ export function PartiesPage({ partyType }: { partyType: PartyType }) {
       {
         header: "Credit limit",
         accessorFn: (r) => r.creditLimit ?? 0,
-        meta: { align: "right" },
+        meta: { align: "right", sortKey: "creditLimit" },
         cell: ({ row }) =>
           row.original.creditLimit != null ? money(row.original.creditLimit) : "—",
       },
@@ -332,24 +333,19 @@ export function PartiesPage({ partyType }: { partyType: PartyType }) {
           placeholder="Search name, phone or GSTIN"
           className="max-w-xs"
           value={search}
-          onChange={(e) => {
-            setSearch(e.target.value);
-            setPage(1);
-          }}
+          onChange={(e) => setSearch(e.target.value)}
         />
         <label className="flex items-center gap-2 text-sm">
           <Checkbox
-            checked={withBalanceOnly}
-            onCheckedChange={(v) => {
-              setWithBalanceOnly(v);
-              setPage(1);
-            }}
+            checked={table.filter("balance") === "1"}
+            onCheckedChange={(v) => table.setFilter("balance", v ? "1" : "")}
           />
           With a balance only
         </label>
       </div>
       <DataTable
         viewKey="parties"
+        sort={table.sortProps}
         columns={columns}
         data={query.data?.items}
         loading={query.isPending}
@@ -357,7 +353,15 @@ export function PartiesPage({ partyType }: { partyType: PartyType }) {
         rowKey={(r) => r.id}
         onRowClick={(r) => void navigate(`/parties/${r.id}`)}
         paging={
-          query.data ? { page, pageSize: 100, total: query.data.total, onPage: setPage } : undefined
+          query.data
+            ? {
+                page: table.state.page,
+                pageSize: table.state.size,
+                total: query.data.total,
+                onPage: table.setPage,
+                onPageSize: table.setSize,
+              }
+            : undefined
         }
         empty={{ title: term ? "No one matches" : `No ${title.toLowerCase()} yet` }}
       />
@@ -460,18 +464,17 @@ export function PaymentDialog({
             </Field>
             <Field>
               <FieldLabel htmlFor="pay-mode">Mode</FieldLabel>
-              <NativeSelect
+              <SelectField
                 id="pay-mode"
                 className="w-full"
                 value={mode}
-                onChange={(e) => setMode(e.target.value)}
-              >
-                {["cash", "upi", "card", "bank_transfer", "cheque", "wallet", "other"].map((m) => (
-                  <NativeSelectOption key={m} value={m}>
-                    {label(m)}
-                  </NativeSelectOption>
-                ))}
-              </NativeSelect>
+                onValueChange={setMode}
+                options={[
+                  ...["cash", "upi", "card", "bank_transfer", "cheque", "wallet", "other"].map(
+                    (m) => ({ value: m, label: label(m) }),
+                  ),
+                ]}
+              />
             </Field>
             <Field>
               <FieldLabel htmlFor="pay-ref">Reference</FieldLabel>
@@ -639,21 +642,14 @@ export function PartyPage() {
               title="Statement"
               actions={
                 <div className="flex items-center gap-2 text-sm">
-                  <Input
-                    type="date"
+                  <DatePicker
                     aria-label="From"
                     className="h-8 w-36"
                     value={from}
-                    onChange={(e) => setFrom(e.target.value)}
+                    onChange={setFrom}
                   />
                   <span>–</span>
-                  <Input
-                    type="date"
-                    aria-label="To"
-                    className="h-8 w-36"
-                    value={to}
-                    onChange={(e) => setTo(e.target.value)}
-                  />
+                  <DatePicker aria-label="To" className="h-8 w-36" value={to} onChange={setTo} />
                 </div>
               }
             >

@@ -1,3 +1,6 @@
+import { DatePicker } from "@/components/ui/date-picker";
+import { SelectField } from "@/components/ui/select-field";
+import { useSearchFilter, useTableState } from "@/lib/table-state";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import type { Api } from "@inventory/shared";
@@ -15,7 +18,6 @@ import {
 } from "@/components/ui/dialog";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
 import { StatusBadge } from "@/components/app/badges";
 import type { ColumnDef } from "@/components/app/data-table";
@@ -24,7 +26,7 @@ import { DataTable } from "@/components/app/data-table";
 import { confirm } from "@/components/app/dialogs";
 import { MoneyInput, RateInput } from "@/components/app/inputs";
 import { Facts, Page, QueryView, Section } from "@/components/app/page";
-import { PartyPicker, useDebounced } from "@/components/app/pickers";
+import { PartyPicker } from "@/components/app/pickers";
 import { call, requestId } from "@/api/v2";
 import { useMoney, usePublicSettings } from "@/lib/business";
 import { label, showDate, showDateTime } from "@/lib/format";
@@ -106,18 +108,13 @@ function ExpenseDialog({ open, onClose }: { open: boolean; onClose: () => void }
           <div className="grid gap-3 sm:grid-cols-2">
             <Field>
               <FieldLabel htmlFor="ex-cat">Category</FieldLabel>
-              <NativeSelect
+              <SelectField
                 id="ex-cat"
                 className="w-full"
                 value={categoryId}
-                onChange={(e) => setCategoryId(e.target.value)}
-              >
-                {categories.data?.map((c) => (
-                  <NativeSelectOption key={c.id} value={c.id}>
-                    {c.name}
-                  </NativeSelectOption>
-                ))}
-              </NativeSelect>
+                onValueChange={setCategoryId}
+                options={[...(categories.data ?? []).map((c) => ({ value: c.id, label: c.name }))]}
+              />
             </Field>
             <Field>
               <FieldLabel htmlFor="ex-title">What for</FieldLabel>
@@ -143,18 +140,18 @@ function ExpenseDialog({ open, onClose }: { open: boolean; onClose: () => void }
             {!onCredit && (
               <Field>
                 <FieldLabel htmlFor="ex-mode">Paid by</FieldLabel>
-                <NativeSelect
+                <SelectField
                   id="ex-mode"
                   className="w-full"
                   value={mode}
-                  onChange={(e) => setMode(e.target.value)}
-                >
-                  {["cash", "upi", "card", "bank_transfer", "cheque"].map((m) => (
-                    <NativeSelectOption key={m} value={m}>
-                      {label(m)}
-                    </NativeSelectOption>
-                  ))}
-                </NativeSelect>
+                  onValueChange={setMode}
+                  options={[
+                    ...["cash", "upi", "card", "bank_transfer", "cheque"].map((m) => ({
+                      value: m,
+                      label: label(m),
+                    })),
+                  ]}
+                />
               </Field>
             )}
           </div>
@@ -245,17 +242,14 @@ export function ExpensesPage() {
   const money = useMoney();
   const canManage = useCan("expenses.manage");
   const categories = useCommand("expenses_categories", {});
-  const [search, setSearch] = useState("");
-  const [categoryId, setCategoryId] = useState("");
-  const [page, setPage] = useState(1);
+  const table = useTableState("expenses", { filters: { q: "", category: "" } });
+  const [search, setSearch] = useSearchFilter(table);
   const [creating, setCreating] = useState(false);
   const [managing, setManaging] = useState(false);
-  const term = useDebounced(search.trim(), 200);
   const query = useList("expenses_list", {
-    search: term || null,
-    categoryId: categoryId || null,
-    page,
-    pageSize: 100,
+    search: table.filter("q") || null,
+    categoryId: table.filter("category") || null,
+    ...table.input,
   });
   const voidExpense = useAction("expenses_void", {
     invalidates: ["expenses_list", "parties_get"],
@@ -266,18 +260,21 @@ export function ExpensesPage() {
       {
         header: "Number",
         accessorKey: "docNo",
+        meta: { sortKey: "docNo" },
         cell: ({ row }) => <span className="font-medium">{row.original.docNo}</span>,
       },
       {
         header: "Date",
         accessorKey: "businessDate",
+        meta: { sortKey: "date" },
         cell: ({ row }) => showDate(row.original.businessDate),
       },
-      { header: "Category", accessorKey: "categoryName" },
-      { header: "What for", accessorKey: "title" },
+      { header: "Category", accessorKey: "categoryName", meta: { sortKey: "category" } },
+      { header: "What for", accessorKey: "title", meta: { sortKey: "title" } },
       {
         header: "Status",
         accessorKey: "status",
+        meta: { sortKey: "status" },
         cell: ({ row }) =>
           row.original.status === "voided" ? (
             <StatusBadge status="voided" />
@@ -290,7 +287,7 @@ export function ExpensesPage() {
       {
         header: "Total",
         accessorKey: "total",
-        meta: { align: "right" },
+        meta: { align: "right", sortKey: "total" },
         cell: ({ row }) => money(row.original.total),
       },
       {
@@ -346,37 +343,28 @@ export function ExpensesPage() {
           placeholder="Number or what for"
           className="max-w-xs"
           value={search}
-          onChange={(e) => {
-            setSearch(e.target.value);
-            setPage(1);
-          }}
+          onChange={(e) => setSearch(e.target.value)}
         />
-        <NativeSelect
+        <SelectField
           aria-label="Category"
-          value={categoryId}
-          onChange={(e) => {
-            setCategoryId(e.target.value);
-            setPage(1);
-          }}
-        >
-          <NativeSelectOption value="">All categories</NativeSelectOption>
-          {categories.data?.map((c) => (
-            <NativeSelectOption key={c.id} value={c.id}>
-              {c.name}
-            </NativeSelectOption>
-          ))}
-        </NativeSelect>
+          className="w-48"
+          value={table.filter("category")}
+          onValueChange={(v) => table.setFilter("category", v)}
+          options={[
+            { value: "", label: "All categories" },
+            ...(categories.data ?? []).map((c) => ({ value: c.id, label: c.name })),
+          ]}
+        />
       </div>
       <DataTable
         viewKey="expenses"
+        sort={table.sortProps}
         columns={columns}
         data={query.data?.items}
         loading={query.isPending}
         error={query.error}
         rowKey={(r) => r.id}
-        paging={
-          query.data ? { page, pageSize: 100, total: query.data.total, onPage: setPage } : undefined
-        }
+        paging={query.data ? table.paging(query.data.total) : undefined}
         empty={{ title: "No expenses yet" }}
       />
       <ExpenseDialog open={creating} onClose={() => setCreating(false)} />
@@ -501,15 +489,16 @@ export function AccountsPage() {
             {!editing?.id && (
               <Field>
                 <FieldLabel htmlFor="acc-kind">Type</FieldLabel>
-                <NativeSelect
+                <SelectField
                   id="acc-kind"
                   className="w-full"
                   value={editing?.kind ?? "bank"}
-                  onChange={(e) => setEditing((x) => ({ ...x, kind: e.target.value }))}
-                >
-                  <NativeSelectOption value="bank">Bank account</NativeSelectOption>
-                  <NativeSelectOption value="cash">Cash drawer</NativeSelectOption>
-                </NativeSelect>
+                  onValueChange={(v) => setEditing((x) => ({ ...x, kind: v }))}
+                  options={[
+                    { value: "bank", label: "Bank account" },
+                    { value: "cash", label: "Cash drawer" },
+                  ]}
+                />
               </Field>
             )}
             <Field>
@@ -580,13 +569,7 @@ export function DayClosePage() {
       <Section>
         <Field className="max-w-xs">
           <FieldLabel htmlFor="dc-day">Day</FieldLabel>
-          <Input
-            id="dc-day"
-            type="date"
-            value={day}
-            max={today}
-            onChange={(e) => e.target.value && setDay(e.target.value)}
-          />
+          <DatePicker id="dc-day" value={day} max={today} onChange={(v) => v && setDay(v)} />
         </Field>
       </Section>
       <QueryView query={summary}>

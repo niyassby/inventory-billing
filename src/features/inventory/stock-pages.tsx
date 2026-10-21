@@ -1,3 +1,6 @@
+import { SelectField } from "@/components/ui/select-field";
+import { DatePicker } from "@/components/ui/date-picker";
+import { useSearchFilter, useTableState } from "@/lib/table-state";
 import { useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
@@ -14,15 +17,16 @@ import {
 } from "@/components/ui/dialog";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { ColumnDef } from "@/components/app/data-table";
-import { DataTable } from "@/components/app/data-table";
+import { DataTable, Pager } from "@/components/app/data-table";
+import { Checkbox } from "@/components/ui/checkbox";
 import { StatusBadge } from "@/components/app/badges";
 import { confirm } from "@/components/app/dialogs";
 import type { ItemLine } from "@/components/app/item-lines";
 import { ItemLines, lineKey } from "@/components/app/item-lines";
 import { MoneyInput, QtyInput } from "@/components/app/inputs";
+import { SearchInput } from "@/components/app/search-input";
 import { Facts, Page, QueryView, Section } from "@/components/app/page";
 import { WarehouseSelect } from "@/components/app/warehouse-select";
 import { call, requestId } from "@/api/v2";
@@ -41,25 +45,37 @@ export function StockMovesPage() {
   const canAdjust = useCan("stock.adjust");
   const canTransfer = useCan("stock.transfer");
   const canCount = useCan("stock.count");
-  const [kind, setKind] = useState<Kind>("adjustment");
-  const [page, setPage] = useState(1);
+  const table = useTableState("stock-moves", {
+    filters: { kind: "adjustment", q: "", from: "", to: "" },
+  });
+  const [search, setSearch] = useSearchFilter(table);
+  const kind = (table.filter("kind") || "adjustment") as Kind;
   const [countOpen, setCountOpen] = useState(false);
-  const query = useList("stock_documents", { kind, page, pageSize: 50 });
+  const query = useList("stock_documents", {
+    kind,
+    search: table.filter("q") || null,
+    from: table.filter("from") || null,
+    to: table.filter("to") || null,
+    ...table.input,
+  });
   const columns = useMemo<ColumnDef<Api.StockDocListItem>[]>(
     () => [
       {
         header: "Number",
         accessorFn: (r) => r.docNo ?? "",
+        meta: { sortKey: "docNo" },
         cell: ({ row }) => <span className="font-medium">{row.original.docNo}</span>,
       },
       {
         header: "Date",
         accessorKey: "businessDate",
+        meta: { sortKey: "date" },
         cell: ({ row }) => showDate(row.original.businessDate),
       },
       {
         header: "Store",
         accessorKey: "warehouseName",
+        meta: { sortKey: "store" },
         cell: ({ row }) =>
           row.original.toWarehouseName
             ? `${row.original.warehouseName} → ${row.original.toWarehouseName}`
@@ -74,6 +90,7 @@ export function StockMovesPage() {
       {
         header: "Status",
         accessorKey: "status",
+        meta: { sortKey: "status" },
         cell: ({ row }) => <StatusBadge status={row.original.status} />,
       },
     ],
@@ -111,21 +128,42 @@ export function StockMovesPage() {
         </>
       }
     >
-      <Tabs
-        value={kind}
-        onValueChange={(v) => {
-          setKind(v as Kind);
-          setPage(1);
-        }}
-      >
+      <Tabs value={kind} onValueChange={(v) => table.setFilter("kind", String(v))}>
         <TabsList>
           <TabsTrigger value="adjustment">Adjustments</TabsTrigger>
           <TabsTrigger value="transfer">Transfers</TabsTrigger>
           <TabsTrigger value="count">Counts</TabsTrigger>
         </TabsList>
       </Tabs>
+      <div className="flex flex-wrap items-center gap-3">
+        <SearchInput
+          aria-label="Search stock documents"
+          placeholder="Document number"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+        <DatePicker
+          aria-label="From"
+          className="w-44"
+          placeholder="From"
+          clearable
+          value={table.filter("from")}
+          max={table.filter("to") || undefined}
+          onChange={(v) => table.setFilter("from", v)}
+        />
+        <DatePicker
+          aria-label="To"
+          className="w-44"
+          placeholder="To"
+          clearable
+          value={table.filter("to")}
+          min={table.filter("from") || undefined}
+          onChange={(v) => table.setFilter("to", v)}
+        />
+      </div>
       <DataTable
         viewKey="stock-moves"
+        sort={table.sortProps}
         columns={columns}
         data={query.data?.items}
         loading={query.isPending}
@@ -138,9 +176,7 @@ export function StockMovesPage() {
               : `/inventory/documents/${r.kind}/${r.id}`,
           )
         }
-        paging={
-          query.data ? { page, pageSize: 50, total: query.data.total, onPage: setPage } : undefined
-        }
+        paging={query.data ? table.paging(query.data.total) : undefined}
         empty={{ title: `No ${kind === "count" ? "counts" : `${kind}s`} yet` }}
       />
       <StartCountDialog open={countOpen} onClose={() => setCountOpen(false)} />
@@ -190,19 +226,16 @@ function StartCountDialog({ open, onClose }: { open: boolean; onClose: () => voi
           </Field>
           <Field>
             <FieldLabel htmlFor="count-category">Only this category (optional)</FieldLabel>
-            <NativeSelect
+            <SelectField
               id="count-category"
               className="w-full"
               value={categoryId}
-              onChange={(e) => setCategoryId(e.target.value)}
-            >
-              <NativeSelectOption value="">Everything</NativeSelectOption>
-              {categories.data?.map((c) => (
-                <NativeSelectOption key={c.id} value={c.id}>
-                  {c.name}
-                </NativeSelectOption>
-              ))}
-            </NativeSelect>
+              onValueChange={setCategoryId}
+              options={[
+                { value: "", label: "Everything" },
+                ...(categories.data ?? []).map((c) => ({ value: c.id, label: c.name })),
+              ]}
+            />
           </Field>
           <Field>
             <FieldLabel htmlFor="count-note">Note</FieldLabel>
@@ -339,14 +372,15 @@ export function AdjustmentPage() {
             {
               header: "Change",
               cell: (l, update) => (
-                <NativeSelect
+                <SelectField
                   aria-label="In or out"
                   value={l.direction}
-                  onChange={(e) => update({ direction: e.target.value as "in" | "out" })}
-                >
-                  <NativeSelectOption value="out">Remove (−)</NativeSelectOption>
-                  <NativeSelectOption value="in">Add (+)</NativeSelectOption>
-                </NativeSelect>
+                  onValueChange={(v) => update({ direction: v as "in" | "out" })}
+                  options={[
+                    { value: "out", label: "Remove (−)" },
+                    { value: "in", label: "Add (+)" },
+                  ]}
+                />
               ),
             },
             {
@@ -427,18 +461,13 @@ export function TransferPage() {
         <div className="grid gap-4 md:grid-cols-3">
           <Field>
             <FieldLabel htmlFor="tr-from">From</FieldLabel>
-            <NativeSelect
+            <SelectField
               id="tr-from"
               className="w-full"
               value={fromId}
-              onChange={(e) => setFrom(e.target.value)}
-            >
-              {stores.data?.map((w) => (
-                <NativeSelectOption key={w.id} value={w.id}>
-                  {w.name}
-                </NativeSelectOption>
-              ))}
-            </NativeSelect>
+              onValueChange={setFrom}
+              options={[...(stores.data ?? []).map((w) => ({ value: w.id, label: w.name }))]}
+            />
           </Field>
           <Field>
             <FieldLabel htmlFor="tr-to">To</FieldLabel>
@@ -541,8 +570,18 @@ export function StockDocumentPage() {
 export function StockCardPage() {
   const { variantId = "" } = useParams();
   const money = useMoney();
-  const [warehouseId, setWarehouseId] = useState("");
-  const card = useList("stock_card", { variantId, warehouseId: warehouseId || null });
+  const table = useTableState(`stock-card-${variantId}`, {
+    size: 50,
+    filters: { store: "", newest: "" },
+  });
+  const warehouseId = table.filter("store");
+  const card = useList("stock_card", {
+    variantId,
+    warehouseId: warehouseId || null,
+    page: table.state.page,
+    pageSize: table.state.size,
+    descending: table.filter("newest") === "1",
+  });
   const sourceLink = (l: Api.StockCardLine): string | null => {
     switch (l.sourceType) {
       case "sales_invoice":
@@ -570,8 +609,21 @@ export function StockCardPage() {
       title={card.data ? `Stock card · ${card.data.name}` : "Stock card"}
       back={{ to: "/inventory/products", label: "Products" }}
     >
-      <div className="max-w-xs">
-        <WarehouseSelect value={warehouseId} onChange={setWarehouseId} label="Store" />
+      <div className="flex flex-wrap items-end gap-4">
+        <div className="w-64">
+          <WarehouseSelect
+            value={warehouseId}
+            onChange={(v) => table.setFilter("store", v)}
+            label="Store"
+          />
+        </div>
+        <label className="flex items-center gap-2 pb-2 text-sm">
+          <Checkbox
+            checked={table.filter("newest") === "1"}
+            onCheckedChange={(v) => table.setFilter("newest", v ? "1" : "")}
+          />
+          Newest first
+        </label>
       </div>
       <QueryView query={card}>
         {(c) => (
@@ -625,6 +677,9 @@ export function StockCardPage() {
                 </tbody>
               </table>
             )}
+            <div className="mt-3">
+              <Pager {...table.paging(c.total)} />
+            </div>
           </Section>
         )}
       </QueryView>

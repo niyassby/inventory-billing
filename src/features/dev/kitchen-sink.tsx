@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { ReactNode } from "react";
 import { toast } from "sonner";
 import { Download, Plus, Search, Trash2 } from "lucide-react";
@@ -19,7 +20,8 @@ import {
 import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Kbd } from "@/components/ui/kbd";
-import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
+import { DatePicker } from "@/components/ui/date-picker";
+import { SelectField } from "@/components/ui/select-field";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -68,6 +70,8 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
 
 /** Development only (`/dev/ui`): every primitive, in the current theme. Not part of the packaged app. */
 export default function KitchenSink() {
+  const [category, setCategory] = useState("");
+  const [day, setDay] = useState("2026-10-20");
   return (
     <Page
       title="Design system"
@@ -162,10 +166,24 @@ export default function KitchenSink() {
           </Field>
           <Field>
             <FieldLabel htmlFor="ks-sel">Select</FieldLabel>
-            <NativeSelect id="ks-sel" className="w-full">
-              <NativeSelectOption>All categories</NativeSelectOption>
-              <NativeSelectOption>Grocery</NativeSelectOption>
-            </NativeSelect>
+            <SelectField
+              id="ks-sel"
+              value={category}
+              onValueChange={setCategory}
+              options={[
+                { value: "", label: "All categories" },
+                { value: "grocery", label: "Grocery" },
+                { value: "stationery", label: "Stationery" },
+              ]}
+            />
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="ks-date">Date</FieldLabel>
+            <DatePicker id="ks-date" value={day} onChange={setDay} clearable />
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="ks-date-bad">Date with an error</FieldLabel>
+            <DatePicker id="ks-date-bad" value="" onChange={setDay} invalid />
           </Field>
           <Field className="md:col-span-2">
             <FieldLabel htmlFor="ks-note">Note</FieldLabel>
@@ -250,6 +268,19 @@ export default function KitchenSink() {
                   <DialogTitle>Delete this item?</DialogTitle>
                   <DialogDescription>It can't be undone.</DialogDescription>
                 </DialogHeader>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <SelectField
+                    aria-label="Reason"
+                    value={category}
+                    onValueChange={setCategory}
+                    options={[
+                      { value: "", label: "Choose a reason" },
+                      { value: "damaged", label: "Damaged" },
+                      { value: "expired", label: "Expired" },
+                    ]}
+                  />
+                  <DatePicker aria-label="Date in a dialog" value={day} onChange={setDay} />
+                </div>
                 <DialogFooter>
                   <Button variant="outline">Cancel</Button>
                   <Button variant="destructive">Delete</Button>

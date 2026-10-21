@@ -1,3 +1,6 @@
+import { DatePicker } from "@/components/ui/date-picker";
+import { SelectField } from "@/components/ui/select-field";
+import { useSearchFilter, useTableState } from "@/lib/table-state";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
@@ -7,7 +10,6 @@ import { FileText, Pencil, Plus, Printer, Receipt } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { StatusBadge } from "@/components/app/badges";
@@ -49,39 +51,45 @@ export function SalesDocsPage() {
   const navigate = useNavigate();
   const money = useMoney();
   const canManage = useCan("quotations.manage");
-  const [params, setParams] = useSearchParams();
-  const docType = (params.get("type") ?? "quotation") as DocType;
-  const [search, setSearch] = useState("");
-  const [page, setPage] = useState(1);
-  const term = useDebounced(search.trim(), 200);
-  const query = useList("sales_docs_list", { docType, search: term || null, page, pageSize: 100 });
+  const table = useTableState("sales-documents", { filters: { type: "quotation", q: "" } });
+  const [search, setSearch] = useSearchFilter(table);
+  const docType = (table.filter("type") || "quotation") as DocType;
+  const query = useList("sales_docs_list", {
+    docType,
+    search: table.filter("q") || null,
+    ...table.input,
+  });
   const columns = useMemo<ColumnDef<Api.SalesDocListItem>[]>(
     () => [
       {
         header: "Number",
         accessorKey: "docNo",
+        meta: { sortKey: "docNo" },
         cell: ({ row }) => <span className="font-medium">{row.original.docNo}</span>,
       },
       {
         header: "Date",
         accessorKey: "businessDate",
+        meta: { sortKey: "date" },
         cell: ({ row }) => showDate(row.original.businessDate),
       },
-      { header: "Customer", accessorKey: "customerName" },
+      { header: "Customer", accessorKey: "customerName", meta: { sortKey: "customer" } },
       {
         header: "Valid until",
         accessorFn: (r) => r.validUntil ?? "",
+        meta: { sortKey: "validUntil" },
         cell: ({ row }) => showDate(row.original.validUntil),
       },
       {
         header: "Status",
         accessorKey: "status",
+        meta: { sortKey: "status" },
         cell: ({ row }) => <StatusBadge status={row.original.status} />,
       },
       {
         header: "Total",
         accessorKey: "total",
-        meta: { align: "right" },
+        meta: { align: "right", sortKey: "total" },
         cell: ({ row }) => money(row.original.total),
       },
     ],
@@ -101,13 +109,7 @@ export function SalesDocsPage() {
         )
       }
     >
-      <Tabs
-        value={docType}
-        onValueChange={(v) => {
-          setParams({ type: String(v) });
-          setPage(1);
-        }}
-      >
+      <Tabs value={docType} onValueChange={(v) => table.setFilter("type", String(v))}>
         <TabsList>
           {TYPES.map(([value, text]) => (
             <TabsTrigger key={value} value={value}>
@@ -121,22 +123,18 @@ export function SalesDocsPage() {
         placeholder="Number or customer"
         className="max-w-xs"
         value={search}
-        onChange={(e) => {
-          setSearch(e.target.value);
-          setPage(1);
-        }}
+        onChange={(e) => setSearch(e.target.value)}
       />
       <DataTable
         viewKey="sales-documents"
+        sort={table.sortProps}
         columns={columns}
         data={query.data?.items}
         loading={query.isPending}
         error={query.error}
         rowKey={(r) => r.id}
         onRowClick={(r) => void navigate(`/sales/documents/${r.id}`)}
-        paging={
-          query.data ? { page, pageSize: 100, total: query.data.total, onPage: setPage } : undefined
-        }
+        paging={query.data ? table.paging(query.data.total) : undefined}
         empty={{ title: `No ${typeName(docType)}s yet` }}
       />
     </Page>
@@ -284,12 +282,7 @@ function Editor({ doc, docType }: { doc: Api.SalesDocDetail | null; docType: str
           {docType === "quotation" && (
             <Field>
               <FieldLabel htmlFor="doc-valid">Valid until</FieldLabel>
-              <Input
-                id="doc-valid"
-                type="date"
-                value={validUntil}
-                onChange={(e) => setValidUntil(e.target.value)}
-              />
+              <DatePicker id="doc-valid" value={validUntil} onChange={setValidUntil} />
             </Field>
           )}
         </div>
@@ -445,23 +438,17 @@ export function SalesDocPage() {
                   </Button>
                 )}
                 {open && canManage && (
-                  <NativeSelect
+                  <SelectField
                     aria-label="Change status"
                     value=""
-                    onChange={(e) =>
-                      e.target.value &&
-                      setStatus.mutate({ input: { id: d.id, status: e.target.value } })
-                    }
-                  >
-                    <NativeSelectOption value="">Mark as…</NativeSelectOption>
-                    {["open", "accepted", "declined", "cancelled"]
-                      .filter((s) => s !== d.status)
-                      .map((s) => (
-                        <NativeSelectOption key={s} value={s}>
-                          {label(s)}
-                        </NativeSelectOption>
-                      ))}
-                  </NativeSelect>
+                    onValueChange={(v) => v && setStatus.mutate({ input: { id: d.id, status: v } })}
+                    options={[
+                      { value: "", label: "Mark as…" },
+                      ...["open", "accepted", "declined", "cancelled"]
+                        .filter((s) => s !== d.status)
+                        .map((s) => ({ value: s, label: label(s) })),
+                    ]}
+                  />
                 )}
                 {open && canSell && (
                   <Button onClick={() => setPaying(true)}>
