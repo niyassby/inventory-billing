@@ -2,7 +2,6 @@ import { useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import type { Api } from "@inventory/shared";
 import { Plus } from "lucide-react";
-import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -10,6 +9,7 @@ import { SelectField } from "@/components/ui/select-field";
 import type { ColumnDef } from "@/components/app/data-table";
 import { DataTable } from "@/components/app/data-table";
 import { StockBadge } from "@/components/app/badges";
+import { ProductImage } from "@/components/app/product-image";
 import { Page } from "@/components/app/page";
 import { SearchInput } from "@/components/app/search-input";
 import { useMoney } from "@/lib/business";
@@ -44,7 +44,12 @@ export default function ProductsPage() {
         meta: { sortKey: "name" },
         cell: ({ row }) => (
           <div className="flex min-w-0 items-center gap-3">
-            <Avatar name={row.original.name} size="sm" />
+            <ProductImage
+              productId={row.original.productId}
+              imageKey={row.original.imageKey}
+              name={row.original.name}
+              size="md"
+            />
             <div className="min-w-0">
               <p className="truncate font-medium">
                 {row.original.name}

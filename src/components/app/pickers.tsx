@@ -4,6 +4,7 @@ import type { Api } from "@inventory/shared";
 import { Search } from "lucide-react";
 import { call } from "@/api/v2";
 import { Input } from "@/components/ui/input";
+import { ProductImage } from "@/components/app/product-image";
 import { useMoney } from "@/lib/business";
 import { showQty } from "@/lib/format";
 import { useCommand } from "@/lib/queries";
@@ -224,7 +225,8 @@ export const ProductPicker = forwardRef<PickerHandle, ProductPickerProps>(functi
       className={className}
       renderItem={(i) => (
         <div className="flex items-center justify-between gap-3">
-          <div className="min-w-0">
+          <ProductImage productId={i.productId} imageKey={i.imageKey} name={i.name} size="md" />
+          <div className="min-w-0 flex-1">
             <p className="truncate font-medium">
               {i.name}
               {i.factorNum !== 1 || i.factorDen !== 1 ? ` (${i.unitCode})` : ""}

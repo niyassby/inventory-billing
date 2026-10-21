@@ -307,7 +307,10 @@ impl Kit {
             )
             .unwrap();
         assert_eq!(debit, credit, "trial balance");
-        // Receivables control account equals the sum of customer balances (no unlinked postings).
+        // Receivables and payables control accounts against the parties' balances. A party that
+        // is both customer and supplier has one balance (what they owe us less what we owe them),
+        // so the exact rule is: receivables less payables equals every party's balance added up;
+        // with no such party each control account matches its own side.
         let ar: i64 = conn
             .query_row(
                 "SELECT coalesce(sum(debit - credit), 0) FROM journal_lines WHERE account_id = ?1",
@@ -315,13 +318,54 @@ impl Kit {
                 |r| r.get(0),
             )
             .unwrap();
-        let customers: i64 = conn
-            .query_row("SELECT coalesce(sum(balance), 0) FROM parties WHERE party_type IN ('customer', 'both')", [], |r| r.get(0))
+        let ap: i64 = conn
+            .query_row(
+                "SELECT coalesce(sum(credit - debit), 0) FROM journal_lines WHERE account_id = ?1",
+                [super::accounts::PAYABLE],
+                |r| r.get(0),
+            )
+            .unwrap();
+        let all_parties: i64 = conn
+            .query_row("SELECT coalesce(sum(balance), 0) FROM parties", [], |r| {
+                r.get(0)
+            })
             .unwrap();
         assert_eq!(
-            ar, customers,
-            "receivables control account vs customer balances"
+            ar - ap,
+            all_parties,
+            "receivables less payables vs party balances"
         );
+        let both: i64 = conn
+            .query_row(
+                "SELECT count(*) FROM parties WHERE party_type = 'both'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        if both == 0 {
+            let customers: i64 = conn
+                .query_row(
+                    "SELECT coalesce(sum(balance), 0) FROM parties WHERE party_type = 'customer'",
+                    [],
+                    |r| r.get(0),
+                )
+                .unwrap();
+            assert_eq!(
+                ar, customers,
+                "receivables control account vs customer balances"
+            );
+            let suppliers: i64 = conn
+                .query_row(
+                    "SELECT coalesce(sum(-balance), 0) FROM parties WHERE party_type = 'supplier'",
+                    [],
+                    |r| r.get(0),
+                )
+                .unwrap();
+            assert_eq!(
+                ap, suppliers,
+                "payables control account vs supplier balances"
+            );
+        }
         // Inventory account equals stock value.
         let inventory: i64 = conn
             .query_row(
@@ -338,25 +382,6 @@ impl Kit {
             )
             .unwrap();
         assert_eq!(inventory, stock_value, "inventory account vs stock value");
-        // Payables control account equals what we owe suppliers.
-        let ap: i64 = conn
-            .query_row(
-                "SELECT coalesce(sum(credit - debit), 0) FROM journal_lines WHERE account_id = ?1",
-                [super::accounts::PAYABLE],
-                |r| r.get(0),
-            )
-            .unwrap();
-        let suppliers: i64 = conn
-            .query_row(
-                "SELECT coalesce(sum(-balance), 0) FROM parties WHERE party_type = 'supplier'",
-                [],
-                |r| r.get(0),
-            )
-            .unwrap();
-        assert_eq!(
-            ap, suppliers,
-            "payables control account vs supplier balances"
-        );
     }
 }
 

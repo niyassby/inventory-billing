@@ -2,6 +2,8 @@ import { NavLink, Navigate, useParams } from "react-router-dom";
 import { Page } from "@/components/app/page";
 import { cn } from "@/lib/utils";
 import { useSession } from "@/stores/session";
+import { Section } from "@/components/app/page";
+import { ShortcutsEditor } from "@/features/pos/shortcuts-editor";
 import { AuditSection } from "./audit-page";
 import { BackupSection, DevicesSection } from "./devices-backup";
 import { SECTIONS, SettingsSection } from "./settings-forms";
@@ -10,7 +12,8 @@ import { RolesSection, UsersSection } from "./users-roles";
 interface Tab {
   id: string;
   title: string;
-  permission: string;
+  /** Absent: every signed-in person may open it. */
+  permission?: string;
 }
 
 const TABS: Tab[] = [
@@ -23,6 +26,7 @@ const TABS: Tab[] = [
   { id: "network", title: "Network and counters", permission: "settings.view" },
   { id: "backup", title: "Backup", permission: "backup.manage" },
   { id: "audit", title: "Audit log", permission: "audit.view" },
+  { id: "shortcuts", title: "Till shortcuts" },
 ];
 
 function Content({ id }: { id: string }) {
@@ -50,6 +54,12 @@ function Content({ id }: { id: string }) {
       );
     case "audit":
       return <AuditSection />;
+    case "shortcuts":
+      return (
+        <Section title="Till shortcuts">
+          <ShortcutsEditor />
+        </Section>
+      );
     default:
       return id in SECTIONS ? <SettingsSection name={id} /> : null;
   }
@@ -58,7 +68,7 @@ function Content({ id }: { id: string }) {
 export default function SettingsPage() {
   const { section } = useParams();
   const permissions = useSession((s) => s.user?.permissions ?? []);
-  const tabs = TABS.filter((t) => permissions.includes(t.permission));
+  const tabs = TABS.filter((t) => !t.permission || permissions.includes(t.permission));
   const first = tabs[0];
   if (!first) {
     return (

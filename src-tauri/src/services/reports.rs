@@ -461,15 +461,17 @@ fn party_balances(
     range: (&str, &str),
 ) -> AppResult<ReportTable> {
     let supplier = q.party_type.as_deref() == Some("supplier");
+    // A party that is both a customer and a supplier has one balance (what they owe us less what
+    // we owe them), so it is listed once, on the side the balance falls on.
     let (kinds, title, sign) = if supplier {
         (
-            "('supplier', 'both')",
+            "(party_type = 'supplier' OR (party_type = 'both' AND balance < 0))",
             "Payables: what you owe suppliers",
             -1,
         )
     } else {
         (
-            "('customer', 'both')",
+            "(party_type = 'customer' OR (party_type = 'both' AND balance > 0))",
             "Receivables: what customers owe you",
             1,
         )
@@ -479,7 +481,7 @@ fn party_balances(
         &format!(
             "SELECT name, coalesce(phone, ''), {sign} * balance, coalesce(credit_limit, 0),
                 (SELECT max(business_date) FROM party_ledger l WHERE l.party_id = parties.id)
-             FROM parties WHERE party_type IN {kinds} AND deleted_at IS NULL AND balance <> 0
+             FROM parties WHERE {kinds} AND deleted_at IS NULL AND balance <> 0
              ORDER BY {sign} * balance DESC"
         ),
         &[],

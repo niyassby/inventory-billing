@@ -425,6 +425,21 @@ pub(crate) fn record_payment(
         now,
     )?;
     let id = new_id();
+    // Cash that moves while the person has a till open goes through that till, whatever screen
+    // made the payment (a refund, a customer's receipt, an expense, a supplier's payment), so the
+    // till's expected cash at closing counts it.
+    let session: Option<String> = match register_session_id {
+        Some(session) => Some(session.to_string()),
+        None if mode == "cash" => tx
+            .query_row(
+                "SELECT id FROM register_sessions WHERE status = 'open' AND opened_by = ?1 ORDER BY opened_at DESC LIMIT 1",
+                [&actor.user_id],
+                |r| r.get(0),
+            )
+            .optional()?,
+        None => None,
+    };
+    let register_session_id = session.as_deref();
     tx.execute(
         "INSERT INTO payments (id, branch_id, series_id, number_period, doc_seq, doc_no, business_date, direction, party_id, account_id, mode,
             amount, tendered, change_given, reference_no, register_session_id, created_at, updated_at, created_by, updated_by)

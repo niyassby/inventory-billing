@@ -15,6 +15,7 @@ import { confirm } from "@/components/app/dialogs";
 import { MoneyInput, QtyInput } from "@/components/app/inputs";
 import { ErrorState, LoadingRows, Page, Section } from "@/components/app/page";
 import { SaveBar } from "@/components/app/save-bar";
+import { ProductPicture } from "./product-picture";
 import { call } from "@/api/v2";
 import { showQty, showRate } from "@/lib/format";
 import { errorText, useCommand } from "@/lib/queries";
@@ -389,6 +390,7 @@ function Editor({ product }: { product: Api.ProductDetail | null }) {
               ))}
             </div>
           </Section>
+          <ProductPicture product={product} canManage={canManage} />
 
           <Section
             title="Variants, prices and stock"

@@ -1,4 +1,5 @@
-import { LogOut } from "lucide-react";
+import { Keyboard, LogOut } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { Avatar } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -16,6 +17,7 @@ import { useSession } from "@/stores/session";
 
 /** Who is signed in, the display spacing, and sign out. */
 export function UserMenu() {
+  const navigate = useNavigate();
   const user = useSession((s) => s.user);
   const signOut = useSession((s) => s.signOut);
   const density = useAppearance((s) => s.density);
@@ -47,6 +49,10 @@ export function UserMenu() {
           </DropdownMenuRadioGroup>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={() => void navigate("/settings/shortcuts")}>
+          <Keyboard aria-hidden />
+          Till shortcuts
+        </DropdownMenuItem>
         <DropdownMenuItem onClick={() => void signOut()}>
           <LogOut aria-hidden />
           Sign out

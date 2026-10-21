@@ -2,13 +2,14 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import type { Api } from "@inventory/shared";
-import { ArrowLeft, Pause, Percent, ScanBarcode, Trash2, User, X } from "lucide-react";
+import { ArrowLeft, Keyboard, Pause, Percent, ScanBarcode, Trash2, User, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Avatar } from "@/components/ui/avatar";
 import { Kbd } from "@/components/ui/kbd";
 import { Textarea } from "@/components/ui/textarea";
 import { ConnectionBadge } from "@/components/connection-badge";
+import { ProductImage } from "@/components/app/product-image";
 import { describeConnection } from "@/api/connection";
 import { useConnection } from "@/hooks/use-connection";
 import { confirm } from "@/components/app/dialogs";
@@ -31,16 +32,9 @@ import {
   TillDialog,
 } from "./pos-dialogs";
 import { usePos } from "./pos-store";
-
-const KEYS: [string, string][] = [
-  ["F1", "Search"],
-  ["F3", "Customer"],
-  ["F4", "Edit line"],
-  ["F7", "Bill discount"],
-  ["F8", "Hold"],
-  ["F9", "Recall"],
-  ["F10", "Pay"],
-];
+import { useShortcuts } from "./shortcut-store";
+import { ShortcutsDialog } from "./shortcuts-dialog";
+import { SHORTCUT_ACTIONS, formatBinding, matchesEvent } from "./shortcuts";
 
 function useBillPreview() {
   const cart = usePos((s) => s.cart);
@@ -76,10 +70,18 @@ export default function PosPage() {
   const [heldOpen, setHeldOpen] = useState(false);
   const [tillOpen, setTillOpen] = useState(false);
   const [paying, setPaying] = useState(false);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const { bindings } = useShortcuts();
   const [saving, setSaving] = useState(false);
   const [done, setDone] = useState<Api.InvoiceDetail | null>(null);
   const anyDialog =
-    editing !== null || billDiscountOpen || heldOpen || tillOpen || paying || done !== null;
+    editing !== null ||
+    billDiscountOpen ||
+    heldOpen ||
+    tillOpen ||
+    paying ||
+    shortcutsOpen ||
+    done !== null;
 
   const total = cart.lines.length > 0 ? (preview.data?.total ?? null) : 0;
   const previewMatches = preview.data?.lines.length === cart.lines.length;
@@ -126,44 +128,45 @@ export default function PosPage() {
       const inField =
         (e.target as HTMLElement | null)?.closest("input, textarea, select") && !searchEmpty;
       const handled = () => e.preventDefault();
-      switch (e.key) {
-        case "F1":
+      const action = SHORTCUT_ACTIONS.find((def) => matchesEvent(bindings[def.id], e))?.id;
+      switch (action) {
+        case "search":
           handled();
           search.current?.focus();
           return;
-        case "F3":
+        case "customer":
           handled();
           customer.current?.focus();
           return;
-        case "F4":
+        case "editLine":
           handled();
           if (cart.lines.length > 0) setEditing(cart.selected);
           return;
-        case "F7":
+        case "discount":
           handled();
           setBillDiscountOpen(true);
           return;
-        case "F8":
+        case "hold":
           handled();
           void hold();
           return;
-        case "F9":
+        case "recall":
           handled();
           setHeldOpen(true);
           return;
-        case "F10":
+        case "pay":
           handled();
           pay();
           return;
+        case "clear":
+          handled();
+          void clear();
+          return;
       }
+      // Ctrl+Enter always takes payment, whatever the bindings are.
       if (e.ctrlKey && e.key === "Enter") {
         handled();
         pay();
-        return;
-      }
-      if (e.ctrlKey && e.key === "Delete") {
-        handled();
-        void clear();
         return;
       }
       if (inField) return;
@@ -186,7 +189,7 @@ export default function PosPage() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [anyDialog, cart.lines.length, cart.selected, pos, pay, hold, clear]);
+  }, [anyDialog, bindings, cart.lines.length, cart.selected, pos, pay, hold, clear]);
 
   const complete = async (payments: Api.PaymentInput[]) => {
     if (total === null) return;
@@ -254,7 +257,7 @@ export default function PosPage() {
             {register.data ? `Till open · ${register.data.registerName}` : "Open till"}
           </Button>
           <Button variant="outline" size="sm" onClick={() => setHeldOpen(true)}>
-            Held bills <Kbd>F9</Kbd>
+            Held bills <Kbd>{formatBinding(bindings.recall)}</Kbd>
           </Button>
         </div>
       </header>
@@ -321,15 +324,25 @@ export default function PosPage() {
                       >
                         <td className="px-3 py-2 text-muted-foreground">{i + 1}</td>
                         <td className="px-3 py-2">
-                          <p className="font-medium">{line.item.name}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {line.item.sku} · {line.item.unitCode}
-                            {!line.item.isService && line.qty > line.item.stock && (
-                              <span className="ml-1 text-warning">
-                                · only {showQty(line.item.stock)} in stock
-                              </span>
-                            )}
-                          </p>
+                          <div className="flex items-center gap-3">
+                            <ProductImage
+                              productId={line.item.productId}
+                              imageKey={line.item.imageKey}
+                              name={line.item.name}
+                              size="md"
+                            />
+                            <div className="min-w-0">
+                              <p className="font-medium">{line.item.name}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {line.item.sku} · {line.item.unitCode}
+                                {!line.item.isService && line.qty > line.item.stock && (
+                                  <span className="ml-1 text-warning">
+                                    · only {showQty(line.item.stock)} in stock
+                                  </span>
+                                )}
+                              </p>
+                            </div>
+                          </div>
                         </td>
                         <td className="px-3 py-2.5 text-right num text-base font-semibold">
                           {showQty(line.qty)}
@@ -367,11 +380,18 @@ export default function PosPage() {
             )}
           </div>
           <div className="flex flex-wrap gap-x-4 gap-y-1 text-caption">
-            {KEYS.map(([k, text]) => (
-              <span key={k} className="flex items-center gap-1">
-                <Kbd>{k}</Kbd> {text}
+            {SHORTCUT_ACTIONS.map((def) => (
+              <span key={def.id} className="flex items-center gap-1">
+                <Kbd>{formatBinding(bindings[def.id])}</Kbd> {def.hint}
               </span>
             ))}
+            <button
+              type="button"
+              className="flex items-center gap-1 rounded text-primary hover:underline"
+              onClick={() => setShortcutsOpen(true)}
+            >
+              <Keyboard className="size-3.5" aria-hidden /> Change shortcuts
+            </button>
           </div>
         </section>
 
@@ -379,7 +399,8 @@ export default function PosPage() {
           <div className="rounded-xl border border-border bg-card p-3 shadow-xs">
             <div className="mb-2 flex items-center justify-between">
               <p className="flex items-center gap-1 text-xs font-medium text-muted-foreground">
-                <User className="size-3.5" aria-hidden /> Customer <Kbd>F3</Kbd>
+                <User className="size-3.5" aria-hidden /> Customer{" "}
+                <Kbd>{formatBinding(bindings.customer)}</Kbd>
               </p>
               {cart.party && (
                 <Button variant="ghost" size="xs" onClick={() => pos.setParty(null)}>
@@ -452,21 +473,21 @@ export default function PosPage() {
             />
             <div className="grid grid-cols-3 gap-2">
               <Button variant="outline" onClick={() => setBillDiscountOpen(true)}>
-                <Percent /> Discount
+                <Percent /> Discount <Kbd className="ml-1">{formatBinding(bindings.discount)}</Kbd>
               </Button>
               <Button
                 variant="outline"
                 disabled={cart.lines.length === 0}
                 onClick={() => void hold()}
               >
-                <Pause /> Hold
+                <Pause /> Hold <Kbd className="ml-1">{formatBinding(bindings.hold)}</Kbd>
               </Button>
               <Button
                 variant="outline"
                 disabled={cart.lines.length === 0}
                 onClick={() => void clear()}
               >
-                <Trash2 /> Clear
+                <Trash2 /> Clear <Kbd className="ml-1">{formatBinding(bindings.clear)}</Kbd>
               </Button>
             </div>
             <Button
@@ -476,7 +497,7 @@ export default function PosPage() {
               onClick={pay}
             >
               Pay {total !== null && cart.lines.length > 0 ? money(total) : ""}{" "}
-              <Kbd className="ml-2">F10</Kbd>
+              <Kbd className="ml-2">{formatBinding(bindings.pay)}</Kbd>
             </Button>
           </div>
         </aside>
@@ -520,6 +541,7 @@ export default function PosPage() {
         onPay={(payments) => void complete(payments)}
       />
       <ReceiptDialog invoice={done} onClose={nextCustomer} />
+      <ShortcutsDialog open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
     </div>
   );
 }

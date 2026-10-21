@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatusBadge, StockBadge } from "@/components/app/badges";
 import { TrendChart } from "@/components/app/charts";
+import { ProductImage } from "@/components/app/product-image";
 import { EmptyState, ErrorState, Page, QueryView, Section } from "@/components/app/page";
 import { useCompactMoney, useLocale, useMoney, usePublicSettings } from "@/lib/business";
 import { showDateTime, showQty } from "@/lib/format";
@@ -456,7 +457,12 @@ function LowStockRow({ item }: { item: Api.ProductListItem }) {
         className="flex items-center justify-between gap-3 rounded-md text-sm hover:bg-muted/50"
       >
         <span className="flex min-w-0 items-center gap-2">
-          <Avatar name={item.name} size="sm" />
+          <ProductImage
+            productId={item.productId}
+            imageKey={item.imageKey}
+            name={item.name}
+            size="sm"
+          />
           <span className="min-w-0">
             <span className="block truncate font-medium">{item.name}</span>
             <span className="num text-caption">
