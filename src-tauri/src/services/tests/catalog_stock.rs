@@ -442,6 +442,7 @@ fn adjustments_transfers_and_the_negative_stock_policy() {
             warehouse_id: Some("w2".into()),
             from: None,
             to: None,
+            page: PageQuery::default(),
         },
     )
     .unwrap();
@@ -453,6 +454,7 @@ fn adjustments_transfers_and_the_negative_stock_policy() {
             warehouse_id: None,
             from: None,
             to: None,
+            page: PageQuery::default(),
         },
     )
     .unwrap();
@@ -536,11 +538,11 @@ fn list_pages_are_bounded() {
     let page = catalog::list_products(
         &ctx,
         &ProductListQuery {
-            sort: Some("sku".into()),
-            descending: true,
             page: PageQuery {
                 page: Some(2),
                 page_size: Some(2),
+                sort: Some("sku".into()),
+                descending: true,
             },
             ..Default::default()
         },

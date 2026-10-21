@@ -421,13 +421,23 @@ pub fn list_audit(ctx: &Ctx<'_>, query: &AuditQuery) -> AppResult<Page<AuditRow>
         params_from_iter(args.iter()),
         |r| r.get(0),
     )?;
+    let order = query.page.order_by(
+        &[
+            ("when", "a.occurred_at"),
+            ("who", "lower(coalesce(u.name, ''))"),
+            ("action", "a.action"),
+            ("details", "lower(coalesce(a.summary, ''))"),
+        ],
+        "a.occurred_at DESC, a.id DESC",
+        "a.id",
+    )?;
     let (limit, offset) = query.page.limit_offset();
     args.extend([limit.into(), offset.into()]);
     let items = ctx
         .conn
         .prepare(&format!(
             "SELECT a.id, a.occurred_at, u.name, ap.name, d.name, a.action, a.entity_type, a.entity_id, a.summary
-             FROM {from_sql} WHERE {where_sql} ORDER BY a.occurred_at DESC, a.id DESC LIMIT ? OFFSET ?"
+             FROM {from_sql} WHERE {where_sql} ORDER BY {order} LIMIT ? OFFSET ?"
         ))?
         .query_map(params_from_iter(args.iter()), |r| {
             Ok(AuditRow {

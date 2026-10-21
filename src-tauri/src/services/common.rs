@@ -10,7 +10,16 @@ use crate::error::{AppError, AppResult};
 pub struct PageQuery {
     pub page: Option<u32>,
     pub page_size: Option<u32>,
+    /// Which column to sort by: one of the keys the list documents (unknown keys are refused).
+    pub sort: Option<String>,
+    /// Sort the other way round.
+    #[serde(default)]
+    pub descending: bool,
 }
+
+/// Sortable columns of one list: the key the client sends and the SQL expression it means. The
+/// client's text never reaches the SQL, only the expression found here.
+pub type SortKeys<'a> = &'a [(&'a str, &'a str)];
 
 impl PageQuery {
     pub const MAX_PAGE_SIZE: u32 = 200;
@@ -26,6 +35,24 @@ impl PageQuery {
     pub fn limit_offset(&self) -> (i64, i64) {
         let size = i64::from(self.page_size());
         (size, (i64::from(self.page()) - 1) * size)
+    }
+
+    /// The ORDER BY body for this request. No `sort` gives `default` (written by the list, so it
+    /// is trusted); a `sort` must be in `keys`. `tiebreak` (a unique column) keeps pages stable.
+    pub fn order_by(&self, keys: SortKeys<'_>, default: &str, tiebreak: &str) -> AppResult<String> {
+        let Some(requested) = self
+            .sort
+            .as_deref()
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+        else {
+            return Ok(default.to_string());
+        };
+        let Some((_, expr)) = keys.iter().find(|(key, _)| *key == requested) else {
+            return Err(AppError::field("sort", "You can't sort by that column."));
+        };
+        let direction = if self.descending { "DESC" } else { "ASC" };
+        Ok(format!("{expr} {direction}, {tiebreak}"))
     }
 }
 
@@ -236,12 +263,14 @@ mod tests {
         let q = PageQuery {
             page: Some(0),
             page_size: Some(10_000),
+            ..Default::default()
         };
         assert_eq!((q.page(), q.page_size()), (1, 200));
         assert_eq!(
             PageQuery {
                 page: Some(3),
-                page_size: Some(20)
+                page_size: Some(20),
+                ..Default::default()
             }
             .limit_offset(),
             (20, 40)

@@ -389,15 +389,28 @@ pub fn list(ctx: &Ctx<'_>, query: &ExpenseListQuery) -> AppResult<Page<ExpenseDe
     }
     let where_sql = filters.join(" AND ");
     let total: i64 = ctx.conn.query_row(
-        &format!("SELECT count(*) FROM expenses e WHERE {where_sql}"),
+        &format!("SELECT count(*) FROM expenses e JOIN expense_categories c ON c.id = e.category_id WHERE {where_sql}"),
         params_from_iter(args.iter()),
         |r| r.get(0),
+    )?;
+    let order = query.page.order_by(
+        &[
+            ("docNo", "e.doc_no"),
+            ("date", "e.business_date"),
+            ("title", "lower(e.title)"),
+            ("category", "lower(c.name)"),
+            ("total", "e.total"),
+            ("paid", "e.amount_paid"),
+            ("status", "e.status"),
+        ],
+        "e.business_date DESC, e.created_at DESC, e.id",
+        "e.id",
     )?;
     let (limit, offset) = query.page.limit_offset();
     args.extend([limit.into(), offset.into()]);
     let ids: Vec<String> = ctx
         .conn
-        .prepare(&format!("SELECT e.id FROM expenses e WHERE {where_sql} ORDER BY e.business_date DESC, e.created_at DESC LIMIT ? OFFSET ?"))?
+        .prepare(&format!("SELECT e.id FROM expenses e JOIN expense_categories c ON c.id = e.category_id WHERE {where_sql} ORDER BY {order} LIMIT ? OFFSET ?"))?
         .query_map(params_from_iter(args.iter()), |r| r.get(0))?
         .collect::<Result<_, _>>()?;
     let items = ids

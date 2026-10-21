@@ -680,10 +680,18 @@ export interface MoneyAccountInput {
  */
 export interface AuditQuery {
   action?: string | null;
+  /**
+   * Sort the other way round.
+   */
+  descending?: boolean;
   from?: string | null;
   page?: number | null;
   pageSize?: number | null;
   search?: string | null;
+  /**
+   * Which column to sort by: one of the keys the list documents (unknown keys are refused).
+   */
+  sort?: string | null;
   to?: string | null;
   userId?: string | null;
 }
@@ -1305,10 +1313,18 @@ export interface ExpenseDetail {
  */
 export interface ExpenseListQuery {
   categoryId?: string | null;
+  /**
+   * Sort the other way round.
+   */
+  descending?: boolean;
   from?: string | null;
   page?: number | null;
   pageSize?: number | null;
   search?: string | null;
+  /**
+   * Which column to sort by: one of the keys the list documents (unknown keys are refused).
+   */
+  sort?: string | null;
   to?: string | null;
 }
 /**
@@ -1437,6 +1453,10 @@ export interface PartyDetail {
  * via the `definition` "PartyListQuery".
  */
 export interface PartyListQuery {
+  /**
+   * Sort the other way round.
+   */
+  descending?: boolean;
   includeInactive?: boolean;
   page?: number | null;
   pageSize?: number | null;
@@ -1445,6 +1465,10 @@ export interface PartyListQuery {
    */
   partyType?: string | null;
   search?: string | null;
+  /**
+   * Which column to sort by: one of the keys the list documents (unknown keys are refused).
+   */
+  sort?: string | null;
   withBalanceOnly?: boolean;
 }
 /**
@@ -1619,6 +1643,10 @@ export interface AllocationDetail {
  * via the `definition` "PaymentListQuery".
  */
 export interface PaymentListQuery {
+  /**
+   * Sort the other way round.
+   */
+  descending?: boolean;
   direction?: string | null;
   from?: string | null;
   mode?: string | null;
@@ -1626,6 +1654,10 @@ export interface PaymentListQuery {
   pageSize?: number | null;
   partyId?: string | null;
   search?: string | null;
+  /**
+   * Which column to sort by: one of the keys the list documents (unknown keys are refused).
+   */
+  sort?: string | null;
   to?: string | null;
 }
 /**
@@ -1759,6 +1791,9 @@ export interface WarehouseStock {
 export interface ProductListQuery {
   brandId?: string | null;
   categoryId?: string | null;
+  /**
+   * Sort the other way round.
+   */
   descending?: boolean;
   includeInactive?: boolean;
   lowStockOnly?: boolean;
@@ -1766,7 +1801,7 @@ export interface ProductListQuery {
   pageSize?: number | null;
   search?: string | null;
   /**
-   * "name" (default), "sku", "price", "stock" or "updated".
+   * Which column to sort by: one of the keys the list documents (unknown keys are refused).
    */
   sort?: string | null;
 }
@@ -2076,6 +2111,10 @@ export interface GoodsReceiptDetail {
  * via the `definition` "PurchaseListQuery".
  */
 export interface PurchaseListQuery {
+  /**
+   * Sort the other way round.
+   */
+  descending?: boolean;
   from?: string | null;
   /**
    * "purchase_order", "purchase_bill" or "purchase_return".
@@ -2085,6 +2124,10 @@ export interface PurchaseListQuery {
   pageSize?: number | null;
   partyId?: string | null;
   search?: string | null;
+  /**
+   * Which column to sort by: one of the keys the list documents (unknown keys are refused).
+   */
+  sort?: string | null;
   status?: string | null;
   to?: string | null;
 }
@@ -2117,12 +2160,20 @@ export interface PurchaseListItem {
  * via the `definition` "ReceiptListQuery".
  */
 export interface ReceiptListQuery {
+  /**
+   * Sort the other way round.
+   */
+  descending?: boolean;
   from?: string | null;
   page?: number | null;
   pageSize?: number | null;
   partyId?: string | null;
   purchaseOrderId?: string | null;
   search?: string | null;
+  /**
+   * Which column to sort by: one of the keys the list documents (unknown keys are refused).
+   */
+  sort?: string | null;
   to?: string | null;
   /**
    * Only receipts not yet covered by a supplier bill.
@@ -2592,11 +2643,22 @@ export interface SalesDocLine {
  * via the `definition` "SalesDocListQuery".
  */
 export interface SalesDocListQuery {
+  /**
+   * Sort the other way round.
+   */
+  descending?: boolean;
   docType?: string | null;
+  from?: string | null;
   page?: number | null;
   pageSize?: number | null;
+  partyId?: string | null;
   search?: string | null;
+  /**
+   * Which column to sort by: one of the keys the list documents (unknown keys are refused).
+   */
+  sort?: string | null;
   status?: string | null;
+  to?: string | null;
 }
 /**
  * This interface was referenced by `ApiContract`'s JSON-Schema
@@ -2685,6 +2747,10 @@ export interface HoldInput {
  * via the `definition` "InvoiceListQuery".
  */
 export interface InvoiceListQuery {
+  /**
+   * Sort the other way round.
+   */
+  descending?: boolean;
   from?: string | null;
   page?: number | null;
   pageSize?: number | null;
@@ -2694,6 +2760,10 @@ export interface InvoiceListQuery {
    */
   paymentStatus?: string | null;
   search?: string | null;
+  /**
+   * Which column to sort by: one of the keys the list documents (unknown keys are refused).
+   */
+  sort?: string | null;
   /**
    * "finalized" or "voided".
    */
@@ -2731,11 +2801,19 @@ export interface InvoiceListItem {
  * via the `definition` "ReturnListQuery".
  */
 export interface ReturnListQuery {
+  /**
+   * Sort the other way round.
+   */
+  descending?: boolean;
   from?: string | null;
   page?: number | null;
   pageSize?: number | null;
   partyId?: string | null;
   search?: string | null;
+  /**
+   * Which column to sort by: one of the keys the list documents (unknown keys are refused).
+   */
+  sort?: string | null;
   to?: string | null;
 }
 /**
@@ -3198,7 +3276,17 @@ export interface StockDocLine {
  * via the `definition` "StockCardQuery".
  */
 export interface StockCardQuery {
+  /**
+   * Sort the other way round.
+   */
+  descending?: boolean;
   from?: string | null;
+  page?: number | null;
+  pageSize?: number | null;
+  /**
+   * Which column to sort by: one of the keys the list documents (unknown keys are refused).
+   */
+  sort?: string | null;
   to?: string | null;
   variantId: string;
   warehouseId?: string | null;
@@ -3209,10 +3297,19 @@ export interface StockCardQuery {
  */
 export interface StockCard {
   closingQty: number;
+  /**
+   * The lines of the requested page.
+   */
   lines: StockCardLine[];
   name: string;
   openingQty: number;
+  page: number;
+  pageSize: number;
   sku: string;
+  /**
+   * Movements in the whole period.
+   */
+  total: number;
   variantId: string;
 }
 /**
@@ -3316,6 +3413,10 @@ export interface StockDocRef {
  * via the `definition` "StockDocQuery".
  */
 export interface StockDocQuery {
+  /**
+   * Sort the other way round.
+   */
+  descending?: boolean;
   from?: string | null;
   /**
    * "adjustment", "transfer" or "count".
@@ -3324,6 +3425,10 @@ export interface StockDocQuery {
   page?: number | null;
   pageSize?: number | null;
   search?: string | null;
+  /**
+   * Which column to sort by: one of the keys the list documents (unknown keys are refused).
+   */
+  sort?: string | null;
   to?: string | null;
 }
 /**
@@ -3393,9 +3498,17 @@ export interface Warehouse {
  * via the `definition` "ExceptionQuery".
  */
 export interface ExceptionQuery {
+  /**
+   * Sort the other way round.
+   */
+  descending?: boolean;
   includeResolved?: boolean;
   page?: number | null;
   pageSize?: number | null;
+  /**
+   * Which column to sort by: one of the keys the list documents (unknown keys are refused).
+   */
+  sort?: string | null;
 }
 /**
  * This interface was referenced by `ApiContract`'s JSON-Schema

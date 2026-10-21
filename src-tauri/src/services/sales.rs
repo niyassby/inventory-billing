@@ -994,11 +994,24 @@ pub fn list_invoices(ctx: &Ctx<'_>, query: &InvoiceListQuery) -> AppResult<Page<
         params_from_iter(args.iter()),
         |r| r.get(0),
     )?;
+    let order = query.page.order_by(
+        &[
+            ("docNo", "doc_no"),
+            ("date", "business_date"),
+            ("customer", "lower(customer_name)"),
+            ("total", "total"),
+            ("paid", "amount_paid"),
+            ("due", "balance_due"),
+            ("status", "payment_status"),
+        ],
+        "business_date DESC, created_at DESC, id",
+        "id",
+    )?;
     let (limit, offset) = query.page.limit_offset();
     args.extend([limit.into(), offset.into()]);
     let mut stmt = ctx.conn.prepare(&format!(
         "SELECT id, doc_no, business_date, customer_name, customer_phone, total, amount_paid, balance_due, payment_status, status
-         FROM sales_invoices WHERE {where_sql} ORDER BY business_date DESC, created_at DESC, id LIMIT ? OFFSET ?"
+         FROM sales_invoices WHERE {where_sql} ORDER BY {order} LIMIT ? OFFSET ?"
     ))?;
     let items = stmt
         .query_map(params_from_iter(args.iter()), |r| {
@@ -2477,6 +2490,9 @@ pub struct SalesDocListQuery {
     pub doc_type: Option<String>,
     pub status: Option<String>,
     pub search: Option<String>,
+    pub party_id: Option<String>,
+    pub from: Option<String>,
+    pub to: Option<String>,
     #[serde(flatten)]
     pub page: PageQuery,
 }
@@ -2509,6 +2525,18 @@ pub fn list_sales_docs(
         filters.push("status = ?".into());
         args.push(s.clone().into());
     }
+    if let Some(party) = &query.party_id {
+        filters.push("party_id = ?".into());
+        args.push(party.clone().into());
+    }
+    if let Some(from) = &query.from {
+        filters.push("business_date >= ?".into());
+        args.push(date("from", from)?.into());
+    }
+    if let Some(to) = &query.to {
+        filters.push("business_date <= ?".into());
+        args.push(date("to", to)?.into());
+    }
     if let Some(search) = query
         .search
         .as_deref()
@@ -2527,13 +2555,26 @@ pub fn list_sales_docs(
         params_from_iter(args.iter()),
         |r| r.get(0),
     )?;
+    let order = query.page.order_by(
+        &[
+            ("docNo", "doc_no"),
+            ("type", "doc_type"),
+            ("date", "business_date"),
+            ("customer", "lower(customer_name)"),
+            ("total", "total"),
+            ("status", "status"),
+            ("validUntil", "coalesce(valid_until, '')"),
+        ],
+        "business_date DESC, created_at DESC, id",
+        "id",
+    )?;
     let (limit, offset) = query.page.limit_offset();
     args.extend([limit.into(), offset.into()]);
     let items = ctx
         .conn
         .prepare(&format!(
             "SELECT id, doc_type, doc_no, business_date, customer_name, total, status, valid_until FROM sales_documents WHERE {where_sql}
-             ORDER BY business_date DESC, created_at DESC LIMIT ? OFFSET ?"
+             ORDER BY {order} LIMIT ? OFFSET ?"
         ))?
         .query_map(params_from_iter(args.iter()), |r| {
             Ok(SalesDocListItem {

@@ -375,11 +375,23 @@ pub fn list(ctx: &Ctx<'_>, query: &PartyListQuery) -> AppResult<Page<PartyListIt
         params_from_iter(args.iter()),
         |r| r.get(0),
     )?;
+    let order = query.page.order_by(
+        &[
+            ("name", "lower(name)"),
+            ("type", "party_type"),
+            ("phone", "coalesce(phone, '')"),
+            ("gstin", "coalesce(gstin, '')"),
+            ("balance", "balance"),
+            ("creditLimit", "coalesce(credit_limit, 0)"),
+        ],
+        "lower(name), id",
+        "id",
+    )?;
     let (limit, offset) = query.page.limit_offset();
     args.extend([limit.into(), offset.into()]);
     let mut stmt = ctx.conn.prepare(&format!(
         "SELECT id, party_type, name, phone, gstin, balance, credit_limit, is_active FROM parties WHERE {where_sql}
-         ORDER BY lower(name), id LIMIT ? OFFSET ?"
+         ORDER BY {order} LIMIT ? OFFSET ?"
     ))?;
     let items = stmt
         .query_map(params_from_iter(args.iter()), |r| {

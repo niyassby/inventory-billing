@@ -484,10 +484,6 @@ pub struct ProductListQuery {
     pub low_stock_only: bool,
     #[serde(default)]
     pub include_inactive: bool,
-    /// "name" (default), "sku", "price", "stock" or "updated".
-    pub sort: Option<String>,
-    #[serde(default)]
-    pub descending: bool,
     #[serde(flatten)]
     pub page: PageQuery,
 }
@@ -1088,16 +1084,22 @@ pub fn list_products(ctx: &Ctx<'_>, query: &ProductListQuery) -> AppResult<Page<
         params_from_iter(args.iter()),
         |r| r.get(0),
     )?;
-    let order = match query.sort.as_deref() {
-        Some("sku") => "lower(v.sku)",
-        Some("price") => "v.sale_price",
-        Some("stock") => {
-            "(SELECT coalesce(sum(qty), 0) FROM stock_levels l WHERE l.variant_id = v.id)"
-        }
-        Some("updated") => "max(p.updated_at, v.updated_at)",
-        _ => "lower(p.name), lower(coalesce(v.variant_name, ''))",
-    };
-    let direction = if query.descending { "DESC" } else { "ASC" };
+    let stock = "(SELECT coalesce(sum(qty), 0) FROM stock_levels l WHERE l.variant_id = v.id)";
+    let keys = [
+        ("name", "lower(p.name), lower(coalesce(v.variant_name, ''))"),
+        ("sku", "lower(v.sku)"),
+        ("category", "lower(coalesce(c.name, ''))"),
+        ("price", "v.sale_price"),
+        ("cost", "v.cost_price"),
+        ("tax", "coalesce(t.rate, 0)"),
+        ("stock", stock),
+        ("updated", "max(p.updated_at, v.updated_at)"),
+    ];
+    let order = query.page.order_by(
+        &keys,
+        "lower(p.name), lower(coalesce(v.variant_name, '')), v.id",
+        "v.id",
+    )?;
     let (limit, offset) = query.page.limit_offset();
     let mut page_args = args.clone();
     page_args.extend([limit.into(), offset.into()]);
@@ -1106,7 +1108,7 @@ pub fn list_products(ctx: &Ctx<'_>, query: &ProductListQuery) -> AppResult<Page<
                 v.sale_price, v.mrp, v.cost_price, coalesce(t.rate, 0),
                 (SELECT coalesce(sum(qty), 0) FROM stock_levels l WHERE l.variant_id = v.id), v.reorder_level,
                 p.is_active AND v.is_active, max(p.updated_at, v.updated_at)
-         {from} ORDER BY {order} {direction}, v.id LIMIT ? OFFSET ?"
+         {from} ORDER BY {order} LIMIT ? OFFSET ?"
     ))?;
     let items = stmt
         .query_map(params_from_iter(page_args.iter()), |r| {

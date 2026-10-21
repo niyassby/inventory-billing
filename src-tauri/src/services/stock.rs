@@ -8,7 +8,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use super::audit::AuditEntry;
-use super::common::{date, optional, positive, required};
+use super::common::{date, optional, positive, required, PageQuery};
 use super::idempotency;
 use super::journal::{self, Entry, JLine};
 use super::numbering;
@@ -429,6 +429,10 @@ pub struct StockCardQuery {
     pub warehouse_id: Option<String>,
     pub from: Option<String>,
     pub to: Option<String>,
+    /// Paging only: a ledger is always in date order (`descending` shows the newest first), and its
+    /// running balance is worked out over the whole period, not just the page.
+    #[serde(flatten)]
+    pub page: PageQuery,
 }
 
 #[derive(Debug, Clone, Serialize, JsonSchema)]
@@ -452,7 +456,12 @@ pub struct StockCard {
     pub name: String,
     pub sku: String,
     pub opening_qty: i64,
+    /// The lines of the requested page.
     pub lines: Vec<StockCardLine>,
+    /// Movements in the whole period.
+    pub total: i64,
+    pub page: u32,
+    pub page_size: u32,
     pub closing_qty: i64,
 }
 
@@ -470,71 +479,85 @@ pub fn stock_card(ctx: &Ctx<'_>, query: &StockCardQuery) -> AppResult<StockCard>
         )?,
         None => 0,
     };
-    let mut stmt = ctx.conn.prepare(
-        "SELECT m.business_date, m.movement_type, m.source_type, m.source_id,
-           coalesce((SELECT doc_no FROM sales_invoices WHERE id = m.source_id),
-                    (SELECT doc_no FROM sales_returns WHERE id = m.source_id),
-                    (SELECT doc_no FROM purchase_bills WHERE id = m.source_id),
-                    (SELECT doc_no FROM goods_receipts WHERE id = m.source_id),
-                    (SELECT doc_no FROM purchase_returns WHERE id = m.source_id),
-                    (SELECT doc_no FROM stock_adjustments WHERE id = m.source_id),
-                    (SELECT doc_no FROM stock_transfers WHERE id = m.source_id),
-                    (SELECT doc_no FROM stock_counts WHERE id = m.source_id)),
-           w.name, m.qty, m.unit_cost
-         FROM stock_movements m JOIN warehouses w ON w.id = m.warehouse_id
+    // The running balance is a window over the whole period; the page is cut afterwards, so every
+    // line shows the true balance whichever page it is on.
+    let direction = if query.page.descending { "DESC" } else { "ASC" };
+    let (limit, offset) = query.page.limit_offset();
+    let total: i64 = ctx.conn.query_row(
+        "SELECT count(*) FROM stock_movements m
          WHERE m.variant_id = ?1 AND (?2 IS NULL OR m.warehouse_id = ?2)
-           AND (?3 IS NULL OR m.business_date >= ?3) AND (?4 IS NULL OR m.business_date <= ?4)
-         ORDER BY m.business_date, m.occurred_at, m.rowid",
+           AND (?3 IS NULL OR m.business_date >= ?3) AND (?4 IS NULL OR m.business_date <= ?4)",
+        params![query.variant_id, query.warehouse_id, from, to],
+        |r| r.get(0),
     )?;
-    let mut balance = opening;
+    let in_period: i64 = ctx.conn.query_row(
+        "SELECT coalesce(sum(qty), 0) FROM stock_movements m
+         WHERE m.variant_id = ?1 AND (?2 IS NULL OR m.warehouse_id = ?2)
+           AND (?3 IS NULL OR m.business_date >= ?3) AND (?4 IS NULL OR m.business_date <= ?4)",
+        params![query.variant_id, query.warehouse_id, from, to],
+        |r| r.get(0),
+    )?;
+    let mut stmt = ctx.conn.prepare(&format!(
+        "WITH led AS (
+           SELECT m.rowid AS rid, m.business_date, m.occurred_at, m.movement_type, m.source_type, m.source_id,
+                  m.warehouse_id, m.qty, m.unit_cost,
+                  ?5 + sum(m.qty) OVER (ORDER BY m.business_date, m.occurred_at, m.rowid) AS bal
+           FROM stock_movements m
+           WHERE m.variant_id = ?1 AND (?2 IS NULL OR m.warehouse_id = ?2)
+             AND (?3 IS NULL OR m.business_date >= ?3) AND (?4 IS NULL OR m.business_date <= ?4)
+         ), pg AS (
+           SELECT * FROM led ORDER BY business_date {direction}, occurred_at {direction}, rid {direction}
+           LIMIT ?6 OFFSET ?7
+         )
+         SELECT pg.business_date, pg.movement_type, pg.source_type, pg.source_id,
+           coalesce((SELECT doc_no FROM sales_invoices WHERE id = pg.source_id),
+                    (SELECT doc_no FROM sales_returns WHERE id = pg.source_id),
+                    (SELECT doc_no FROM purchase_bills WHERE id = pg.source_id),
+                    (SELECT doc_no FROM goods_receipts WHERE id = pg.source_id),
+                    (SELECT doc_no FROM purchase_returns WHERE id = pg.source_id),
+                    (SELECT doc_no FROM stock_adjustments WHERE id = pg.source_id),
+                    (SELECT doc_no FROM stock_transfers WHERE id = pg.source_id),
+                    (SELECT doc_no FROM stock_counts WHERE id = pg.source_id)),
+           w.name, pg.qty, pg.unit_cost, pg.bal
+         FROM pg JOIN warehouses w ON w.id = pg.warehouse_id
+         ORDER BY pg.business_date {direction}, pg.occurred_at {direction}, pg.rid {direction}"
+    ))?;
     let lines = stmt
         .query_map(
-            params![query.variant_id, query.warehouse_id, from, to],
+            params![
+                query.variant_id,
+                query.warehouse_id,
+                from,
+                to,
+                opening,
+                limit,
+                offset
+            ],
             |r| {
-                Ok((
-                    r.get(0)?,
-                    r.get(1)?,
-                    r.get(2)?,
-                    r.get(3)?,
-                    r.get(4)?,
-                    r.get(5)?,
-                    r.get::<_, i64>(6)?,
-                    r.get(7)?,
-                ))
+                Ok(StockCardLine {
+                    business_date: r.get(0)?,
+                    movement_type: r.get(1)?,
+                    source_type: r.get(2)?,
+                    source_id: r.get(3)?,
+                    doc_no: r.get(4)?,
+                    warehouse_name: r.get(5)?,
+                    qty: r.get(6)?,
+                    unit_cost: r.get(7)?,
+                    balance: r.get(8)?,
+                })
             },
         )?
-        .map(|row| {
-            let (
-                business_date,
-                movement_type,
-                source_type,
-                source_id,
-                doc_no,
-                warehouse_name,
-                qty,
-                unit_cost,
-            ) = row?;
-            balance += qty;
-            Ok(StockCardLine {
-                business_date,
-                movement_type,
-                source_type,
-                source_id,
-                doc_no,
-                warehouse_name,
-                qty,
-                unit_cost,
-                balance,
-            })
-        })
-        .collect::<AppResult<Vec<_>>>()?;
+        .collect::<Result<Vec<_>, _>>()?;
     Ok(StockCard {
         variant_id: query.variant_id.clone(),
         name: info.name,
         sku: info.sku,
         opening_qty: opening,
         lines,
-        closing_qty: balance,
+        total,
+        page: query.page.page(),
+        page_size: query.page.page_size(),
+        closing_qty: opening + in_period,
     })
 }
 

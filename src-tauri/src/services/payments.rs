@@ -486,13 +486,27 @@ pub fn list(ctx: &Ctx<'_>, query: &PaymentListQuery) -> AppResult<Page<PaymentLi
         params_from_iter(args.iter()),
         |r| r.get(0),
     )?;
+    let order = query.page.order_by(
+        &[
+            ("docNo", "p.doc_no"),
+            ("date", "p.business_date"),
+            ("direction", "p.direction"),
+            ("party", "lower(coalesce(pa.name, ''))"),
+            ("mode", "p.mode"),
+            ("amount", "p.amount"),
+            ("status", "p.status"),
+            ("reference", "coalesce(p.reference_no, '')"),
+        ],
+        "p.business_date DESC, p.created_at DESC, p.id",
+        "p.id",
+    )?;
     let (limit, offset) = query.page.limit_offset();
     args.extend([limit.into(), offset.into()]);
     let items = ctx
         .conn
         .prepare(&format!(
             "SELECT p.id, p.doc_no, p.business_date, p.direction, pa.name, p.mode, p.amount, p.status, p.reference_no {from_sql}
-             ORDER BY p.business_date DESC, p.created_at DESC LIMIT ? OFFSET ?"
+             ORDER BY {order} LIMIT ? OFFSET ?"
         ))?
         .query_map(params_from_iter(args.iter()), |r| {
             Ok(PaymentListItem {

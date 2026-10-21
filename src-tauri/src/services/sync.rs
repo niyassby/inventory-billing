@@ -90,6 +90,16 @@ pub struct ExceptionQuery {
 
 pub fn list_exceptions(ctx: &Ctx<'_>, query: &ExceptionQuery) -> AppResult<Page<SyncException>> {
     ctx.require("sync.review")?;
+    let order = query.page.order_by(
+        &[
+            ("when", "e.created_at"),
+            ("kind", "e.kind"),
+            ("device", "lower(coalesce(d.name, ''))"),
+            ("amount", "e.amount"),
+        ],
+        "e.created_at DESC, e.id",
+        "e.id",
+    )?;
     let (limit, offset) = query.page.limit_offset();
     let filter = if query.include_resolved {
         "1 = 1"
@@ -112,7 +122,7 @@ pub fn list_exceptions(ctx: &Ctx<'_>, query: &ExceptionQuery) -> AppResult<Page<
              LEFT JOIN sales_invoices i ON e.source_type = 'sales_invoice' AND i.id = e.source_id
              LEFT JOIN product_variants v ON v.id = e.variant_id
              LEFT JOIN products p ON p.id = v.product_id
-             WHERE {filter} ORDER BY e.created_at DESC LIMIT ?1 OFFSET ?2"
+             WHERE {filter} ORDER BY {order} LIMIT ?1 OFFSET ?2"
         ))?
         .query_map(params![limit, offset], |r| {
             Ok(SyncException {

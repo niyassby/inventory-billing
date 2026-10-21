@@ -134,13 +134,23 @@ pub fn list_stock_documents(
         params_from_iter(f.args.iter()),
         |r| r.get(0),
     )?;
+    let order = query.page.order_by(
+        &[
+            ("docNo", "coalesce(d.doc_no, '')"),
+            ("date", date_col),
+            ("status", "d.status"),
+            ("store", "lower(w.name)"),
+        ],
+        &format!("{date_col} DESC, d.created_at DESC, d.id"),
+        "d.id",
+    )?;
     let (limit, offset) = query.page.limit_offset();
     let mut args = f.args;
     args.extend([limit.into(), offset.into()]);
     let items = ctx
         .conn
         .prepare(&format!(
-            "SELECT {select} FROM {from_sql} WHERE {where_sql} ORDER BY {date_col} DESC, d.created_at DESC LIMIT ? OFFSET ?"
+            "SELECT {select} FROM {from_sql} WHERE {where_sql} ORDER BY {order} LIMIT ? OFFSET ?"
         ))?
         .query_map(params_from_iter(args.iter()), |r| {
             Ok(StockDocListItem {
@@ -325,6 +335,19 @@ pub fn list_sales_returns(
         params_from_iter(f.args.iter()),
         |r| r.get(0),
     )?;
+    let order = query.page.order_by(
+        &[
+            ("docNo", "r.doc_no"),
+            ("date", "r.business_date"),
+            ("status", "r.status"),
+            ("customer", "lower(r.customer_name)"),
+            ("invoice", "coalesce(i.doc_no, '')"),
+            ("total", "r.total"),
+            ("refunded", "r.amount_refunded"),
+        ],
+        "r.business_date DESC, r.created_at DESC, r.id",
+        "r.id",
+    )?;
     let (limit, offset) = query.page.limit_offset();
     let mut args = f.args;
     args.extend([limit.into(), offset.into()]);
@@ -332,7 +355,7 @@ pub fn list_sales_returns(
         .conn
         .prepare(&format!(
             "SELECT r.id, r.doc_no, r.business_date, r.status, r.customer_name, i.doc_no, r.total, r.amount_refunded
-             FROM {from_sql} WHERE {where_sql} ORDER BY r.business_date DESC, r.created_at DESC LIMIT ? OFFSET ?"
+             FROM {from_sql} WHERE {where_sql} ORDER BY {order} LIMIT ? OFFSET ?"
         ))?
         .query_map(params_from_iter(args.iter()), |r| {
             Ok(ReturnListItem {
@@ -424,6 +447,18 @@ pub fn list_goods_receipts(
         params_from_iter(f.args.iter()),
         |r| r.get(0),
     )?;
+    let order = query.page.order_by(
+        &[
+            ("docNo", "g.doc_no"),
+            ("date", "g.business_date"),
+            ("status", "g.status"),
+            ("supplier", "lower(p.name)"),
+            ("reference", "coalesce(g.supplier_reference, '')"),
+            ("order", "coalesce(o.doc_no, '')"),
+        ],
+        "g.business_date DESC, g.created_at DESC, g.id",
+        "g.id",
+    )?;
     let (limit, offset) = query.page.limit_offset();
     let mut args = f.args;
     args.extend([limit.into(), offset.into()]);
@@ -433,7 +468,7 @@ pub fn list_goods_receipts(
             "SELECT g.id, g.doc_no, g.business_date, g.status, g.party_id, p.name, g.supplier_reference, o.doc_no,
                 (SELECT b.doc_no FROM purchase_bills b WHERE b.goods_receipt_id = g.id AND b.status <> 'voided' LIMIT 1),
                 (SELECT coalesce(sum(value), 0) FROM stock_movements m WHERE m.source_type = 'goods_receipt' AND m.source_id = g.id)
-             FROM {from_sql} WHERE {where_sql} ORDER BY g.business_date DESC, g.created_at DESC LIMIT ? OFFSET ?"
+             FROM {from_sql} WHERE {where_sql} ORDER BY {order} LIMIT ? OFFSET ?"
         ))?
         .query_map(params_from_iter(args.iter()), |r| {
             Ok(ReceiptListItem {

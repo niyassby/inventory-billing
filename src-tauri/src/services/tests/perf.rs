@@ -109,11 +109,10 @@ fn targets_hold_with_50k_products_and_150k_movements() {
                 brand_id: None,
                 low_stock_only: false,
                 include_inactive: false,
-                sort: None,
-                descending: false,
                 page: PageQuery {
                     page: Some(1),
                     page_size: Some(200),
+                    ..Default::default()
                 },
             },
         )

@@ -14,7 +14,7 @@ use crate::services::sales::{
 };
 use crate::services::testkit::{code, Kit};
 
-fn cash(amount: i64) -> PaymentInput {
+pub(super) fn cash(amount: i64) -> PaymentInput {
     PaymentInput {
         mode: "cash".into(),
         amount,
@@ -24,7 +24,7 @@ fn cash(amount: i64) -> PaymentInput {
     }
 }
 
-fn sale(key: &str, variant: &str, units: i64, pay: i64) -> SaleInput {
+pub(super) fn sale(key: &str, variant: &str, units: i64, pay: i64) -> SaleInput {
     SaleInput {
         idempotency_key: key.into(),
         warehouse_id: None,

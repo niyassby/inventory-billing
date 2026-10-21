@@ -1578,13 +1578,26 @@ pub fn list(ctx: &Ctx<'_>, query: &PurchaseListQuery) -> AppResult<Page<Purchase
         params_from_iter(args.iter()),
         |r| r.get(0),
     )?;
+    let order = query.page.order_by(
+        &[
+            ("docNo", "doc_no"),
+            ("date", "business_date"),
+            ("supplier", "lower(supplier_name)"),
+            ("supplierInvoiceNo", invoice_no),
+            ("total", "total"),
+            ("paid", paid),
+            ("status", "status"),
+        ],
+        "business_date DESC, created_at DESC, id",
+        "id",
+    )?;
     let (limit, offset) = query.page.limit_offset();
     args.extend([limit.into(), offset.into()]);
     let items = ctx
         .conn
         .prepare(&format!(
             "SELECT id, doc_no, business_date, supplier_name, {invoice_no}, total, {paid}, status FROM {table} WHERE {where_sql}
-             ORDER BY business_date DESC, created_at DESC LIMIT ? OFFSET ?"
+             ORDER BY {order} LIMIT ? OFFSET ?"
         ))?
         .query_map(params_from_iter(args.iter()), |r| {
             Ok(PurchaseListItem {

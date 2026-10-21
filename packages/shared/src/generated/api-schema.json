@@ -235,6 +235,11 @@
             "null"
           ]
         },
+        "descending": {
+          "default": false,
+          "description": "Sort the other way round.",
+          "type": "boolean"
+        },
         "from": {
           "type": [
             "string",
@@ -258,6 +263,13 @@
           ]
         },
         "search": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "sort": {
+          "description": "Which column to sort by: one of the keys the list documents (unknown keys are refused).",
           "type": [
             "string",
             "null"
@@ -1543,6 +1555,11 @@
     },
     "ExceptionQuery": {
       "properties": {
+        "descending": {
+          "default": false,
+          "description": "Sort the other way round.",
+          "type": "boolean"
+        },
         "includeResolved": {
           "default": false,
           "type": "boolean"
@@ -1560,6 +1577,13 @@
           "minimum": 0.0,
           "type": [
             "integer",
+            "null"
+          ]
+        },
+        "sort": {
+          "description": "Which column to sort by: one of the keys the list documents (unknown keys are refused).",
+          "type": [
+            "string",
             "null"
           ]
         }
@@ -1757,6 +1781,11 @@
             "null"
           ]
         },
+        "descending": {
+          "default": false,
+          "description": "Sort the other way round.",
+          "type": "boolean"
+        },
         "from": {
           "type": [
             "string",
@@ -1780,6 +1809,13 @@
           ]
         },
         "search": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "sort": {
+          "description": "Which column to sort by: one of the keys the list documents (unknown keys are refused).",
           "type": [
             "string",
             "null"
@@ -2463,6 +2499,11 @@
     },
     "InvoiceListQuery": {
       "properties": {
+        "descending": {
+          "default": false,
+          "description": "Sort the other way round.",
+          "type": "boolean"
+        },
         "from": {
           "type": [
             "string",
@@ -2499,6 +2540,13 @@
           ]
         },
         "search": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "sort": {
+          "description": "Which column to sort by: one of the keys the list documents (unknown keys are refused).",
           "type": [
             "string",
             "null"
@@ -3766,6 +3814,11 @@
     },
     "PartyListQuery": {
       "properties": {
+        "descending": {
+          "default": false,
+          "description": "Sort the other way round.",
+          "type": "boolean"
+        },
         "includeInactive": {
           "default": false,
           "type": "boolean"
@@ -3794,6 +3847,13 @@
           ]
         },
         "search": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "sort": {
+          "description": "Which column to sort by: one of the keys the list documents (unknown keys are refused).",
           "type": [
             "string",
             "null"
@@ -4099,6 +4159,11 @@
     },
     "PaymentListQuery": {
       "properties": {
+        "descending": {
+          "default": false,
+          "description": "Sort the other way round.",
+          "type": "boolean"
+        },
         "direction": {
           "type": [
             "string",
@@ -4140,6 +4205,13 @@
           ]
         },
         "search": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "sort": {
+          "description": "Which column to sort by: one of the keys the list documents (unknown keys are refused).",
           "type": [
             "string",
             "null"
@@ -4725,6 +4797,7 @@
         },
         "descending": {
           "default": false,
+          "description": "Sort the other way round.",
           "type": "boolean"
         },
         "includeInactive": {
@@ -4758,7 +4831,7 @@
           ]
         },
         "sort": {
-          "description": "\"name\" (default), \"sku\", \"price\", \"stock\" or \"updated\".",
+          "description": "Which column to sort by: one of the keys the list documents (unknown keys are refused).",
           "type": [
             "string",
             "null"
@@ -5171,6 +5244,11 @@
     },
     "PurchaseListQuery": {
       "properties": {
+        "descending": {
+          "default": false,
+          "description": "Sort the other way round.",
+          "type": "boolean"
+        },
         "from": {
           "type": [
             "string",
@@ -5204,6 +5282,13 @@
           ]
         },
         "search": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "sort": {
+          "description": "Which column to sort by: one of the keys the list documents (unknown keys are refused).",
           "type": [
             "string",
             "null"
@@ -5407,6 +5492,11 @@
     },
     "ReceiptListQuery": {
       "properties": {
+        "descending": {
+          "default": false,
+          "description": "Sort the other way round.",
+          "type": "boolean"
+        },
         "from": {
           "type": [
             "string",
@@ -5442,6 +5532,13 @@
           ]
         },
         "search": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "sort": {
+          "description": "Which column to sort by: one of the keys the list documents (unknown keys are refused).",
           "type": [
             "string",
             "null"
@@ -5940,6 +6037,11 @@
     },
     "ReturnListQuery": {
       "properties": {
+        "descending": {
+          "default": false,
+          "description": "Sort the other way round.",
+          "type": "boolean"
+        },
         "from": {
           "type": [
             "string",
@@ -5969,6 +6071,13 @@
           ]
         },
         "search": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "sort": {
+          "description": "Which column to sort by: one of the keys the list documents (unknown keys are refused).",
           "type": [
             "string",
             "null"
@@ -6496,7 +6605,18 @@
     },
     "SalesDocListQuery": {
       "properties": {
+        "descending": {
+          "default": false,
+          "description": "Sort the other way round.",
+          "type": "boolean"
+        },
         "docType": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "from": {
           "type": [
             "string",
             "null"
@@ -6518,13 +6638,32 @@
             "null"
           ]
         },
+        "partyId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "search": {
           "type": [
             "string",
             "null"
           ]
         },
+        "sort": {
+          "description": "Which column to sort by: one of the keys the list documents (unknown keys are refused).",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "status": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "to": {
           "type": [
             "string",
             "null"
@@ -7025,6 +7164,7 @@
           "type": "integer"
         },
         "lines": {
+          "description": "The lines of the requested page.",
           "items": {
             "$ref": "#/definitions/StockCardLine"
           },
@@ -7037,8 +7177,23 @@
           "format": "int64",
           "type": "integer"
         },
+        "page": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "pageSize": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": "integer"
+        },
         "sku": {
           "type": "string"
+        },
+        "total": {
+          "description": "Movements in the whole period.",
+          "format": "int64",
+          "type": "integer"
         },
         "variantId": {
           "type": "string"
@@ -7049,7 +7204,10 @@
         "lines",
         "name",
         "openingQty",
+        "page",
+        "pageSize",
         "sku",
+        "total",
         "variantId"
       ],
       "type": "object"
@@ -7104,7 +7262,35 @@
     },
     "StockCardQuery": {
       "properties": {
+        "descending": {
+          "default": false,
+          "description": "Sort the other way round.",
+          "type": "boolean"
+        },
         "from": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "page": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "pageSize": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "sort": {
+          "description": "Which column to sort by: one of the keys the list documents (unknown keys are refused).",
           "type": [
             "string",
             "null"
@@ -7219,6 +7405,11 @@
     },
     "StockDocQuery": {
       "properties": {
+        "descending": {
+          "default": false,
+          "description": "Sort the other way round.",
+          "type": "boolean"
+        },
         "from": {
           "type": [
             "string",
@@ -7246,6 +7437,13 @@
           ]
         },
         "search": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "sort": {
+          "description": "Which column to sort by: one of the keys the list documents (unknown keys are refused).",
           "type": [
             "string",
             "null"
