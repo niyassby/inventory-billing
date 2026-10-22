@@ -34,7 +34,8 @@ impl Spec {
 pub fn schema() -> Value {
     let mut gen = SchemaSettings::draft07().into_generator();
     let mut specs = super::specs(&mut gen);
-    let local = super::local::specs(&mut gen);
+    let mut local = super::local::specs(&mut gen);
+    local.extend(super::printers::specs(&mut gen));
     let local_names: Vec<&str> = local.iter().map(|s| s.name).collect();
     specs.extend(local);
     specs.sort_by_key(|s| s.name);

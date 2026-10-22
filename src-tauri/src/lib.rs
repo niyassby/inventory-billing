@@ -32,6 +32,7 @@ pub mod jobs;
 pub mod legacy_migration;
 pub mod logging;
 pub mod node;
+pub mod printing;
 pub mod secrets;
 pub mod services;
 
@@ -169,15 +170,18 @@ fn start_hub(state: app::AppState, node: Arc<api::local::Node>) {
     });
 }
 
-/// One invoke handler: local device commands, and v2 commands (sent to the hub when this PC is
+/// One invoke handler: local device and printer commands, and v2 commands (sent to the hub when this PC is
 /// a counter).
 fn route<R: tauri::Runtime>() -> impl Fn(tauri::ipc::Invoke<R>) -> bool + Send + Sync + 'static {
     let v2 = api::handler::<R>();
     let local = api::local::handler::<R>();
+    let printers = api::printers::handler::<R>();
     move |invoke| {
         let command = invoke.message.command();
         if api::local::NAMES.contains(&command) {
             local(invoke)
+        } else if api::printers::NAMES.contains(&command) {
+            printers(invoke)
         } else {
             match CLIENT.get() {
                 Some(runtime) if api::NAMES.contains(&command) => {

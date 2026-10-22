@@ -563,7 +563,7 @@ pub struct CloseRegisterInput {
     pub notes: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct RegisterSession {
     pub id: String,

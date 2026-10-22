@@ -647,6 +647,44 @@ fn total_stock(conn: &Connection, variant_id: &str) -> AppResult<i64> {
     )?)
 }
 
+/// A barcode identifies one thing at the till: it may not repeat within the product, nor belong
+/// to another product's variant or pack size (the unique indexes only check each table alone).
+fn check_barcodes(
+    conn: &Connection,
+    product_id: Option<&str>,
+    variants: &[CleanVariant],
+    packs: &[UnitConversionInput],
+) -> AppResult<()> {
+    let mut seen = HashSet::new();
+    let variant_codes = variants.iter().enumerate().filter_map(|(i, v)| {
+        v.barcode
+            .as_deref()
+            .map(|b| (format!("variants.{i}.barcode"), b.to_string()))
+    });
+    let pack_codes = packs.iter().enumerate().filter_map(|(i, c)| {
+        c.barcode
+            .as_deref()
+            .map(str::trim)
+            .filter(|b| !b.is_empty())
+            .map(|b| (format!("unitConversions.{i}.barcode"), b.to_string()))
+    });
+    for (field, code) in variant_codes.chain(pack_codes) {
+        if !seen.insert(code.clone()) {
+            return Err(AppError::field(
+                &field,
+                "This barcode is used twice in this product.",
+            ));
+        }
+        if super::printing::barcode_taken(conn, &code, product_id)? {
+            return Err(AppError::field(
+                &field,
+                "Another product already has this barcode.",
+            ));
+        }
+    }
+    Ok(())
+}
+
 pub fn save_product(ctx: &mut Ctx<'_>, input: &ProductInput) -> AppResult<ProductDetail> {
     ctx.require("products.manage")?;
     let name = required("name", &input.name, 160)?;
@@ -712,6 +750,7 @@ pub fn save_product(ctx: &mut Ctx<'_>, input: &ProductInput) -> AppResult<Produc
     let actor = ctx.actor;
     let product_id = write(ctx.conn, |tx| {
         exists(tx, "units", &input.base_unit_id, "baseUnitId")?;
+        check_barcodes(tx, input.id.as_deref(), &variants, &input.unit_conversions)?;
         if let Some(c) = &input.category_id {
             exists(tx, "categories", c, "categoryId")?;
         }

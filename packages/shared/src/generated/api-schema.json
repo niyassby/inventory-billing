@@ -928,6 +928,32 @@
       ],
       "type": "object"
     },
+    "CodePage": {
+      "description": "Character tables an ESC/POS printer can be switched to (`ESC t n`). Everything outside the table is printed as a picture or replaced (see `encode`).",
+      "oneOf": [
+        {
+          "description": "US (the factory default of most printers).",
+          "enum": [
+            "pc437"
+          ],
+          "type": "string"
+        },
+        {
+          "description": "Multilingual Latin with €.",
+          "enum": [
+            "pc858"
+          ],
+          "type": "string"
+        },
+        {
+          "description": "Windows Latin-1.",
+          "enum": [
+            "wpc1252"
+          ],
+          "type": "string"
+        }
+      ]
+    },
     "Column": {
       "properties": {
         "key": {
@@ -1211,6 +1237,14 @@
         }
       },
       "type": "object"
+    },
+    "CutMode": {
+      "enum": [
+        "none",
+        "partial",
+        "full"
+      ],
+      "type": "string"
     },
     "DayCloseRow": {
       "properties": {
@@ -1533,25 +1567,118 @@
         }
       ]
     },
-    "ErrorCode": {
-      "enum": [
-        "UNAUTHORIZED",
-        "FORBIDDEN",
-        "APPROVAL_REQUIRED",
-        "VALIDATION",
-        "NOT_FOUND",
-        "CONFLICT",
-        "INSUFFICIENT_STOCK",
-        "TOTALS_MISMATCH",
-        "DOCUMENT_FINALIZED",
-        "RATE_LIMITED",
-        "LOCKED_OUT",
-        "HUB_OFFLINE",
-        "SETUP_REQUIRED",
-        "PASSWORD_CHANGE_REQUIRED",
-        "INTERNAL"
+    "Discovered": {
+      "description": "Printers installed in Windows and serial ports present, for the printer settings screen.",
+      "properties": {
+        "serialPorts": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "windowsQueues": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "windowsSupported": {
+          "description": "Whether this computer can print through Windows queues.",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "serialPorts",
+        "windowsQueues",
+        "windowsSupported"
       ],
-      "type": "string"
+      "type": "object"
+    },
+    "DrawerInput": {
+      "properties": {
+        "reason": {
+          "default": null,
+          "description": "Why the drawer is opened without a sale (\"change for a customer\", …).",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "type": "object"
+    },
+    "DrawerOpenInput": {
+      "properties": {
+        "invoice": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/InvoiceDetail"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The cash sale just saved: the drawer opens for it without approval (auto-print off)."
+        },
+        "reason": {
+          "default": null,
+          "description": "Why the drawer is opened without a sale.",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "type": "object"
+    },
+    "DrawerPin": {
+      "oneOf": [
+        {
+          "enum": [
+            "pin5"
+          ],
+          "type": "string"
+        },
+        {
+          "description": "Connector pin 2 (most drawers).",
+          "enum": [
+            "pin2"
+          ],
+          "type": "string"
+        }
+      ]
+    },
+    "ErrorCode": {
+      "oneOf": [
+        {
+          "enum": [
+            "UNAUTHORIZED",
+            "FORBIDDEN",
+            "APPROVAL_REQUIRED",
+            "VALIDATION",
+            "NOT_FOUND",
+            "CONFLICT",
+            "INSUFFICIENT_STOCK",
+            "TOTALS_MISMATCH",
+            "DOCUMENT_FINALIZED",
+            "RATE_LIMITED",
+            "LOCKED_OUT",
+            "HUB_OFFLINE",
+            "SETUP_REQUIRED",
+            "PASSWORD_CHANGE_REQUIRED",
+            "INTERNAL"
+          ],
+          "type": "string"
+        },
+        {
+          "description": "A printer could not be reached or refused the job (details.kind says why).",
+          "enum": [
+            "PRINTER_ERROR"
+          ],
+          "type": "string"
+        }
+      ]
     },
     "ExceptionQuery": {
       "properties": {
@@ -1854,6 +1981,35 @@
       ],
       "type": "object"
     },
+    "GenerateBarcodesInput": {
+      "properties": {
+        "variantIds": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "variantIds"
+      ],
+      "type": "object"
+    },
+    "GeneratedBarcode": {
+      "properties": {
+        "barcode": {
+          "type": "string"
+        },
+        "variantId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "barcode",
+        "variantId"
+      ],
+      "type": "object"
+    },
     "GoodsReceiptDetail": {
       "properties": {
         "businessDate": {
@@ -1975,6 +2131,66 @@
         "createdAt",
         "id",
         "label"
+      ],
+      "type": "object"
+    },
+    "HeldSlip": {
+      "description": "A parked bill, for the customer to keep while they fetch something.",
+      "properties": {
+        "heldAt": {
+          "type": "string"
+        },
+        "heldBy": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "label": {
+          "type": "string"
+        },
+        "lines": {
+          "items": {
+            "$ref": "#/definitions/HeldSlipLine"
+          },
+          "type": "array"
+        },
+        "total": {
+          "description": "The cart total the till showed, when it had one.",
+          "format": "int64",
+          "type": [
+            "integer",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "heldAt",
+        "label",
+        "lines"
+      ],
+      "type": "object"
+    },
+    "HeldSlipLine": {
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "qty": {
+          "description": "Thousandths.",
+          "format": "int64",
+          "type": "integer"
+        },
+        "unit": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "name",
+        "qty"
       ],
       "type": "object"
     },
@@ -2680,6 +2896,231 @@
           ]
         }
       },
+      "type": "object"
+    },
+    "LabelItem": {
+      "description": "One product to label, with how many copies.",
+      "properties": {
+        "barcode": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "batchNo": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "copies": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "expiryDate": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "mrp": {
+          "default": null,
+          "format": "int64",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "price": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "sku": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "variantId": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "copies",
+        "name",
+        "price"
+      ],
+      "type": "object"
+    },
+    "LabelLanguage": {
+      "enum": [
+        "zpl",
+        "tspl"
+      ],
+      "type": "string"
+    },
+    "LabelPreview": {
+      "properties": {
+        "svg": {
+          "description": "One label as SVG (millimetre size).",
+          "type": "string"
+        },
+        "symbology": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Symbology"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The barcode actually used (EAN falls back to Code 128 for codes that aren't EANs)."
+        },
+        "warning": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "svg"
+      ],
+      "type": "object"
+    },
+    "LabelPreviewInput": {
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/definitions/LabelItem"
+          },
+          "type": "array"
+        },
+        "template": {
+          "$ref": "#/definitions/LabelTemplate"
+        }
+      },
+      "required": [
+        "items",
+        "template"
+      ],
+      "type": "object"
+    },
+    "LabelSourceInput": {
+      "properties": {
+        "receiptId": {
+          "default": null,
+          "description": "A goods receipt: one label per unit received (whole units, rounded up).",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "variantIds": {
+          "default": [],
+          "description": "Products (variants) to label, one label each to start with.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "type": "object"
+    },
+    "LabelTemplate": {
+      "properties": {
+        "columns": {
+          "default": 1,
+          "description": "Labels side by side on the roll (1–4).",
+          "format": "int64",
+          "type": "integer"
+        },
+        "gapMm": {
+          "default": 0,
+          "description": "Gap between labels on the roll.",
+          "format": "int64",
+          "type": "integer"
+        },
+        "heightMm": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "id": {
+          "default": null,
+          "description": "Absent for a template that isn't saved yet.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "showBarcode": {
+          "default": true,
+          "type": "boolean"
+        },
+        "showBatch": {
+          "default": false,
+          "type": "boolean"
+        },
+        "showBusiness": {
+          "default": false,
+          "type": "boolean"
+        },
+        "showExpiry": {
+          "default": false,
+          "type": "boolean"
+        },
+        "showMrp": {
+          "default": false,
+          "type": "boolean"
+        },
+        "showName": {
+          "default": true,
+          "type": "boolean"
+        },
+        "showPrice": {
+          "default": true,
+          "type": "boolean"
+        },
+        "showSku": {
+          "default": false,
+          "type": "boolean"
+        },
+        "symbology": {
+          "$ref": "#/definitions/Symbology",
+          "default": "code128"
+        },
+        "updatedAt": {
+          "default": null,
+          "description": "For edits: the `updatedAt` the editor loaded.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "widthMm": {
+          "format": "int64",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "heightMm",
+        "name",
+        "widthMm"
+      ],
       "type": "object"
     },
     "Link": {
@@ -3398,6 +3839,37 @@
       ],
       "type": "object"
     },
+    "Page_for_PrintJob": {
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/definitions/PrintJob"
+          },
+          "type": "array"
+        },
+        "page": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "pageSize": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "total": {
+          "format": "int64",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "items",
+        "page",
+        "pageSize",
+        "total"
+      ],
+      "type": "object"
+    },
     "Page_for_ProductListItem": {
       "properties": {
         "items": {
@@ -3653,6 +4125,13 @@
         "expiresAt"
       ],
       "type": "object"
+    },
+    "PaperWidth": {
+      "enum": [
+        "mm58",
+        "mm80"
+      ],
+      "type": "string"
     },
     "PartyDetail": {
       "properties": {
@@ -4543,6 +5022,623 @@
         "unitName",
         "unitPrice",
         "variantId"
+      ],
+      "type": "object"
+    },
+    "PrintDocument": {
+      "description": "A document to print, with the figures the backend produced (the same ones the screen shows).",
+      "oneOf": [
+        {
+          "properties": {
+            "invoice": {
+              "$ref": "#/definitions/InvoiceDetail"
+            },
+            "reprint": {
+              "default": false,
+              "description": "A copy printed later: marked \"REPRINT\".",
+              "type": "boolean"
+            },
+            "type": {
+              "enum": [
+                "receipt"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "invoice",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "invoiceNo": {
+              "default": null,
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "salesReturn": {
+              "$ref": "#/definitions/ReturnDetail"
+            },
+            "type": {
+              "enum": [
+                "return_slip"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "salesReturn",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "session": {
+              "$ref": "#/definitions/RegisterSession"
+            },
+            "type": {
+              "enum": [
+                "till_close"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "session",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "slip": {
+              "$ref": "#/definitions/HeldSlip"
+            },
+            "type": {
+              "enum": [
+                "held_slip"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "slip",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "items": {
+              "items": {
+                "$ref": "#/definitions/LabelItem"
+              },
+              "type": "array"
+            },
+            "template": {
+              "$ref": "#/definitions/LabelTemplate"
+            },
+            "type": {
+              "enum": [
+                "labels"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "items",
+            "template",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "description": "The printer test page.",
+          "properties": {
+            "type": {
+              "enum": [
+                "test"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "type"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "PrintInput": {
+      "properties": {
+        "document": {
+          "$ref": "#/definitions/PrintDocument"
+        },
+        "printerId": {
+          "default": null,
+          "description": "A printer of this PC, instead of the document's route.",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "document"
+      ],
+      "type": "object"
+    },
+    "PrintJob": {
+      "properties": {
+        "attempts": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "createdAt": {
+          "type": "string"
+        },
+        "createdBy": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "createdByName": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "deviceName": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "docType": {
+          "type": "string"
+        },
+        "errorKind": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "id": {
+          "type": "string"
+        },
+        "lastError": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "nextTryAt": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "printedAt": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "printerId": {
+          "type": "string"
+        },
+        "printerName": {
+          "type": "string"
+        },
+        "status": {
+          "description": "\"queued\", \"printed\", \"failed\" or \"cancelled\".",
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "attempts",
+        "createdAt",
+        "docType",
+        "id",
+        "printerId",
+        "printerName",
+        "status",
+        "title"
+      ],
+      "type": "object"
+    },
+    "PrintJobQuery": {
+      "properties": {
+        "descending": {
+          "default": false,
+          "description": "Sort the other way round.",
+          "type": "boolean"
+        },
+        "page": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "pageSize": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "sort": {
+          "description": "Which column to sort by: one of the keys the list documents (unknown keys are refused).",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "status": {
+          "default": null,
+          "description": "\"queued\", \"printed\", \"failed\" or \"cancelled\"; empty for all.",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "type": "object"
+    },
+    "PrintOutcome": {
+      "properties": {
+        "jobId": {
+          "description": "The hub's print-queue entry, when it went through the hub.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "message": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "printerName": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "status": {
+          "$ref": "#/definitions/PrintStatus"
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "type": "object"
+    },
+    "PrintRoute": {
+      "description": "Where one kind of document is printed: a printer of this PC, or one the hub shares.",
+      "properties": {
+        "onHub": {
+          "default": false,
+          "type": "boolean"
+        },
+        "printerId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "printerId"
+      ],
+      "type": "object"
+    },
+    "PrintStatus": {
+      "description": "What happened to a print request.",
+      "oneOf": [
+        {
+          "description": "Handed to the printer.",
+          "enum": [
+            "printed"
+          ],
+          "type": "string"
+        },
+        {
+          "description": "Waiting in the hub's queue (it retries).",
+          "enum": [
+            "queued"
+          ],
+          "type": "string"
+        },
+        {
+          "description": "No printer is set up for this document: print through the system dialog instead.",
+          "enum": [
+            "no_printer"
+          ],
+          "type": "string"
+        }
+      ]
+    },
+    "PrinterChangeInput": {
+      "properties": {
+        "summary": {
+          "description": "The new configuration, summarised (names, kinds, connections, routes)."
+        }
+      },
+      "required": [
+        "summary"
+      ],
+      "type": "object"
+    },
+    "PrinterConfig": {
+      "properties": {
+        "autoPrintReceipt": {
+          "default": false,
+          "description": "Print the receipt as soon as a sale is saved.",
+          "type": "boolean"
+        },
+        "drawerOnCash": {
+          "default": false,
+          "description": "Open the drawer when a sale is paid (partly) in cash.",
+          "type": "boolean"
+        },
+        "drawerPrinterId": {
+          "default": null,
+          "description": "The receipt printer the cash drawer is plugged into.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "fontPath": {
+          "default": null,
+          "description": "A font file with the rupee sign and Indian scripts, when the system one won't do.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "printers": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/PrinterProfile"
+          },
+          "type": "array"
+        },
+        "routes": {
+          "$ref": "#/definitions/Routes",
+          "default": {
+            "heldSlip": null,
+            "labels": null,
+            "receipt": null,
+            "returnSlip": null,
+            "tillClose": null
+          }
+        }
+      },
+      "type": "object"
+    },
+    "PrinterConnection": {
+      "oneOf": [
+        {
+          "description": "Raw TCP, usually port 9100.",
+          "properties": {
+            "host": {
+              "type": "string"
+            },
+            "port": {
+              "format": "uint16",
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "type": {
+              "enum": [
+                "network"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "host",
+            "port",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "description": "\"COM3\" on Windows, \"/dev/ttyUSB0\" elsewhere.",
+          "properties": {
+            "baud": {
+              "format": "uint32",
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "port": {
+              "type": "string"
+            },
+            "type": {
+              "enum": [
+                "serial"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "baud",
+            "port",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "description": "A printer installed in Windows (its queue name), sent RAW.",
+          "properties": {
+            "queue": {
+              "type": "string"
+            },
+            "type": {
+              "enum": [
+                "windows"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "queue",
+            "type"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "PrinterKind": {
+      "oneOf": [
+        {
+          "description": "ESC/POS thermal receipt printer.",
+          "enum": [
+            "receipt"
+          ],
+          "type": "string"
+        },
+        {
+          "description": "ZPL or TSPL label printer.",
+          "enum": [
+            "label"
+          ],
+          "type": "string"
+        }
+      ]
+    },
+    "PrinterProfile": {
+      "properties": {
+        "codePage": {
+          "$ref": "#/definitions/CodePage",
+          "default": "pc437"
+        },
+        "connection": {
+          "$ref": "#/definitions/PrinterConnection"
+        },
+        "copies": {
+          "default": 1,
+          "format": "uint8",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "cut": {
+          "$ref": "#/definitions/CutMode",
+          "default": "partial"
+        },
+        "drawerPin": {
+          "$ref": "#/definitions/DrawerPin",
+          "default": "pin2"
+        },
+        "feedLines": {
+          "default": 4,
+          "description": "Blank lines before the cut, so the last line clears the cutter.",
+          "format": "uint8",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "hasDrawer": {
+          "default": false,
+          "description": "A cash drawer is plugged into this printer.",
+          "type": "boolean"
+        },
+        "id": {
+          "default": "",
+          "description": "Empty for a new printer (an id is given on save).",
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/definitions/PrinterKind"
+        },
+        "labelDpi": {
+          "default": 203,
+          "format": "uint16",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "labelLanguage": {
+          "$ref": "#/definitions/LabelLanguage",
+          "default": "zpl"
+        },
+        "name": {
+          "type": "string"
+        },
+        "paper": {
+          "$ref": "#/definitions/PaperWidth",
+          "default": "mm80"
+        },
+        "pictureFallback": {
+          "default": true,
+          "description": "Print text the code page lacks (Hindi, Malayalam…) as a picture instead of \"?\".",
+          "type": "boolean"
+        },
+        "rupee": {
+          "$ref": "#/definitions/RupeeStyle",
+          "default": "symbol"
+        },
+        "shared": {
+          "default": false,
+          "description": "On the hub: counters may print to it through the hub's print queue.",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "connection",
+        "kind",
+        "name"
+      ],
+      "type": "object"
+    },
+    "PrinterSetup": {
+      "properties": {
+        "config": {
+          "$ref": "#/definitions/PrinterConfig"
+        },
+        "hubPrinters": {
+          "description": "The hub's shared printers (counters only; empty when the hub can't be reached).",
+          "items": {
+            "$ref": "#/definitions/SharedPrinter"
+          },
+          "type": "array"
+        },
+        "isCounter": {
+          "description": "This PC is a counter: it can also print to the hub's shared printers.",
+          "type": "boolean"
+        },
+        "pictureFont": {
+          "description": "A font for pictures of text (₹, Hindi, Malayalam) was found on this PC.",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "config",
+        "hubPrinters",
+        "isCounter",
+        "pictureFont"
+      ],
+      "type": "object"
+    },
+    "PrinterTestInput": {
+      "properties": {
+        "printer": {
+          "$ref": "#/definitions/PrinterProfile",
+          "description": "The printer as typed in the form (it need not be saved yet)."
+        }
+      },
+      "required": [
+        "printer"
       ],
       "type": "object"
     },
@@ -6272,6 +7368,79 @@
       ],
       "type": "string"
     },
+    "Routes": {
+      "properties": {
+        "heldSlip": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/PrintRoute"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "labels": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/PrintRoute"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "receipt": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/PrintRoute"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "returnSlip": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/PrintRoute"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "tillClose": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/PrintRoute"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "type": "object"
+    },
+    "RupeeStyle": {
+      "oneOf": [
+        {
+          "description": "Print ₹ (as a picture: no printer code page has it).",
+          "enum": [
+            "symbol"
+          ],
+          "type": "string"
+        },
+        {
+          "description": "Print \"Rs.\" (faster, works without the picture fallback).",
+          "enum": [
+            "text"
+          ],
+          "type": "string"
+        }
+      ]
+    },
     "SaleInput": {
       "properties": {
         "billDiscount": {
@@ -7191,6 +8360,29 @@
       ],
       "type": "object"
     },
+    "SharedPrinter": {
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/definitions/PrinterKind"
+        },
+        "name": {
+          "type": "string"
+        },
+        "paper": {
+          "$ref": "#/definitions/PaperWidth"
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "name",
+        "paper"
+      ],
+      "type": "object"
+    },
     "StatementLine": {
       "properties": {
         "balance": {
@@ -7642,6 +8834,35 @@
         "variantId"
       ],
       "type": "object"
+    },
+    "SubmitPrintJobInput": {
+      "properties": {
+        "document": {
+          "$ref": "#/definitions/PrintDocument"
+        },
+        "idempotencyKey": {
+          "type": "string"
+        },
+        "printerId": {
+          "description": "One of the hub's shared printers.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "document",
+        "idempotencyKey",
+        "printerId"
+      ],
+      "type": "object"
+    },
+    "Symbology": {
+      "enum": [
+        "ean13",
+        "ean8",
+        "code128",
+        "qr"
+      ],
+      "type": "string"
     },
     "SyncException": {
       "properties": {
@@ -9115,6 +10336,38 @@
           ],
           "type": "object"
         },
+        "drawer_authorize": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/DrawerInput"
+            },
+            "output": {
+              "type": "null"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "drawer_open": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/DrawerOpenInput"
+            },
+            "output": {
+              "type": "null"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
         "expenses_categories": {
           "additionalProperties": false,
           "properties": {
@@ -9206,6 +10459,95 @@
             },
             "output": {
               "$ref": "#/definitions/HubInfo"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "labels_items": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/LabelSourceInput"
+            },
+            "output": {
+              "items": {
+                "$ref": "#/definitions/LabelItem"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "labels_preview": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/LabelPreviewInput"
+            },
+            "output": {
+              "items": {
+                "$ref": "#/definitions/LabelPreview"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "labels_templates_delete": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/IdInput"
+            },
+            "output": {
+              "type": "null"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "labels_templates_list": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/NoInput"
+            },
+            "output": {
+              "items": {
+                "$ref": "#/definitions/LabelTemplate"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "labels_templates_save": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/LabelTemplate"
+            },
+            "output": {
+              "$ref": "#/definitions/LabelTemplate"
             }
           },
           "required": [
@@ -9517,6 +10859,185 @@
           ],
           "type": "object"
         },
+        "print_document": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/PrintInput"
+            },
+            "output": {
+              "$ref": "#/definitions/PrintOutcome"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "print_jobs_cancel": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/IdInput"
+            },
+            "output": {
+              "$ref": "#/definitions/PrintJob"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "print_jobs_list": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/PrintJobQuery"
+            },
+            "output": {
+              "$ref": "#/definitions/Page_for_PrintJob"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "print_jobs_retry": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/IdInput"
+            },
+            "output": {
+              "$ref": "#/definitions/PrintJob"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "print_jobs_submit": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/SubmitPrintJobInput"
+            },
+            "output": {
+              "$ref": "#/definitions/PrintJob"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "printers_config_get": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/NoInput"
+            },
+            "output": {
+              "$ref": "#/definitions/PrinterSetup"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "printers_config_save": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/PrinterConfig"
+            },
+            "output": {
+              "$ref": "#/definitions/PrinterSetup"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "printers_discover": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/NoInput"
+            },
+            "output": {
+              "$ref": "#/definitions/Discovered"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "printers_record_change": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/PrinterChangeInput"
+            },
+            "output": {
+              "type": "null"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "printers_shared": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/NoInput"
+            },
+            "output": {
+              "items": {
+                "$ref": "#/definitions/SharedPrinter"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "printers_test": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/PrinterTestInput"
+            },
+            "output": {
+              "$ref": "#/definitions/PrintOutcome"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
         "products_delete": {
           "additionalProperties": false,
           "properties": {
@@ -9525,6 +11046,25 @@
             },
             "output": {
               "type": "null"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "products_generate_barcodes": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/GenerateBarcodesInput"
+            },
+            "output": {
+              "items": {
+                "$ref": "#/definitions/GeneratedBarcode"
+              },
+              "type": "array"
             }
           },
           "required": [
@@ -10766,12 +12306,19 @@
         "devices_list",
         "devices_pairing_code",
         "devices_revoke",
+        "drawer_authorize",
+        "drawer_open",
         "expenses_categories",
         "expenses_create",
         "expenses_list",
         "expenses_save_category",
         "expenses_void",
         "hub_status",
+        "labels_items",
+        "labels_preview",
+        "labels_templates_delete",
+        "labels_templates_list",
+        "labels_templates_save",
         "notifications_list",
         "notifications_mark_read",
         "outbox_discard",
@@ -10790,7 +12337,19 @@
         "payments_record",
         "payments_void",
         "permissions_list",
+        "print_document",
+        "print_jobs_cancel",
+        "print_jobs_list",
+        "print_jobs_retry",
+        "print_jobs_submit",
+        "printers_config_get",
+        "printers_config_save",
+        "printers_discover",
+        "printers_record_change",
+        "printers_shared",
+        "printers_test",
         "products_delete",
+        "products_generate_barcodes",
         "products_get",
         "products_image_get",
         "products_image_remove",
@@ -10882,7 +12441,13 @@
           "outbox_list",
           "outbox_retry",
           "outbox_discard",
-          "client_cached_customers"
+          "client_cached_customers",
+          "printers_config_get",
+          "printers_config_save",
+          "printers_discover",
+          "printers_test",
+          "print_document",
+          "drawer_open"
         ],
         "type": "string"
       },

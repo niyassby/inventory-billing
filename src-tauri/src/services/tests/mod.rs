@@ -12,5 +12,6 @@ mod images;
 mod lists;
 mod network;
 mod perf;
+mod printing;
 mod purchasing;
 mod reporting;

@@ -13,24 +13,104 @@ export type Link = ("connected" | "hub_offline") | "degraded" | "syncing";
 export type DeviceMode = "standalone" | "hub" | "client";
 /**
  * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "Symbology".
+ */
+export type Symbology = "ean13" | "ean8" | "code128" | "qr";
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
  * via the `definition` "ErrorCode".
  */
 export type ErrorCode =
-  | "UNAUTHORIZED"
-  | "FORBIDDEN"
-  | "APPROVAL_REQUIRED"
-  | "VALIDATION"
-  | "NOT_FOUND"
-  | "CONFLICT"
-  | "INSUFFICIENT_STOCK"
-  | "TOTALS_MISMATCH"
-  | "DOCUMENT_FINALIZED"
-  | "RATE_LIMITED"
-  | "LOCKED_OUT"
-  | "HUB_OFFLINE"
-  | "SETUP_REQUIRED"
-  | "PASSWORD_CHANGE_REQUIRED"
-  | "INTERNAL";
+  | (
+      | "UNAUTHORIZED"
+      | "FORBIDDEN"
+      | "APPROVAL_REQUIRED"
+      | "VALIDATION"
+      | "NOT_FOUND"
+      | "CONFLICT"
+      | "INSUFFICIENT_STOCK"
+      | "TOTALS_MISMATCH"
+      | "DOCUMENT_FINALIZED"
+      | "RATE_LIMITED"
+      | "LOCKED_OUT"
+      | "HUB_OFFLINE"
+      | "SETUP_REQUIRED"
+      | "PASSWORD_CHANGE_REQUIRED"
+      | "INTERNAL"
+    )
+  | "PRINTER_ERROR";
+/**
+ * A document to print, with the figures the backend produced (the same ones the screen shows).
+ *
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "PrintDocument".
+ */
+export type PrintDocument =
+  | {
+      invoice: InvoiceDetail;
+      /**
+       * A copy printed later: marked "REPRINT".
+       */
+      reprint?: boolean;
+      type: "receipt";
+    }
+  | {
+      invoiceNo?: string | null;
+      salesReturn: ReturnDetail;
+      type: "return_slip";
+    }
+  | {
+      session: RegisterSession;
+      type: "till_close";
+    }
+  | {
+      slip: HeldSlip;
+      type: "held_slip";
+    }
+  | {
+      items: LabelItem[];
+      template: LabelTemplate;
+      type: "labels";
+    }
+  | {
+      type: "test";
+    };
+/**
+ * What happened to a print request.
+ *
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "PrintStatus".
+ */
+export type PrintStatus = "printed" | "queued" | "no_printer";
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "PrinterConnection".
+ */
+export type PrinterConnection =
+  | {
+      host: string;
+      port: number;
+      type: "network";
+    }
+  | {
+      baud: number;
+      port: string;
+      type: "serial";
+    }
+  | {
+      queue: string;
+      type: "windows";
+    };
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "PrinterKind".
+ */
+export type PrinterKind = "receipt" | "label";
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "PaperWidth".
+ */
+export type PaperWidth = "mm58" | "mm80";
 /**
  * This interface was referenced by `ApiContract`'s JSON-Schema
  * via the `definition` "Discount".
@@ -62,10 +142,37 @@ export type OfflineSalesPolicy = "block" | "allow_reserved_numbers" | "allow_res
  */
 export type TaxRegime = "gst" | "vat" | "none";
 /**
+ * Character tables an ESC/POS printer can be switched to (`ESC t n`). Everything outside the table is printed as a picture or replaced (see `encode`).
+ *
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "CodePage".
+ */
+export type CodePage = "pc437" | "pc858" | "wpc1252";
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "CutMode".
+ */
+export type CutMode = "none" | "partial" | "full";
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "DrawerPin".
+ */
+export type DrawerPin = "pin5" | "pin2";
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "LabelLanguage".
+ */
+export type LabelLanguage = "zpl" | "tspl";
+/**
  * This interface was referenced by `ApiContract`'s JSON-Schema
  * via the `definition` "Rounding".
  */
 export type Rounding = "half_up" | "half_even";
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "RupeeStyle".
+ */
+export type RupeeStyle = "symbol" | "text";
 
 /**
  * Generated from src-tauri/src/api (do not edit). Every command takes { token, input, approval? }.
@@ -209,6 +316,14 @@ export interface ApiContract {
       input: IdInput;
       output: null;
     };
+    drawer_authorize: {
+      input: DrawerInput;
+      output: null;
+    };
+    drawer_open: {
+      input: DrawerOpenInput;
+      output: null;
+    };
     expenses_categories: {
       input: NoInput;
       output: ExpenseCategory[];
@@ -232,6 +347,26 @@ export interface ApiContract {
     hub_status: {
       input: NoInput;
       output: HubInfo;
+    };
+    labels_items: {
+      input: LabelSourceInput;
+      output: LabelItem[];
+    };
+    labels_preview: {
+      input: LabelPreviewInput;
+      output: LabelPreview[];
+    };
+    labels_templates_delete: {
+      input: IdInput;
+      output: null;
+    };
+    labels_templates_list: {
+      input: NoInput;
+      output: LabelTemplate[];
+    };
+    labels_templates_save: {
+      input: LabelTemplate;
+      output: LabelTemplate;
     };
     notifications_list: {
       input: NotificationQuery;
@@ -305,9 +440,57 @@ export interface ApiContract {
       input: NoInput;
       output: PermissionInfo[];
     };
+    print_document: {
+      input: PrintInput;
+      output: PrintOutcome;
+    };
+    print_jobs_cancel: {
+      input: IdInput;
+      output: PrintJob;
+    };
+    print_jobs_list: {
+      input: PrintJobQuery;
+      output: PageFor_PrintJob;
+    };
+    print_jobs_retry: {
+      input: IdInput;
+      output: PrintJob;
+    };
+    print_jobs_submit: {
+      input: SubmitPrintJobInput;
+      output: PrintJob;
+    };
+    printers_config_get: {
+      input: NoInput;
+      output: PrinterSetup;
+    };
+    printers_config_save: {
+      input: PrinterConfig;
+      output: PrinterSetup;
+    };
+    printers_discover: {
+      input: NoInput;
+      output: Discovered;
+    };
+    printers_record_change: {
+      input: PrinterChangeInput;
+      output: null;
+    };
+    printers_shared: {
+      input: NoInput;
+      output: SharedPrinter[];
+    };
+    printers_test: {
+      input: PrinterTestInput;
+      output: PrintOutcome;
+    };
     products_delete: {
       input: IdInput;
       output: null;
+    };
+    products_generate_barcodes: {
+      input: GenerateBarcodesInput;
+      output: GeneratedBarcode[];
     };
     products_get: {
       input: IdInput;
@@ -611,6 +794,12 @@ export interface ApiContract {
     | "outbox_retry"
     | "outbox_discard"
     | "client_cached_customers"
+    | "printers_config_get"
+    | "printers_config_save"
+    | "printers_discover"
+    | "printers_test"
+    | "print_document"
+    | "drawer_open"
   )[];
   publicCommands: (
     | "auth_login"
@@ -1241,6 +1430,142 @@ export interface IdInput {
 }
 /**
  * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "DrawerInput".
+ */
+export interface DrawerInput {
+  /**
+   * Why the drawer is opened without a sale ("change for a customer", …).
+   */
+  reason?: string | null;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "DrawerOpenInput".
+ */
+export interface DrawerOpenInput {
+  /**
+   * The cash sale just saved: the drawer opens for it without approval (auto-print off).
+   */
+  invoice?: InvoiceDetail | null;
+  /**
+   * Why the drawer is opened without a sale.
+   */
+  reason?: string | null;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "InvoiceDetail".
+ */
+export interface InvoiceDetail {
+  amountPaid: number;
+  balanceDue: number;
+  billDiscount: number;
+  billingAddress?: string | null;
+  businessDate: string;
+  createdByName?: string | null;
+  customerGstin?: string | null;
+  customerName: string;
+  customerPhone?: string | null;
+  docNo: string;
+  finalizedAt?: string | null;
+  gross: number;
+  id: string;
+  isInterState: boolean;
+  lineDiscount: number;
+  lines: InvoiceLine[];
+  notes?: string | null;
+  /**
+   * "online", or "offline" for a bill a counter made while the hub was unreachable.
+   */
+  origin?: string;
+  partyId?: string | null;
+  paymentStatus: string;
+  payments: PaymentSummary[];
+  placeOfSupply?: string | null;
+  pricesIncludeTax: boolean;
+  roundOff: number;
+  snapshotSource: string;
+  status: string;
+  taxSummary: TaxSummaryRow[];
+  taxTotal: number;
+  taxable: number;
+  total: number;
+  voidReason?: string | null;
+  voidedAt?: string | null;
+  /**
+   * Items that went below zero stock under the "warn" policy (only on creation).
+   */
+  warnings?: StockWarning[];
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "InvoiceLine".
+ */
+export interface InvoiceLine {
+  billDiscountShare: number;
+  cess: number;
+  cgst: number;
+  hsnSac?: string | null;
+  id: string;
+  igst: number;
+  itemName: string;
+  lineDiscount: number;
+  lineNo: number;
+  lineTotal: number;
+  mrp?: number | null;
+  otherTax: number;
+  qty: number;
+  returnedQty: number;
+  sgst: number;
+  sku?: string | null;
+  taxRate: number;
+  taxTotal: number;
+  taxable: number;
+  unitName?: string | null;
+  unitPrice: number;
+  variantId: string;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "PaymentSummary".
+ */
+export interface PaymentSummary {
+  amount: number;
+  businessDate: string;
+  changeGiven: number;
+  docNo: string;
+  id: string;
+  mode: string;
+  status: string;
+  tendered?: number | null;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "TaxSummaryRow".
+ */
+export interface TaxSummaryRow {
+  cess: number;
+  cgst: number;
+  igst: number;
+  otherTax: number;
+  sgst: number;
+  taxRate: number;
+  taxable: number;
+}
+/**
+ * A movement allowed under the "warn" policy that took stock below zero.
+ *
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "StockWarning".
+ */
+export interface StockWarning {
+  available: number;
+  name: string;
+  requested: number;
+  variantId: string;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
  * via the `definition` "ExpenseCategory".
  */
 export interface ExpenseCategory {
@@ -1368,6 +1693,94 @@ export interface ExpenseCategoryInput {
 export interface VoidExpenseInput {
   id: string;
   reason: string;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "LabelSourceInput".
+ */
+export interface LabelSourceInput {
+  /**
+   * A goods receipt: one label per unit received (whole units, rounded up).
+   */
+  receiptId?: string | null;
+  /**
+   * Products (variants) to label, one label each to start with.
+   */
+  variantIds?: string[];
+}
+/**
+ * One product to label, with how many copies.
+ *
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "LabelItem".
+ */
+export interface LabelItem {
+  barcode?: string | null;
+  batchNo?: string | null;
+  copies: number;
+  expiryDate?: string | null;
+  mrp?: number | null;
+  name: string;
+  price: number;
+  sku?: string | null;
+  variantId?: string | null;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "LabelPreviewInput".
+ */
+export interface LabelPreviewInput {
+  items: LabelItem[];
+  template: LabelTemplate;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "LabelTemplate".
+ */
+export interface LabelTemplate {
+  /**
+   * Labels side by side on the roll (1–4).
+   */
+  columns?: number;
+  /**
+   * Gap between labels on the roll.
+   */
+  gapMm?: number;
+  heightMm: number;
+  /**
+   * Absent for a template that isn't saved yet.
+   */
+  id?: string | null;
+  name: string;
+  showBarcode?: boolean;
+  showBatch?: boolean;
+  showBusiness?: boolean;
+  showExpiry?: boolean;
+  showMrp?: boolean;
+  showName?: boolean;
+  showPrice?: boolean;
+  showSku?: boolean;
+  symbology?: "ean13" | "ean8" | "code128" | "qr";
+  /**
+   * For edits: the `updatedAt` the editor loaded.
+   */
+  updatedAt?: string | null;
+  widthMm: number;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "LabelPreview".
+ */
+export interface LabelPreview {
+  /**
+   * One label as SVG (millimetre size).
+   */
+  svg: string;
+  /**
+   * The barcode actually used (EAN falls back to Code 128 for codes that aren't EANs).
+   */
+  symbology?: Symbology | null;
+  warning?: string | null;
 }
 /**
  * This interface was referenced by `ApiContract`'s JSON-Schema
@@ -1735,6 +2148,373 @@ export interface PermissionInfo {
 }
 /**
  * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "PrintInput".
+ */
+export interface PrintInput {
+  document: PrintDocument;
+  /**
+   * A printer of this PC, instead of the document's route.
+   */
+  printerId?: string | null;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "ReturnDetail".
+ */
+export interface ReturnDetail {
+  amountRefunded: number;
+  businessDate: string;
+  customerName: string;
+  docNo: string;
+  id: string;
+  lines: ReturnLine[];
+  originalInvoiceId?: string | null;
+  partyId?: string | null;
+  reason?: string | null;
+  status: string;
+  taxTotal: number;
+  taxable: number;
+  total: number;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "ReturnLine".
+ */
+export interface ReturnLine {
+  itemName: string;
+  lineTotal: number;
+  qty: number;
+  restock: boolean;
+  taxTotal: number;
+  taxable: number;
+  unitPrice: number;
+  variantId: string;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "RegisterSession".
+ */
+export interface RegisterSession {
+  cashIn: number;
+  cashOut: number;
+  closedAt?: string | null;
+  countedCash?: number | null;
+  difference?: number | null;
+  expectedCash: number;
+  id: string;
+  openedAt: string;
+  openedByName?: string | null;
+  openingFloat: number;
+  registerId: string;
+  registerName: string;
+  status: string;
+}
+/**
+ * A parked bill, for the customer to keep while they fetch something.
+ *
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "HeldSlip".
+ */
+export interface HeldSlip {
+  heldAt: string;
+  heldBy?: string | null;
+  label: string;
+  lines: HeldSlipLine[];
+  /**
+   * The cart total the till showed, when it had one.
+   */
+  total?: number | null;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "HeldSlipLine".
+ */
+export interface HeldSlipLine {
+  name: string;
+  /**
+   * Thousandths.
+   */
+  qty: number;
+  unit?: string | null;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "PrintOutcome".
+ */
+export interface PrintOutcome {
+  /**
+   * The hub's print-queue entry, when it went through the hub.
+   */
+  jobId?: string | null;
+  message?: string | null;
+  printerName?: string | null;
+  status: PrintStatus;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "PrintJob".
+ */
+export interface PrintJob {
+  attempts: number;
+  createdAt: string;
+  createdBy?: string | null;
+  createdByName?: string | null;
+  deviceName?: string | null;
+  docType: string;
+  errorKind?: string | null;
+  id: string;
+  lastError?: string | null;
+  nextTryAt?: string | null;
+  printedAt?: string | null;
+  printerId: string;
+  printerName: string;
+  /**
+   * "queued", "printed", "failed" or "cancelled".
+   */
+  status: string;
+  title: string;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "PrintJobQuery".
+ */
+export interface PrintJobQuery {
+  /**
+   * Sort the other way round.
+   */
+  descending?: boolean;
+  page?: number | null;
+  pageSize?: number | null;
+  /**
+   * Which column to sort by: one of the keys the list documents (unknown keys are refused).
+   */
+  sort?: string | null;
+  /**
+   * "queued", "printed", "failed" or "cancelled"; empty for all.
+   */
+  status?: string | null;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "Page_for_PrintJob".
+ */
+export interface PageFor_PrintJob {
+  items: PrintJob[];
+  page: number;
+  pageSize: number;
+  total: number;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "SubmitPrintJobInput".
+ */
+export interface SubmitPrintJobInput {
+  document: PrintDocument;
+  idempotencyKey: string;
+  /**
+   * One of the hub's shared printers.
+   */
+  printerId: string;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "PrinterSetup".
+ */
+export interface PrinterSetup {
+  config: PrinterConfig;
+  /**
+   * The hub's shared printers (counters only; empty when the hub can't be reached).
+   */
+  hubPrinters: SharedPrinter[];
+  /**
+   * This PC is a counter: it can also print to the hub's shared printers.
+   */
+  isCounter: boolean;
+  /**
+   * A font for pictures of text (₹, Hindi, Malayalam) was found on this PC.
+   */
+  pictureFont: boolean;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "PrinterConfig".
+ */
+export interface PrinterConfig {
+  /**
+   * Print the receipt as soon as a sale is saved.
+   */
+  autoPrintReceipt?: boolean;
+  /**
+   * Open the drawer when a sale is paid (partly) in cash.
+   */
+  drawerOnCash?: boolean;
+  /**
+   * The receipt printer the cash drawer is plugged into.
+   */
+  drawerPrinterId?: string | null;
+  /**
+   * A font file with the rupee sign and Indian scripts, when the system one won't do.
+   */
+  fontPath?: string | null;
+  printers?: PrinterProfile[];
+  routes?: Routes;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "PrinterProfile".
+ */
+export interface PrinterProfile {
+  /**
+   * Character tables an ESC/POS printer can be switched to (`ESC t n`). Everything outside the table is printed as a picture or replaced (see `encode`).
+   */
+  codePage?: "pc437" | "pc858" | "wpc1252";
+  connection: PrinterConnection;
+  copies?: number;
+  cut?: "none" | "partial" | "full";
+  drawerPin?: "pin5" | "pin2";
+  /**
+   * Blank lines before the cut, so the last line clears the cutter.
+   */
+  feedLines?: number;
+  /**
+   * A cash drawer is plugged into this printer.
+   */
+  hasDrawer?: boolean;
+  /**
+   * Empty for a new printer (an id is given on save).
+   */
+  id?: string;
+  kind: PrinterKind;
+  labelDpi?: number;
+  labelLanguage?: "zpl" | "tspl";
+  name: string;
+  paper?: "mm58" | "mm80";
+  /**
+   * Print text the code page lacks (Hindi, Malayalam…) as a picture instead of "?".
+   */
+  pictureFallback?: boolean;
+  rupee?: "symbol" | "text";
+  /**
+   * On the hub: counters may print to it through the hub's print queue.
+   */
+  shared?: boolean;
+}
+export interface Routes {
+  heldSlip?: PrintRoute | null;
+  labels?: PrintRoute | null;
+  receipt?: PrintRoute | null;
+  returnSlip?: PrintRoute | null;
+  tillClose?: PrintRoute | null;
+}
+/**
+ * Where one kind of document is printed: a printer of this PC, or one the hub shares.
+ *
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "PrintRoute".
+ */
+export interface PrintRoute {
+  onHub?: boolean;
+  printerId: string;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "SharedPrinter".
+ */
+export interface SharedPrinter {
+  id: string;
+  kind: PrinterKind;
+  name: string;
+  paper: PaperWidth;
+}
+/**
+ * Printers installed in Windows and serial ports present, for the printer settings screen.
+ *
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "Discovered".
+ */
+export interface Discovered {
+  serialPorts: string[];
+  windowsQueues: string[];
+  /**
+   * Whether this computer can print through Windows queues.
+   */
+  windowsSupported: boolean;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "PrinterChangeInput".
+ */
+export interface PrinterChangeInput {
+  /**
+   * The new configuration, summarised (names, kinds, connections, routes).
+   */
+  summary: {
+    [k: string]: unknown;
+  };
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "PrinterTestInput".
+ */
+export interface PrinterTestInput {
+  printer: PrinterProfile1;
+}
+/**
+ * The printer as typed in the form (it need not be saved yet).
+ */
+export interface PrinterProfile1 {
+  /**
+   * Character tables an ESC/POS printer can be switched to (`ESC t n`). Everything outside the table is printed as a picture or replaced (see `encode`).
+   */
+  codePage?: "pc437" | "pc858" | "wpc1252";
+  connection: PrinterConnection;
+  copies?: number;
+  cut?: "none" | "partial" | "full";
+  drawerPin?: "pin5" | "pin2";
+  /**
+   * Blank lines before the cut, so the last line clears the cutter.
+   */
+  feedLines?: number;
+  /**
+   * A cash drawer is plugged into this printer.
+   */
+  hasDrawer?: boolean;
+  /**
+   * Empty for a new printer (an id is given on save).
+   */
+  id?: string;
+  kind: PrinterKind;
+  labelDpi?: number;
+  labelLanguage?: "zpl" | "tspl";
+  name: string;
+  paper?: "mm58" | "mm80";
+  /**
+   * Print text the code page lacks (Hindi, Malayalam…) as a picture instead of "?".
+   */
+  pictureFallback?: boolean;
+  rupee?: "symbol" | "text";
+  /**
+   * On the hub: counters may print to it through the hub's print queue.
+   */
+  shared?: boolean;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "GenerateBarcodesInput".
+ */
+export interface GenerateBarcodesInput {
+  variantIds: string[];
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "GeneratedBarcode".
+ */
+export interface GeneratedBarcode {
+  barcode: string;
+  variantId: string;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
  * via the `definition` "ProductDetail".
  */
 export interface ProductDetail {
@@ -2065,18 +2845,6 @@ export interface PurchaseDocLine {
   variantId: string;
 }
 /**
- * A movement allowed under the "warn" policy that took stock below zero.
- *
- * This interface was referenced by `ApiContract`'s JSON-Schema
- * via the `definition` "StockWarning".
- */
-export interface StockWarning {
-  available: number;
-  name: string;
-  requested: number;
-  variantId: string;
-}
-/**
  * This interface was referenced by `ApiContract`'s JSON-Schema
  * via the `definition` "PurchaseBillInput".
  */
@@ -2326,25 +3094,6 @@ export interface CloseRegisterInput {
 }
 /**
  * This interface was referenced by `ApiContract`'s JSON-Schema
- * via the `definition` "RegisterSession".
- */
-export interface RegisterSession {
-  cashIn: number;
-  cashOut: number;
-  closedAt?: string | null;
-  countedCash?: number | null;
-  difference?: number | null;
-  expectedCash: number;
-  id: string;
-  openedAt: string;
-  openedByName?: string | null;
-  openingFloat: number;
-  registerId: string;
-  registerName: string;
-  status: string;
-}
-/**
- * This interface was referenced by `ApiContract`'s JSON-Schema
  * via the `definition` "OpenRegisterInput".
  */
 export interface OpenRegisterInput {
@@ -2497,106 +3246,6 @@ export interface SaleLineInput {
 }
 /**
  * This interface was referenced by `ApiContract`'s JSON-Schema
- * via the `definition` "InvoiceDetail".
- */
-export interface InvoiceDetail {
-  amountPaid: number;
-  balanceDue: number;
-  billDiscount: number;
-  billingAddress?: string | null;
-  businessDate: string;
-  createdByName?: string | null;
-  customerGstin?: string | null;
-  customerName: string;
-  customerPhone?: string | null;
-  docNo: string;
-  finalizedAt?: string | null;
-  gross: number;
-  id: string;
-  isInterState: boolean;
-  lineDiscount: number;
-  lines: InvoiceLine[];
-  notes?: string | null;
-  /**
-   * "online", or "offline" for a bill a counter made while the hub was unreachable.
-   */
-  origin?: string;
-  partyId?: string | null;
-  paymentStatus: string;
-  payments: PaymentSummary[];
-  placeOfSupply?: string | null;
-  pricesIncludeTax: boolean;
-  roundOff: number;
-  snapshotSource: string;
-  status: string;
-  taxSummary: TaxSummaryRow[];
-  taxTotal: number;
-  taxable: number;
-  total: number;
-  voidReason?: string | null;
-  voidedAt?: string | null;
-  /**
-   * Items that went below zero stock under the "warn" policy (only on creation).
-   */
-  warnings?: StockWarning[];
-}
-/**
- * This interface was referenced by `ApiContract`'s JSON-Schema
- * via the `definition` "InvoiceLine".
- */
-export interface InvoiceLine {
-  billDiscountShare: number;
-  cess: number;
-  cgst: number;
-  hsnSac?: string | null;
-  id: string;
-  igst: number;
-  itemName: string;
-  lineDiscount: number;
-  lineNo: number;
-  lineTotal: number;
-  mrp?: number | null;
-  otherTax: number;
-  qty: number;
-  returnedQty: number;
-  sgst: number;
-  sku?: string | null;
-  taxRate: number;
-  taxTotal: number;
-  taxable: number;
-  unitName?: string | null;
-  unitPrice: number;
-  variantId: string;
-}
-/**
- * This interface was referenced by `ApiContract`'s JSON-Schema
- * via the `definition` "PaymentSummary".
- */
-export interface PaymentSummary {
-  amount: number;
-  businessDate: string;
-  changeGiven: number;
-  docNo: string;
-  id: string;
-  mode: string;
-  status: string;
-  tendered?: number | null;
-}
-/**
- * This interface was referenced by `ApiContract`'s JSON-Schema
- * via the `definition` "TaxSummaryRow".
- */
-export interface TaxSummaryRow {
-  cess: number;
-  cgst: number;
-  igst: number;
-  otherTax: number;
-  sgst: number;
-  taxRate: number;
-  taxable: number;
-}
-/**
- * This interface was referenced by `ApiContract`'s JSON-Schema
  * via the `definition` "ReturnInput".
  */
 export interface ReturnInput {
@@ -2629,39 +3278,6 @@ export interface ReturnLineInput {
    * Product returned without an invoice.
    */
   variantId?: string | null;
-}
-/**
- * This interface was referenced by `ApiContract`'s JSON-Schema
- * via the `definition` "ReturnDetail".
- */
-export interface ReturnDetail {
-  amountRefunded: number;
-  businessDate: string;
-  customerName: string;
-  docNo: string;
-  id: string;
-  lines: ReturnLine[];
-  originalInvoiceId?: string | null;
-  partyId?: string | null;
-  reason?: string | null;
-  status: string;
-  taxTotal: number;
-  taxable: number;
-  total: number;
-}
-/**
- * This interface was referenced by `ApiContract`'s JSON-Schema
- * via the `definition` "ReturnLine".
- */
-export interface ReturnLine {
-  itemName: string;
-  lineTotal: number;
-  qty: number;
-  restock: boolean;
-  taxTotal: number;
-  taxable: number;
-  unitPrice: number;
-  variantId: string;
 }
 /**
  * This interface was referenced by `ApiContract`'s JSON-Schema
@@ -3736,6 +4352,17 @@ export interface WarehouseInput {
   id?: string | null;
   name: string;
 }
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "Routes".
+ */
+export interface Routes1 {
+  heldSlip?: PrintRoute | null;
+  labels?: PrintRoute | null;
+  receipt?: PrintRoute | null;
+  returnSlip?: PrintRoute | null;
+  tillClose?: PrintRoute | null;
+}
 
 export type CommandName = keyof ApiContract["commands"];
 export type CommandInput<K extends CommandName> = ApiContract["commands"][K]["input"];
@@ -3747,4 +4374,4 @@ export type Approval = ApiContract["approval"];
 export const PUBLIC_COMMANDS = ["auth_login","auth_pin_login","client_sync_now","device_discover_hubs","device_pair","device_probe_hub","device_restart","device_set_mode","device_status","setup_create_business","setup_import_legacy","setup_status"] as const satisfies readonly CommandName[];
 
 /** Commands about this PC itself; never forwarded to the hub. */
-export const LOCAL_COMMANDS = ["device_status","device_discover_hubs","device_probe_hub","device_pair","device_set_mode","device_restart","client_sync_now","outbox_list","outbox_retry","outbox_discard","client_cached_customers"] as const satisfies readonly CommandName[];
+export const LOCAL_COMMANDS = ["device_status","device_discover_hubs","device_probe_hub","device_pair","device_set_mode","device_restart","client_sync_now","outbox_list","outbox_retry","outbox_discard","client_cached_customers","printers_config_get","printers_config_save","printers_discover","printers_test","print_document","drawer_open"] as const satisfies readonly CommandName[];

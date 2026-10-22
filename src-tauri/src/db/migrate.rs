@@ -63,6 +63,11 @@ pub const MIGRATIONS: &[Migration] = &[
         name: "hub_sync_backup",
         sql: include_str!("migrations/0009_hub_sync_backup.sql"),
     },
+    Migration {
+        version: 10,
+        name: "printing",
+        sql: include_str!("migrations/0010_printing.sql"),
+    },
 ];
 
 pub fn latest_version() -> i64 {

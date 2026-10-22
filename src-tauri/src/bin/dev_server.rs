@@ -53,6 +53,30 @@ async fn call(
         }))
         .into_response();
     }
+    // Printing: the bridge is a standalone PC whose printers.json sits in its data folder.
+    if api::printers::NAMES.contains(&command.as_str()) {
+        let env = api::printers::PrintEnv {
+            data_dir: state
+                .db_path
+                .parent()
+                .map(std::path::PathBuf::from)
+                .unwrap_or_default(),
+            state: state.clone(),
+            client: None,
+        };
+        return match api::printers::dispatch(
+            &env,
+            &command,
+            &body.token,
+            body.input,
+            body.approval.as_ref(),
+        )
+        .await
+        {
+            Ok(value) => Json(value).into_response(),
+            Err(e) => e.into_response(),
+        };
+    }
     if api::local::NAMES.contains(&command.as_str()) {
         return AppError::validation("Not available in the browser bridge.").into_response();
     }

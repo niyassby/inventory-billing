@@ -25,6 +25,7 @@ pub mod numbering;
 pub mod parties;
 pub mod party_ledger;
 pub mod payments;
+pub mod printing;
 pub mod purchases;
 pub mod reports;
 pub mod sales;

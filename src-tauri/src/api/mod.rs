@@ -14,6 +14,7 @@
 
 pub mod contract;
 pub mod local;
+pub mod printers;
 
 use std::time::Instant;
 
@@ -220,9 +221,11 @@ macro_rules! commands {
     };
 }
 
+use crate::printing::labels::{LabelItem, LabelTemplate};
 use crate::services::{
     accounting, backup, catalog, common::Page, devices, documents, expenses, images, notifications,
-    parties, payments, purchases, reports, sales, settings, setup, stock, sync, upgrade, users,
+    parties, payments, printing, purchases, reports, sales, settings, setup, stock, sync, upgrade,
+    users,
 };
 
 fn legacy_database_found(state: &AppState) -> bool {
@@ -358,6 +361,17 @@ commands! {
     authed notifications_list(notifications::NotificationQuery) -> Vec<notifications::Notification> = |ctx: &mut Ctx<'_>, q: &notifications::NotificationQuery| notifications::list(ctx, q);
     authed notifications_mark_read(users::IdInput) -> () = notifications::mark_read;
 
+    authed printers_record_change(printing::PrinterChangeInput) -> () = printing::record_printer_change;
+    authed drawer_authorize(printing::DrawerInput) -> () = printing::authorize_drawer;
+    authed print_jobs_list(printing::PrintJobQuery) -> Page<printing::PrintJob> = |ctx: &mut Ctx<'_>, q: &printing::PrintJobQuery| printing::list_jobs(ctx, q);
+    authed print_jobs_cancel(users::IdInput) -> printing::PrintJob = printing::cancel_job;
+    authed labels_templates_list(NoInput) -> Vec<LabelTemplate> = |ctx: &mut Ctx<'_>, _: &NoInput| printing::list_templates(ctx);
+    authed labels_templates_save(LabelTemplate) -> LabelTemplate = printing::save_template;
+    authed labels_templates_delete(users::IdInput) -> () = printing::delete_template;
+    authed labels_items(printing::LabelSourceInput) -> Vec<LabelItem> = |ctx: &mut Ctx<'_>, i: &printing::LabelSourceInput| printing::label_items(ctx, i);
+    authed labels_preview(printing::LabelPreviewInput) -> Vec<printing::LabelPreview> = |ctx: &mut Ctx<'_>, i: &printing::LabelPreviewInput| printing::preview(ctx, i);
+    authed products_generate_barcodes(printing::GenerateBarcodesInput) -> Vec<printing::GeneratedBarcode> = printing::generate_barcodes;
+
     stateful hub_status(NoInput) -> crate::node::HubInfo = |state: &AppState, ctx: &mut Ctx<'_>, _: &NoInput| {
         ctx.require("devices.manage")?;
         Ok(state.hub.read().map_err(AppError::internal_lock)?.clone())
@@ -374,6 +388,9 @@ commands! {
     stateful products_image_set(images::ImageSetInput) -> images::ImageSaved = images::set;
     stateful products_image_remove(images::ImageRemoveInput) -> images::ImageSaved = images::remove;
     stateful products_image_get(images::ImageGetInput) -> Option<images::ImageData> = images::get;
+    stateful printers_shared(NoInput) -> Vec<printing::SharedPrinter> = |state: &AppState, _: &mut Ctx<'_>, _: &NoInput| Ok(printing::shared_printers(state));
+    stateful print_jobs_submit(printing::SubmitPrintJobInput) -> printing::PrintJob = printing::submit;
+    stateful print_jobs_retry(users::IdInput) -> printing::PrintJob = printing::retry_job;
 }
 
 /// A command sent by a paired device over the LAN (crate::hub). Same commands, same checks; the

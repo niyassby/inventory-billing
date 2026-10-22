@@ -23,11 +23,13 @@ pub enum ErrorCode {
     HubOffline,
     SetupRequired,
     PasswordChangeRequired,
+    /// A printer could not be reached or refused the job (details.kind says why).
+    PrinterError,
     Internal,
 }
 
 impl ErrorCode {
-    pub const ALL: [ErrorCode; 15] = [
+    pub const ALL: [ErrorCode; 16] = [
         ErrorCode::Unauthorized,
         ErrorCode::Forbidden,
         ErrorCode::ApprovalRequired,
@@ -42,6 +44,7 @@ impl ErrorCode {
         ErrorCode::HubOffline,
         ErrorCode::SetupRequired,
         ErrorCode::PasswordChangeRequired,
+        ErrorCode::PrinterError,
         ErrorCode::Internal,
     ];
 
@@ -61,6 +64,7 @@ impl ErrorCode {
             ErrorCode::HubOffline => "HUB_OFFLINE",
             ErrorCode::SetupRequired => "SETUP_REQUIRED",
             ErrorCode::PasswordChangeRequired => "PASSWORD_CHANGE_REQUIRED",
+            ErrorCode::PrinterError => "PRINTER_ERROR",
             ErrorCode::Internal => "INTERNAL",
         }
     }

@@ -56,6 +56,9 @@ export const PERMISSIONS = [
   "approvals.grant",
   "devices.manage",
   "sync.review",
+  "printing.manage",
+  "labels.print",
+  "sales.open_drawer",
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
 
@@ -88,6 +91,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Readonly<Record<Role, readonly Permission
     "purchases.view",
     "purchases.receive",
     "parties.view",
+    "labels.print",
   ],
   accountant: [
     "dashboard.view",
@@ -196,6 +200,7 @@ export const ERROR_CODES = [
   "HUB_OFFLINE",
   "SETUP_REQUIRED",
   "PASSWORD_CHANGE_REQUIRED",
+  "PRINTER_ERROR",
   "INTERNAL",
 ] as const;
 export type ErrorCode = (typeof ERROR_CODES)[number];

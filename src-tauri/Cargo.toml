@@ -61,9 +61,17 @@ zstd = "0.13"
 # Product pictures: decode, scale and re-encode (pure Rust).
 image = { version = "0.25", default-features = false, features = ["jpeg", "png", "webp", "gif"] }
 base64 = "0.22"
+# Phase 9: printing. QR matrices, text shaping and rasterising (symbols and scripts a thermal
+# printer's code page lacks are printed as a picture), serial printers.
+qrcode = { version = "0.14", default-features = false }
+rustybuzz = "0.20"
+fontdue = "0.9"
+serialport = { version = "4", default-features = false }
 
 [target.'cfg(windows)'.dependencies]
 keyring = { version = "3", features = ["windows-native"] }
+# RAW printing through the Windows print queue (USB printers with the maker's driver).
+windows-sys = { version = "0.59", features = ["Win32_Foundation", "Win32_Graphics_Gdi", "Win32_Graphics_Printing"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
 keyring = { version = "3", features = ["apple-native"] }

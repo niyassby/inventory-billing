@@ -11,7 +11,7 @@ use crate::app::AppState;
 use crate::domain::ids::new_id;
 use crate::error::{AppError, AppResult};
 use crate::services::settings::{self, Settings};
-use crate::services::{backup, images};
+use crate::services::{backup, images, printing};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Job {
@@ -248,8 +248,9 @@ fn cleanup(conn: &Connection, now: DateTime<Utc>) -> AppResult<String> {
         "DELETE FROM notifications WHERE read_at IS NOT NULL AND read_at < ?1",
         [(now - chrono::Duration::days(90)).to_rfc3339()],
     )?;
+    let print_jobs = printing::purge_old_jobs(conn, now)?;
     Ok(format!(
-        "{sessions} sessions, {keys} request ids, {codes} pairing codes, {notices} notices removed"
+        "{sessions} sessions, {keys} request ids, {codes} pairing codes, {notices} notices, {print_jobs} print jobs removed"
     ))
 }
 
@@ -305,6 +306,15 @@ pub fn spawn(state: AppState) {
             std::thread::sleep(Duration::from_secs(60));
             if let Err(e) = tick(&state) {
                 tracing::warn!("job scheduler: {}", e.message);
+            }
+            // The hub's print queue: failed jobs whose next try is due (not a recorded job: it
+            // runs every minute and only logs when there was something to print).
+            match printing::retry_due(&state) {
+                Ok(summary) if !summary.starts_with("0 ") => {
+                    tracing::info!("print queue: {summary}")
+                }
+                Ok(_) => {}
+                Err(e) => tracing::warn!("print queue: {}", e.message),
             }
         })
         .map(|_| ())

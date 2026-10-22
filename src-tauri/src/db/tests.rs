@@ -124,7 +124,7 @@ fn amount_paid(conn: &Connection, invoice_id: &str) -> (i64, String) {
 fn migrates_a_fresh_database_and_is_idempotent() {
     let mut conn = open_in_memory().unwrap();
     let first = migrate::run(&mut conn).unwrap();
-    assert_eq!(first.applied, vec![1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    assert_eq!(first.applied, vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
     assert_eq!(first.version, migrate::latest_version());
 
     let second = migrate::run(&mut conn).unwrap();
@@ -210,6 +210,61 @@ fn file_databases_use_wal_and_foreign_keys() {
         .unwrap();
     assert_eq!(mode, "wal");
     assert_eq!(fk, 1);
+}
+
+#[test]
+fn the_printing_migration_applies_to_a_database_in_use() {
+    // A database at version 9 with stock and a finalized invoice, then 0010 on top.
+    let mut conn = crate::db::open_in_memory().unwrap();
+    migrate::run_migrations(&mut conn, &migrate::MIGRATIONS[..9]).unwrap();
+    seed_basics(&conn);
+    insert_movement(&conn, "m1", "opening", 10_000, 42_000).unwrap();
+    finalized_invoice(&conn, "i1", "INV/26-27/00001");
+    let outcome = migrate::run(&mut conn).unwrap();
+    assert_eq!(outcome.applied, vec![10]);
+    assert_eq!(outcome.version, 10);
+
+    let (qty, invoices): (i64, i64) = conn
+        .query_row(
+            "SELECT (SELECT qty FROM stock_levels WHERE variant_id = 'v1'), (SELECT count(*) FROM sales_invoices)",
+            [],
+            |r| Ok((r.get(0)?, r.get(1)?)),
+        )
+        .unwrap();
+    assert_eq!((qty, invoices), (10_000, 1), "existing data is untouched");
+    let templates: i64 = conn
+        .query_row("SELECT count(*) FROM label_templates", [], |r| r.get(0))
+        .unwrap();
+    assert_eq!(templates, 2);
+    let grants: Vec<String> = {
+        let mut stmt = conn
+            .prepare(
+                "SELECT r.code || ':' || rp.permission_code FROM role_permissions rp JOIN roles r ON r.id = rp.role_id
+                 WHERE rp.permission_code IN ('printing.manage', 'labels.print', 'sales.open_drawer') ORDER BY 1",
+            )
+            .unwrap();
+        let rows = stmt.query_map([], |r| r.get(0)).unwrap();
+        rows.map(Result::unwrap).collect()
+    };
+    assert_eq!(
+        grants,
+        [
+            "manager:labels.print",
+            "manager:printing.manage",
+            "manager:sales.open_drawer",
+            "owner:labels.print",
+            "owner:printing.manage",
+            "owner:sales.open_drawer",
+            "stock_keeper:labels.print",
+        ]
+    );
+    // A printed job needs its time; the status list is enforced.
+    let bad = conn.execute(
+        "INSERT INTO print_jobs (id, printer_id, printer_name, title, doc_type, data, status, created_at, updated_at)
+         VALUES ('j1', 'p', 'P', 'T', 'receipt', x'00', 'printed', '2026-10-22', '2026-10-22')",
+        [],
+    );
+    assert!(err_text(bad).contains("CHECK"));
 }
 
 // ---------------------------------------------------------------- seed data
