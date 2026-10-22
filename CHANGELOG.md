@@ -5,6 +5,46 @@ All notable changes to this project. The format follows
 
 ## [Unreleased]
 
+### Phase 9: printing and labels (2026-10-22)
+
+Migration 0010 (print queue, label templates, three permissions). Decisions: ASSUMPTIONS A-96 to
+A-107. Step zero: [docs/GAP_ANALYSIS_PHASE9.md](docs/GAP_ANALYSIS_PHASE9.md).
+
+#### Added
+- Direct printing to receipt printers (ESC/POS, 58 and 80 mm) over the network (raw TCP), a
+  serial port or a Windows print queue (USB printers), from this PC or through the hub. Receipt,
+  return slip, till-close summary, held-bill slip and test page; code page, ₹ and Hindi or
+  Malayalam text printed as pictures, cut, copies. The print dialog stays the fallback.
+- Settings → Printers and drawer, per PC: printers (find Windows printers and COM ports, test
+  page before saving), what prints where, automatic receipt after a sale, the cash drawer.
+- Cash drawer: opens for cash sales, and by hand with `sales.open_drawer` or a manager's approval
+  (audited).
+- The hub's print queue: counters print to printers the hub shares; failed jobs are retried
+  after 1, 2 and 5 minutes, then wait for Retry or Cancel. The queue is shown on hub and counters.
+- Barcode labels (Stock → Barcode labels): from products or a goods receipt (one per unit, with
+  batch and expiry), templates (size, labels across, EAN-13, EAN-8, Code 128 or QR, fields),
+  preview, print to a ZPL or TSPL label printer or on A4 sheets. "Print labels" on goods receipts.
+- In-store EAN-13 barcodes (prefix 29) for products without one, unique across products and pack
+  sizes.
+- First start: optional receipt printer setup with a test print.
+- Commands: `printers_config_get/save`, `printers_discover`, `printers_test`, `print_document`,
+  `drawer_open` (this PC); `printers_shared`, `printers_record_change`, `drawer_authorize`,
+  `print_jobs_submit/list/retry/cancel`, `labels_templates_list/save/delete`, `labels_items`,
+  `labels_preview`, `products_generate_barcodes` (hub). Error code `PRINTER_ERROR`.
+- Tests: byte-level snapshots of receipts, slips and ZPL/TSPL jobs, a unit test per barcode type,
+  a fake network printer (Rust and end-to-end), print-queue retries and replays, permissions,
+  label templates, in-store barcodes, the 0010 migration on a database in use.
+
+#### Changed
+- Saving a product refuses a barcode that another product's variant or pack size already has.
+- The till, invoice and return pages print through the configured printer when there is one.
+
+#### Not done
+- Printer status read-back (paper out, cover open): failures are connection errors only (A-100).
+- Hindi and Malayalam receipts and UI text come with Phase 15 localisation; the picture fallback
+  is in place.
+- Not tried on real printers here (no hardware): see the manual checks in the phase report.
+
 ### Lists, pictures, shortcuts, controls and an Accounts audit (2026-10-21)
 
 No schema change and no migration: product pictures use the existing `products.image_path`.

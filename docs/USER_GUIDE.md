@@ -12,6 +12,10 @@ and the **owner** account (your name, e-mail and a password of at least 10 chara
 There is no default password. Write the owner password down: if every owner forgets theirs, the
 data is still safe but only a backup restore can get you back in.
 
+Next it offers to set up the **receipt printer**: say how it is connected, press **Print a test
+page**, and **Use this printer**. **Skip for now** keeps printing through the normal print dialog;
+you can add printers later in Settings → Printers and drawer.
+
 [screenshot: first-run setup]
 
 ## 2. Signing in
@@ -34,7 +38,15 @@ Open **Point of sale** (or press **F2** anywhere).
 | Hold the bill      | **Hold** (or leave it and start another); **F9** brings it back                                                          |
 | Pay                | **F10**. Choose cash, card, UPI or a mix. For cash, type what the customer gave: the change shows. **Enter** completes. |
 
-After payment you can print a receipt (58 mm, 80 mm or A4) or start the next bill.
+After payment the receipt prints by itself when the PC has a receipt printer set to do so, and
+the cash drawer opens for cash. **P** prints (another) copy, marked REPRINT if one already came
+out. Without a receipt printer, P opens the print dialog (58 mm, 80 mm or A4) as before.
+
+If the printer fails (paper out, cable, switched off) **the sale is still saved**: a message says
+what is wrong and has a **Reprint** button. Fix the printer and press it.
+
+Holding a bill prints a small slip with its name when a printer is set for held bills. Closing
+the till offers **Print summary** (the cash-up with any difference, and signature lines).
 
 [screenshot: the till]
 
@@ -55,7 +67,14 @@ a correction is a new entry that points at the old one.
 ## 5. Products and stock
 
 - **Products**: add items with a name, SKU, barcode, prices, tax rate and unit. One product can
-  have variants (size, colour). Opening stock is entered once when the item is created.
+  have variants (size, colour). Opening stock is entered once when the item is created. An item
+  without a barcode can get an **in-store barcode** (the barcode button next to the empty field,
+  on a saved product): a 13-digit number starting with 29 that no other product or pack has.
+- **Barcode labels** (Stock → Barcode labels): add products by search or scan, or take a whole
+  goods receipt (one label per unit received, with batch and expiry), set how many labels, check
+  the preview and **Print**. With a label printer they print at once; otherwise they print on A4
+  sticker sheets through the print dialog (**A4 sheet** does that on purpose). Label templates
+  (size, labels across, barcode type, what is shown) are edited on the same screen.
 - **Stock moves** shows every change, with the reason. Use **Adjust** for damage or found stock,
   **Transfer** between stores, and **Count** to compare shelves with the system.
 - The low-stock list is on the dashboard and under Products → _Low stock_.

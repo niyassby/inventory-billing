@@ -1,6 +1,6 @@
 # Database (v2)
 
-*Schema version 6 · SQLite (bundled 3.45, STRICT tables, WAL) · Source:
+*Schema version 10 · SQLite (bundled 3.45, STRICT tables, WAL) · Source:
 `src-tauri/src/db/migrations/*.sql` · Tests: `src-tauri/src/db/tests.rs`*
 
 The v2 database replaces the v1 `inventory_app.db`. It is created by versioned migrations and
@@ -312,6 +312,20 @@ erDiagram
 
 Split payments at the till are several `payments` rows allocated to the same invoice. Cash
 handed over beyond the bill is `tendered` and `change_given`, never "paid" (audit B-4).
+
+### 3.6 Printing (migration 0010, Phase 9)
+
+- `print_jobs`: documents sent to one of the hub's shared printers (the hub's print queue). The
+  rendered job is kept in `data` (BLOB) so a retry sends the same bytes; `status` is `queued`,
+  `printed`, `failed` or `cancelled`, with `attempts`, `last_error`, `error_kind` and
+  `next_try_at` for the automatic retries. `printer_id` names a printer in the hub's
+  `printers.json`, not a row. Printed and cancelled jobs are deleted after 7 days.
+- `label_templates`: label size (mm), gap, labels across, barcode type and which fields show. Two
+  templates are seeded.
+- Permissions `printing.manage`, `labels.print`, `sales.open_drawer` and their role grants.
+
+Printers and routes are **not** in the database: they are per PC (`printers.json`, ASSUMPTIONS
+A-97).
 
 ## 4. Invariants the database enforces
 

@@ -28,6 +28,25 @@ one-time pairing codes, per-device credentials stored hashed on the hub and in t
 on the counter, requests only from private addresses, rate limited pairing. The hub speaks no
 plain HTTP. Not covered: a hostile device already on the shop network beyond what the above gives.
 
+## Printing (Phase 9)
+
+- Only the Rust side talks to printers; the window asks for a document and gets a result. The
+  printer commands are built in Rust from the backend's own figures.
+- Network printers must be an IP address on a private, link-local or loopback network, checked
+  on save and before every job (A-105); serial port names and Windows printer names are checked
+  for shape. A printer address can't send printer bytes off the shop network.
+- Windows printing uses the spooler in RAW mode through `windows-sys` (`OpenPrinterW`,
+  `WritePrinter`); the unsafe blocks are small, documented and close the handle on every path.
+- Counters print to the hub only through the normal authenticated API (`print_jobs_submit`),
+  with idempotency keys, permission checks per document type and only to printers the hub
+  marked as shared. A replayed request never prints twice.
+- Opening the drawer without a sale needs `sales.open_drawer` or a manager's approval and is
+  audited. Printer changes are audited on the hub (best effort from an offline counter, A-97).
+- New dependencies: `qrcode`, `rustybuzz`, `fontdue`, `serialport` (MIT / Apache-2.0) and
+  `windows-sys` (already in the tree through Tauri). `cargo audit` to be re-run in CI.
+- Fonts are read from the Windows font folder or a path the owner names; a font file that fails
+  to parse is ignored (the line prints as text).
+
 ## Dependencies (checked 2026-10-20)
 
 - **npm** (`npm audit --omit=dev`): the one finding (`xlsx`, SheetJS, unfixed prototype-pollution

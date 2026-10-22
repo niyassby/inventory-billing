@@ -207,6 +207,23 @@ Master Prompt (§12). It is ignored in normal runs; in a release build:
 cargo test --release --lib perf -- --ignored --nocapture
 ```
 
+## Printing
+
+`src-tauri/src/printing/`: `config` (printers.json), `templates` (what a receipt says) →
+`escpos` (bytes), `labels` (ZPL, TSPL, SVG from one layout), `barcode`, `raster` (text as a
+picture for ₹ and Indian scripts), `transport` (TCP, serial, Windows queue). The hub's queue,
+label templates and in-store barcodes are `services/printing.rs`; the commands that run on the PC
+with the printer are `api/printers.rs` (they also run in the browser bridge).
+
+Print jobs are checked byte for byte against `src-tauri/src/printing/snapshots/*.txt`. After a
+deliberate layout change:
+
+```bash
+UPDATE_SNAPSHOTS=1 cargo test --manifest-path src-tauri/Cargo.toml printing
+```
+
+and review the diff. `e2e/printing.spec.ts` drives the screens against a fake network printer.
+
 ## End-to-end tests
 
 `npm run test:e2e` starts the dev bridge on port 1431 with a fresh demo shop (`.e2e-data/`), builds

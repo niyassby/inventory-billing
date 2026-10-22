@@ -12,6 +12,8 @@ offline. Multi-counter shops connect their devices to one **hub** PC over the lo
 > backend) and Phase 6 (reports, accounting-lite, settings) and Phase 7 (polish, accessibility,
 > performance) are done. Phase 8 (tests, packaging, documentation) is done:
 > see [docs/RELEASE.md](docs/RELEASE.md) for what to check before a release.
+> Phase 9 (printing and labels: thermal receipts, cash drawer, barcode labels, the hub's print
+> queue) is done: see [docs/PHASE9_REPORT.md](docs/PHASE9_REPORT.md).
 
 ## Stack
 

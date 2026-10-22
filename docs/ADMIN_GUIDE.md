@@ -141,10 +141,50 @@ A "restore on first start" screen would shorten this: a suggestion (ASSUMPTIONS 
 | "No offline invoice numbers left" | The counter used its reserved block while offline. Reconnect to the hub; it reserves more automatically. |
 | Hub shows "Hub not serving" | Port 47900 is used by another program, or the firewall blocks it. Change the port in Settings → Network, restart, and pair the counters again with the new address. |
 | Backups fail | Folder missing, read-only or full; USB drive unplugged (only the second copy fails then). |
+| Receipts don't print | See §6, *Printers*: the error message names the problem; the sale is saved either way. |
 
 Logs for support are in `%LOCALAPPDATA%\com.niyas.tauri-app\logs` (one file per day, 14 days).
 
-## 6. Reports, day close and settings
+## 6. Printers, labels and the cash drawer
+
+Printers are set **per PC** in Settings → *Printers and drawer* (they are kept in `printers.json`
+next to the database, like `device.json`). Changing them needs `printing.manage` (owners and
+managers).
+
+- **Receipt printers** speak ESC/POS (Epson TM and compatible 58 and 80 mm printers):
+  - *Network*: the printer's IP address and port (usually 9100). Only addresses on the shop
+    network are accepted (192.168.x.x, 10.x.x.x, 172.16–31.x.x, link-local and this PC).
+  - *USB or installed in Windows*: install the printer maker's Windows driver first, then pick the
+    printer by its Windows name. The app sends it raw printer commands, not a page.
+  - *Serial*: the COM port and speed.
+- **Label printers** speak ZPL (Zebra and compatibles) or TSPL (TSC, Xprinter, most others);
+  choose the language and 203 or 300 dpi.
+- **What prints where**: receipts, return slips, till-close summaries, held-bill slips and labels
+  can each go to a printer, or stay with the system print dialog.
+- **₹ and Indian scripts**: no receipt printer has ₹ in its character set. The app prints lines
+  with ₹, Hindi or Malayalam as small pictures, using the Nirmala UI font that comes with Windows
+  (or a font file you name). Choose *Rs.* per printer for plain text instead.
+- **Cash drawer**: plug it into a receipt printer, tick *cash drawer attached* on that printer,
+  choose it as the drawer and tick *open for cash sales*. *Open drawer (no sale)* needs
+  `sales.open_drawer` (owners and managers) or a manager's approval, and is written to the audit
+  log.
+- **Counters and the hub's printer**: on the hub, tick *Share with counters* on a printer. A
+  counter can then route documents to it; they go to the hub's **print queue**, which retries a
+  failed job after 1, 2 and 5 minutes and then waits for someone to press *Retry*. The queue is
+  shown on both the hub and the counters (cashiers see their own jobs). A counter's sale never
+  opens the hub's drawer.
+- **Test pages**: every printer has *Print a test page*. Check that the ruler line of digits fits
+  on one line (else the paper width is wrong), that ₹ prints, and that the paper is cut.
+
+| Problem shown | What to check |
+|---|---|
+| "can't be reached on the network" | Printer on, same network, IP address right (print the printer's own self-test page to see it). |
+| "refused the connection" | Port (9100), or another PC holding the printer's only connection. |
+| "isn't on this PC" | USB cable, Windows printer name, COM port. |
+| "port is in use" | Another program (the maker's utility) has the serial port open. |
+| Letters print as "?" | Turn on *print as a picture* for that printer, or check that a font was found. |
+
+## 7. Reports, day close and settings
 
 - **Reports** (sidebar, *Reports*): pick a report, choose the period and, where it applies, the
   store or account. *Print / PDF* opens the print dialog (choose "Save as PDF"); *CSV* and *Excel*
