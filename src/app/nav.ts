@@ -17,6 +17,7 @@ import {
   ClipboardList,
   Wallet,
   CalendarCheck,
+  Barcode,
 } from "lucide-react";
 
 export interface NavItem {
@@ -74,6 +75,12 @@ export const NAV: NavGroup[] = [
         to: "/inventory/masters",
         icon: Tags,
         permission: "products.view",
+      },
+      {
+        title: "Barcode labels",
+        to: "/inventory/labels",
+        icon: Barcode,
+        permission: "labels.print",
       },
       { title: "Purchases", to: "/purchases", icon: Truck, permission: "purchases.view" },
     ],

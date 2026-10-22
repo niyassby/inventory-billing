@@ -21,6 +21,7 @@ export default defineConfig({
         "src/app/nav.ts",
         "src/features/pos/cart.ts",
         "src/features/sales/print.ts",
+        "src/features/printing/labels.ts",
       ],
       exclude: ["**/*.test.ts", "**/index.ts", "**/generated/**", "**/types/**"],
       thresholds: { lines: 80, functions: 80, branches: 80, statements: 80 },

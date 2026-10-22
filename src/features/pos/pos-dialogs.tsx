@@ -16,7 +16,8 @@ import { OfflineBadge } from "@/components/app/badges";
 import { useMoney, usePublicSettings } from "@/lib/business";
 import { showDateTime } from "@/lib/format";
 import { useAction, useCommand } from "@/lib/queries";
-import { documentHtml, defaultPaper, printHtml } from "@/features/sales/print";
+import { documentHtml, defaultPaper, printHtml, tillCloseHtml } from "@/features/sales/print";
+import { printDocument } from "@/features/printing/print-service";
 import type { Paper } from "@/features/sales/print";
 import type { CartLine } from "./cart";
 
@@ -239,16 +240,30 @@ export function HeldBillsDialog({
 /** After a sale: print in the chosen size, then the next customer. */
 export function ReceiptDialog({
   invoice,
+  printedAlready = false,
   onClose,
 }: {
   invoice: Api.InvoiceDetail | null;
+  /** The receipt went to the printer on its own: another one is a reprint. */
+  printedAlready?: boolean;
   onClose: () => void;
 }) {
   const settings = usePublicSettings();
   const money = useMoney();
   const [paper, setPaper] = useState<Paper>(defaultPaper(settings.data));
   const change = invoice?.payments.reduce((n, p) => n + p.changeGiven, 0) ?? 0;
-  const print = () => invoice && printHtml(documentHtml(invoice, settings.data, paper));
+  const print = () => {
+    if (!invoice) return;
+    // A4 always goes through the print dialog; receipts go to this PC's receipt printer if set.
+    if (paper === "a4") {
+      printHtml(documentHtml(invoice, settings.data, paper));
+      return;
+    }
+    void printDocument({
+      document: { type: "receipt", invoice, reprint: printedAlready },
+      fallbackHtml: () => documentHtml(invoice, settings.data, paper),
+    });
+  };
   return (
     <Dialog open={invoice !== null} onOpenChange={(o) => !o && onClose()}>
       <DialogContent>
@@ -329,10 +344,16 @@ export function TillDialog({
     success: "Till opened",
     onSuccess: onClose,
   });
+  const settings = usePublicSettings();
   const closeTill = useAction("register_close", {
     invalidates: ["register_current"],
     onSuccess: (s) => setClosed(s),
   });
+  const printSummary = (s: Api.RegisterSession) =>
+    void printDocument({
+      document: { type: "till_close", session: s },
+      fallbackHtml: () => tillCloseHtml(s, settings.data),
+    });
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent>
@@ -375,9 +396,14 @@ export function TillDialog({
           )}
           <DialogFooter>
             {closed ? (
-              <Button type="button" onClick={onClose}>
-                Done
-              </Button>
+              <>
+                <Button type="button" variant="outline" onClick={() => printSummary(closed)}>
+                  <Printer /> Print summary
+                </Button>
+                <Button type="button" onClick={onClose}>
+                  Done
+                </Button>
+              </>
             ) : (
               <>
                 <Button type="button" variant="outline" onClick={onClose}>

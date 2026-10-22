@@ -26,7 +26,8 @@ import { errorText, useAction, useCommand, useList } from "@/lib/queries";
 import { run } from "@/lib/run";
 import { useCan } from "@/stores/session";
 import type { Paper } from "./print";
-import { defaultPaper, documentHtml, printHtml } from "./print";
+import { defaultPaper, documentHtml, printHtml, returnSlipHtml } from "./print";
+import { printDocument } from "@/features/printing/print-service";
 import { invoiceEvents } from "./timeline";
 
 // ------------------------------------------------------------------------------------- invoices
@@ -245,7 +246,15 @@ export function PrintButtons({ invoice }: { invoice: Api.InvoiceDetail }) {
       />
       <Button
         variant="outline"
-        onClick={() => printHtml(documentHtml(invoice, settings.data, paper))}
+        onClick={() =>
+          // A4 goes through the print dialog; a receipt to this PC's receipt printer if it has one.
+          paper === "a4"
+            ? printHtml(documentHtml(invoice, settings.data, paper))
+            : void printDocument({
+                document: { type: "receipt", invoice, reprint: true },
+                fallbackHtml: () => documentHtml(invoice, settings.data, paper),
+              })
+        }
       >
         <Printer /> Print
       </Button>
@@ -489,12 +498,26 @@ export function ReturnPage() {
   const { id = "" } = useParams();
   const money = useMoney();
   const ret = useCommand("sales_get_return", { id });
+  const settings = usePublicSettings();
   return (
     <QueryView query={ret}>
       {(r) => (
         <Page
           title={`Credit note ${r.docNo}`}
           back={{ to: "/sales/returns", label: "Sales returns" }}
+          actions={
+            <Button
+              variant="outline"
+              onClick={() =>
+                void printDocument({
+                  document: { type: "return_slip", salesReturn: r, invoiceNo: null },
+                  fallbackHtml: () => returnSlipHtml(r, settings.data),
+                })
+              }
+            >
+              <Printer /> Print slip
+            </Button>
+          }
         >
           <Section>
             <Facts

@@ -18,6 +18,8 @@ const SCREENS = [
   "/accounting/expenses",
   "/settings/business",
   "/settings/users",
+  "/settings/printers",
+  "/inventory/labels",
 ];
 
 for (const theme of ["light", "dark"] as const) {

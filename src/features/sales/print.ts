@@ -1,7 +1,7 @@
 import type { Api } from "@inventory/shared";
 import type { Locale } from "@/lib/format";
 import { localeOf } from "@/lib/business";
-import { label, showDate, showMoney, showQty, showRate } from "@/lib/format";
+import { label, showDate, showDateTime, showMoney, showQty, showRate } from "@/lib/format";
 
 export type Paper = "a4" | "thermal_80" | "thermal_58";
 
@@ -160,6 +160,70 @@ export function documentHtml(
 ): string {
   if (paper === "a4") return invoiceHtml(invoice, settings);
   return receiptHtml(invoice, settings, paper === "thermal_58" ? 58 : 80);
+}
+
+/** A credit note for the customer (thermal), as the receipt printer's return slip. */
+export function returnSlipHtml(
+  ret: Api.ReturnDetail,
+  settings: Api.PublicSettings | undefined,
+  widthMm: 58 | 80 = 80,
+): string {
+  const l = localeOf(settings);
+  const b = settings?.business;
+  const lines = ret.lines
+    .map(
+      (line) => `<tr><td colspan="2">${esc(line.itemName)}</td></tr>
+<tr class="small"><td>${showQty(line.qty)} × ${showMoney(line.unitPrice, l)}</td><td class="r">${showMoney(line.lineTotal, l)}</td></tr>`,
+    )
+    .join("");
+  const credit = ret.total - ret.amountRefunded;
+  return `<!doctype html><html><head><meta charset="utf-8"><title>${esc(ret.docNo)}</title><style>${thermalCss(widthMm)}</style></head><body>
+<div class="c b" style="font-size:1.2em">${esc(b?.name)}</div>
+${b?.address ? `<div class="c small">${esc(b.address)}</div>` : ""}
+${b?.gstin ? `<div class="c small">GSTIN ${esc(b.gstin)}</div>` : ""}
+<hr><div class="c b">CREDIT NOTE</div>
+<table><tr><td class="b">${esc(ret.docNo)}</td><td class="r">${showDate(ret.businessDate, l.locale)}</td></tr>
+<tr><td colspan="2">${esc(ret.customerName)}</td></tr>
+${ret.reason ? `<tr><td colspan="2" class="small">Reason: ${esc(ret.reason)}</td></tr>` : ""}</table>
+<hr><table>${lines}</table><hr>
+<table>
+<tr><td>Taxable</td><td class="r">${showMoney(ret.taxable, l)}</td></tr>
+${ret.taxTotal ? `<tr><td>Tax</td><td class="r">${showMoney(ret.taxTotal, l)}</td></tr>` : ""}
+<tr class="total"><td>Total</td><td class="r">${showMoney(ret.total, l)}</td></tr>
+${ret.amountRefunded ? `<tr><td>Refunded</td><td class="r">${showMoney(ret.amountRefunded, l)}</td></tr>` : ""}
+${credit > 0 ? `<tr><td>Kept as credit</td><td class="r">${showMoney(credit, l)}</td></tr>` : ""}
+</table><hr><p>Customer signature ____________</p>
+</body></html>`;
+}
+
+/** The till's cash-up when it is closed (80 mm), as the thermal printer's version. */
+export function tillCloseHtml(
+  session: Api.RegisterSession,
+  settings: Api.PublicSettings | undefined,
+): string {
+  const l = localeOf(settings);
+  const diff = session.difference ?? 0;
+  const diffLabel = diff < 0 ? "Short" : diff > 0 ? "Over" : "Difference";
+  const row = (k: string, v: string, cls = "") =>
+    `<tr class="${cls}"><td>${esc(k)}</td><td class="r">${v}</td></tr>`;
+  return `<!doctype html><html><head><meta charset="utf-8"><title>Till close</title><style>${thermalCss(80)}</style></head><body>
+<div class="c b" style="font-size:1.2em">${esc(settings?.business.name)}</div>
+<div class="c b">TILL CLOSE</div><hr>
+<table>
+${row("Till", esc(session.registerName))}
+${row("Opened", showDateTime(session.openedAt, l.locale))}
+${session.openedByName ? row("Opened by", esc(session.openedByName)) : ""}
+${session.closedAt ? row("Closed", showDateTime(session.closedAt, l.locale)) : ""}
+</table><hr><table>
+${row("Opening float", showMoney(session.openingFloat, l))}
+${row("Cash in", showMoney(session.cashIn, l))}
+${row("Cash out", `−${showMoney(session.cashOut, l)}`)}
+${row("Expected cash", showMoney(session.expectedCash, l), "b")}
+${session.countedCash !== null && session.countedCash !== undefined ? row("Counted cash", showMoney(session.countedCash, l)) : ""}
+${row(diffLabel, showMoney(Math.abs(diff), l), "total")}
+</table><hr>
+<p>Cashier ____________</p><p>Manager ____________</p>
+</body></html>`;
 }
 
 /** Prints HTML through a hidden frame (the OS print dialog; "Save as PDF" makes the PDF). */

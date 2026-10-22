@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import { useSession } from "@/stores/session";
 import { Section } from "@/components/app/page";
 import { ShortcutsEditor } from "@/features/pos/shortcuts-editor";
+import { PrintersSection } from "@/features/printing/printers-section";
 import { AuditSection } from "./audit-page";
 import { BackupSection, DevicesSection } from "./devices-backup";
 import { SECTIONS, SettingsSection } from "./settings-forms";
@@ -20,6 +21,7 @@ const TABS: Tab[] = [
   { id: "business", title: "Business", permission: "settings.view" },
   { id: "tax", title: "Tax and pricing", permission: "settings.view" },
   { id: "invoice", title: "Invoices and printing", permission: "settings.view" },
+  { id: "printers", title: "Printers and drawer" },
   { id: "inventory", title: "Inventory", permission: "settings.view" },
   { id: "users", title: "Users and roles", permission: "users.manage" },
   { id: "security", title: "Security", permission: "settings.view" },
@@ -54,6 +56,8 @@ function Content({ id }: { id: string }) {
       );
     case "audit":
       return <AuditSection />;
+    case "printers":
+      return <PrintersSection />;
     case "shortcuts":
       return (
         <Section title="Till shortcuts">

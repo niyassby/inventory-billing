@@ -14,6 +14,7 @@ import { call } from "@/api/v2";
 import { errorText } from "@/lib/queries";
 import { showMoney } from "@/lib/format";
 import { useSession } from "@/stores/session";
+import { PrinterSetupStep } from "@/features/printing/printer-setup-step";
 import { AuthFrame } from "./sign-in";
 
 const setupSchema = z
@@ -291,7 +292,15 @@ function ImportOldData({ onDone, onFresh }: { onDone: () => void; onFresh: () =>
 export function Setup({ status }: { status: Api.SetupStatus }) {
   const queryClient = useQueryClient();
   const [fresh, setFresh] = useState(!status.legacyDatabaseFound);
+  const [printerStep, setPrinterStep] = useState(false);
   const done = () => void queryClient.invalidateQueries({ queryKey: ["setup_status"] });
+  if (printerStep) {
+    return (
+      <AuthFrame title="Receipt printer" subtitle="Optional. You can change it later in Settings.">
+        <PrinterSetupStep onDone={done} />
+      </AuthFrame>
+    );
+  }
   return (
     <AuthFrame
       title={fresh ? "Set up your business" : "Welcome to the new version"}
@@ -299,7 +308,7 @@ export function Setup({ status }: { status: Api.SetupStatus }) {
     >
       {fresh ? (
         <>
-          <NewBusiness onDone={done} />
+          <NewBusiness onDone={() => setPrinterStep(true)} />
           {status.legacyDatabaseFound && (
             <FieldDescription className="mt-3 text-center">
               <button type="button" className="underline" onClick={() => setFresh(false)}>

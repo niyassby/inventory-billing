@@ -5,7 +5,7 @@ import { Controller, useFieldArray, useForm } from "react-hook-form";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import type { Api } from "@inventory/shared";
-import { History, Plus, Trash2 } from "lucide-react";
+import { Barcode, History, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
@@ -234,6 +234,19 @@ function Editor({ product }: { product: Api.ProductDetail | null }) {
   const err = (name: string) =>
     (formState.errors as Record<string, { message?: string } | undefined>)[name]?.message;
 
+  // An in-store EAN-13 from the backend (unique across products and pack sizes). Only on a saved,
+  // unchanged form: the product is reloaded with its new barcode.
+  const makeBarcode = async (variantId: string) => {
+    try {
+      const [made] = await call("products_generate_barcodes", { variantIds: [variantId] });
+      void queryClient.invalidateQueries({ queryKey: ["products_get"] });
+      void queryClient.invalidateQueries({ queryKey: ["products_list"] });
+      if (made) toast.success(`Barcode ${made.barcode} given`);
+    } catch (e) {
+      toast.error(errorText(e));
+    }
+  };
+
   return (
     <Page
       title={product ? product.name : "New product"}
@@ -453,7 +466,29 @@ function Editor({ product }: { product: Api.ProductDetail | null }) {
                           />
                         </td>
                         <td className="min-w-36 p-1">
-                          <Input aria-label="Barcode" {...register(`variants.${i}.barcode`)} />
+                          <div className="flex gap-1">
+                            <Input aria-label="Barcode" {...register(`variants.${i}.barcode`)} />
+                            {canManage &&
+                              f.variantId &&
+                              !f.barcode &&
+                              !watch(`variants.${i}.barcode`) && (
+                                <Button
+                                  type="button"
+                                  size="icon"
+                                  variant="outline"
+                                  aria-label="Make an in-store barcode"
+                                  title={
+                                    formState.isDirty
+                                      ? "Save your changes first"
+                                      : "Make an in-store barcode"
+                                  }
+                                  disabled={formState.isDirty}
+                                  onClick={() => f.variantId && void makeBarcode(f.variantId)}
+                                >
+                                  <Barcode />
+                                </Button>
+                              )}
+                          </div>
                         </td>
                         {(["salePrice", "mrp", "costPrice"] as const).map((name) => (
                           <td key={name} className="min-w-28 p-1">

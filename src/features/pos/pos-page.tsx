@@ -22,6 +22,7 @@ import { errorText, useCommand } from "@/lib/queries";
 import { cn } from "@/lib/utils";
 import { useSession } from "@/stores/session";
 import { useQueryClient } from "@tanstack/react-query";
+import { openDrawerForSale, paidInCash, printDocument } from "@/features/printing/print-service";
 import { fromHeld, itemCount, previewInput, saleLines, toHeld } from "./cart";
 import { PaymentDialog } from "./payment-dialog";
 import {
@@ -68,6 +69,7 @@ export default function PosPage() {
       ? connectionView
       : null;
   const register = useCommand("register_current", {});
+  const printers = useCommand("printers_config_get", {}, { staleTime: 60_000 });
   const search = useRef<PickerHandle>(null);
   const customer = useRef<PickerHandle>(null);
 
@@ -80,6 +82,7 @@ export default function PosPage() {
   const { bindings } = useShortcuts();
   const [saving, setSaving] = useState(false);
   const [done, setDone] = useState<Api.InvoiceDetail | null>(null);
+  const [autoPrinted, setAutoPrinted] = useState(false);
   const anyDialog =
     editing !== null ||
     billDiscountOpen ||
@@ -106,15 +109,38 @@ export default function PosPage() {
     if (cart.lines.length === 0) return;
     const label = cart.party?.name ?? `Bill ${new Date().toLocaleTimeString()}`;
     try {
-      await call("sales_hold", { label, cart: toHeld(cart), partyId: cart.party?.id ?? null });
+      const held = await call("sales_hold", {
+        label,
+        cart: toHeld(cart),
+        partyId: cart.party?.id ?? null,
+      });
       void queryClient.invalidateQueries({ queryKey: ["sales_held_list"] });
+      if (printers.data?.config.routes?.heldSlip) {
+        void printDocument({
+          document: {
+            type: "held_slip",
+            slip: {
+              label: held.label,
+              heldAt: held.createdAt,
+              heldBy: held.createdByName ?? null,
+              lines: cart.lines.map((l) => ({
+                name: l.item.name,
+                qty: l.qty,
+                unit: l.item.unitCode,
+              })),
+              total,
+            },
+          },
+          quietSuccess: true,
+        });
+      }
       pos.reset();
       toast.success(`Held: ${label}`);
       search.current?.focus();
     } catch (e) {
       toast.error(errorText(e));
     }
-  }, [cart, pos, queryClient]);
+  }, [cart, pos, queryClient, printers.data, total]);
 
   const clear = useCallback(async () => {
     if (cart.lines.length === 0) return;
@@ -214,6 +240,15 @@ export default function PosPage() {
       setPaying(false);
       setDone(invoice);
       pos.reset();
+      // Printing never holds up the next sale; a failure offers a reprint.
+      const printing = printers.data?.config;
+      if (printing?.autoPrintReceipt && printing.routes?.receipt) {
+        void printDocument({ document: { type: "receipt", invoice }, quietSuccess: true });
+        setAutoPrinted(true);
+      } else {
+        setAutoPrinted(false);
+        if (printing?.drawerOnCash && paidInCash(invoice)) void openDrawerForSale(invoice);
+      }
       void queryClient.invalidateQueries({ queryKey: ["sales_list_invoices"] });
       void queryClient.invalidateQueries({ queryKey: ["products_search"] });
     } catch (e) {
@@ -552,7 +587,7 @@ export default function PosPage() {
         onClose={() => setPaying(false)}
         onPay={(payments) => void complete(payments)}
       />
-      <ReceiptDialog invoice={done} onClose={nextCustomer} />
+      <ReceiptDialog invoice={done} printedAlready={autoPrinted} onClose={nextCustomer} />
       <ShortcutsDialog open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
     </div>
   );

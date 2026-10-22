@@ -6,7 +6,7 @@ import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom"
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import type { Api } from "@inventory/shared";
-import { Ban, PackageCheck, Plus, Receipt, Trash2, Undo2 } from "lucide-react";
+import { Ban, Barcode, PackageCheck, Plus, Receipt, Trash2, Undo2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Field, FieldLabel } from "@/components/ui/field";
@@ -906,6 +906,7 @@ export function ReceiptPage() {
   const navigate = useNavigate();
   const money = useMoney();
   const canManage = useCan("purchases.manage");
+  const canLabel = useCan("labels.print");
   const receipt = useCommand("purchases_get_receipt", { id });
   return (
     <QueryView query={receipt}>
@@ -915,11 +916,21 @@ export function ReceiptPage() {
           description="Goods received"
           back={{ to: "/purchases?tab=goods_receipt", label: "Purchases" }}
           actions={
-            canManage && (
-              <Button onClick={() => void navigate(`/purchases/bills/new?receipt=${r.id}`)}>
-                <Receipt /> Enter the bill
-              </Button>
-            )
+            <>
+              {canLabel && (
+                <Button
+                  variant="outline"
+                  onClick={() => void navigate(`/inventory/labels?receipt=${r.id}`)}
+                >
+                  <Barcode /> Print labels
+                </Button>
+              )}
+              {canManage && (
+                <Button onClick={() => void navigate(`/purchases/bills/new?receipt=${r.id}`)}>
+                  <Receipt /> Enter the bill
+                </Button>
+              )}
+            </>
           }
         >
           <Section>
