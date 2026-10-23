@@ -13,7 +13,8 @@ interface PosState {
   step: (index: number, units: number) => void;
   remove: (index: number) => void;
   setLineDiscount: (index: number, d: Api.Discount | null) => void;
-  setLinePrice: (index: number, price: number | null) => void;
+  setLinePrice: (index: number, price: number | null, catalogPrice?: number) => void;
+  setLineBatch: (index: number, batchId: string | null, batchNo: string | null) => void;
   setBillDiscount: (d: Api.Discount | null) => void;
   setParty: (p: CartParty | null) => void;
   setNotes: (notes: string) => void;
@@ -33,7 +34,8 @@ export const usePos = create<PosState>()(
       step: (i, u) => set((s) => ({ cart: C.stepQty(s.cart, i, u) })),
       remove: (i) => set((s) => ({ cart: C.removeLine(s.cart, i) })),
       setLineDiscount: (i, d) => set((s) => ({ cart: C.setLineDiscount(s.cart, i, d) })),
-      setLinePrice: (i, p) => set((s) => ({ cart: C.setLinePrice(s.cart, i, p) })),
+      setLinePrice: (i, p, c) => set((s) => ({ cart: C.setLinePrice(s.cart, i, p, c) })),
+      setLineBatch: (i, b, n) => set((s) => ({ cart: C.setLineBatch(s.cart, i, b, n) })),
       setBillDiscount: (d) => set((s) => ({ cart: C.setBillDiscount(s.cart, d) })),
       setParty: (p) => set((s) => ({ cart: C.setParty(s.cart, p) })),
       setNotes: (notes) => set((s) => ({ cart: { ...s.cart, notes } })),

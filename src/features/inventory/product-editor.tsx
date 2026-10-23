@@ -1,4 +1,5 @@
 import { SelectField } from "@/components/ui/select-field";
+import { DatePicker } from "@/components/ui/date-picker";
 import { useEffect, useMemo } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { Controller, useFieldArray, useForm } from "react-hook-form";
@@ -32,6 +33,9 @@ interface VariantRow {
   costPrice: number | null;
   reorderLevel: number | null;
   openingStock: number | null;
+  /** Batch products: the batch the opening stock belongs to. */
+  openingBatchNo: string;
+  openingExpiryDate: string;
   isActive: boolean;
 }
 
@@ -67,6 +71,8 @@ const emptyVariant = (): VariantRow => ({
   costPrice: null,
   reorderLevel: 0,
   openingStock: null,
+  openingBatchNo: "",
+  openingExpiryDate: "",
   isActive: true,
 });
 
@@ -102,6 +108,8 @@ function fromDetail(p: Api.ProductDetail): ProductForm {
       costPrice: v.costPrice,
       reorderLevel: v.reorderLevel,
       openingStock: null,
+      openingBatchNo: "",
+      openingExpiryDate: "",
       isActive: v.isActive,
     })),
     packs: p.unitConversions.map((c) => ({
@@ -190,6 +198,10 @@ function Editor({ product }: { product: Api.ProductDetail | null }) {
         reorderQty: 0,
         isActive: x.isActive,
         openingStock: x.variantId ? null : x.openingStock,
+        openingBatchNo:
+          !x.variantId && v.trackBatches && x.openingBatchNo ? x.openingBatchNo : null,
+        openingExpiryDate:
+          !x.variantId && v.trackBatches && x.openingExpiryDate ? x.openingExpiryDate : null,
       })),
       unitConversions: v.packs
         .filter((p) => p.fromUnitId && p.baseQty)
@@ -536,17 +548,41 @@ function Editor({ product }: { product: Api.ProductDetail | null }) {
                               {showQty(existing.stock)} {baseUnit?.code}
                             </Link>
                           ) : (
-                            <Controller
-                              control={control}
-                              name={`variants.${i}.openingStock`}
-                              render={({ field }) => (
-                                <QtyInput
-                                  aria-label="Opening stock"
-                                  value={field.value}
-                                  onValueChange={field.onChange}
-                                />
+                            <div className="flex flex-col gap-1">
+                              <Controller
+                                control={control}
+                                name={`variants.${i}.openingStock`}
+                                render={({ field }) => (
+                                  <QtyInput
+                                    aria-label="Opening stock"
+                                    value={field.value}
+                                    onValueChange={field.onChange}
+                                  />
+                                )}
+                              />
+                              {watch("trackBatches") && (
+                                <>
+                                  <Input
+                                    aria-label="Opening stock batch"
+                                    placeholder="Batch"
+                                    {...register(`variants.${i}.openingBatchNo`)}
+                                  />
+                                  <Controller
+                                    control={control}
+                                    name={`variants.${i}.openingExpiryDate`}
+                                    render={({ field }) => (
+                                      <DatePicker
+                                        aria-label="Opening stock expiry"
+                                        placeholder="Expiry"
+                                        clearable
+                                        value={field.value}
+                                        onChange={field.onChange}
+                                      />
+                                    )}
+                                  />
+                                </>
                               )}
-                            />
+                            </div>
                           )}
                         </td>
                         <td className="p-1">

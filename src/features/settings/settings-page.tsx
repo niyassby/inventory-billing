@@ -5,6 +5,7 @@ import { useSession } from "@/stores/session";
 import { Section } from "@/components/app/page";
 import { ShortcutsEditor } from "@/features/pos/shortcuts-editor";
 import { PrintersSection } from "@/features/printing/printers-section";
+import { ValuationSection } from "@/features/inventory/valuation-section";
 import { AuditSection } from "./audit-page";
 import { BackupSection, DevicesSection } from "./devices-backup";
 import { SECTIONS, SettingsSection } from "./settings-forms";
@@ -58,6 +59,13 @@ function Content({ id }: { id: string }) {
       return <AuditSection />;
     case "printers":
       return <PrintersSection />;
+    case "inventory":
+      return (
+        <>
+          <SettingsSection name="inventory" />
+          <ValuationSection />
+        </>
+      );
     case "shortcuts":
       return (
         <Section title="Till shortcuts">

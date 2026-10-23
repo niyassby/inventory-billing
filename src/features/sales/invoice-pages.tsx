@@ -185,6 +185,16 @@ export function InvoiceLines({ invoice }: { invoice: Api.InvoiceDetail }) {
               {l.returnedQty > 0 && (
                 <span className="ml-2 text-xs text-warning">{showQty(l.returnedQty)} returned</span>
               )}
+              {(l.batches ?? []).length > 0 && (
+                <span className="block text-xs text-muted-foreground">
+                  {(l.batches ?? [])
+                    .map(
+                      (b) =>
+                        `Batch ${b.batchNo}${b.expiryDate ? ` exp ${showDate(b.expiryDate)}` : ""}`,
+                    )
+                    .join(" · ")}
+                </span>
+              )}
             </td>
             <td className="text-right tabular-nums">
               {showQty(l.qty)} {l.unitName}

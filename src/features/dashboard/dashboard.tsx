@@ -5,6 +5,7 @@ import {
   ArrowUpRight,
   Bell,
   CalendarCheck,
+  CalendarClock,
   HandCoins,
   PackagePlus,
   Plus,
@@ -156,6 +157,7 @@ export default function Dashboard() {
     reportInput("sales_by_item", { from: from30, to: today }),
     { enabled: canReports },
   );
+  const expiry = useCommand("inventory_expiry_summary", {}, { enabled: canProducts });
   const lowStock = useCommand(
     "products_list",
     { lowStockOnly: true, page: 1, pageSize: 6 },
@@ -264,6 +266,21 @@ export default function Dashboard() {
             value={String(lowStock.data?.total ?? 0)}
             hint={(lowStock.data?.total ?? 0) > 0 ? "Items to reorder" : "Everything is stocked"}
           />
+          {expiry.data && expiry.data.expiredBatches + expiry.data.nearBatches > 0 && (
+            <Kpi
+              label="Expiry"
+              to="/inventory/expiry"
+              icon={<CalendarClock />}
+              query={expiry}
+              value={money(expiry.data.expiredValue + expiry.data.nearValue)}
+              hint={
+                <span className={expiry.data.expiredBatches > 0 ? "text-danger" : "text-warning"}>
+                  {expiry.data.expiredBatches} expired · {expiry.data.nearBatches} within{" "}
+                  {expiry.data.alertDays} days
+                </span>
+              }
+            />
+          )}
         </div>
       )}
 

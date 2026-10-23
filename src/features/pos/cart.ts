@@ -14,6 +14,9 @@ export interface CartLine {
   discount: Api.Discount | null;
   /** A changed price (needs `sales.price_override` or a manager); null = catalogue price. */
   unitPrice: number | null;
+  /** A chosen batch; absent or null = the backend picks by first expiry. */
+  batchId?: string | null;
+  batchNo?: string | null;
 }
 
 export interface CartParty {
@@ -49,7 +52,7 @@ function lineKey(item: Api.SearchItem): string {
 export function addItem(cart: Cart, item: Api.SearchItem, qty = ONE): Cart {
   const key = lineKey(item);
   const index = cart.lines.findIndex(
-    (l) => l.key === key && l.discount === null && l.unitPrice === null,
+    (l) => l.key === key && l.discount === null && l.unitPrice === null && !l.batchId,
   );
   if (index >= 0) {
     const lines = cart.lines.map((l, i) => (i === index ? { ...l, qty: l.qty + qty } : l));
@@ -88,11 +91,31 @@ export function setLineDiscount(cart: Cart, index: number, discount: Api.Discoun
   return update(cart, index, (l) => ({ ...l, discount: normaliseDiscount(discount) }));
 }
 
-export function setLinePrice(cart: Cart, index: number, unitPrice: number | null): Cart {
+/**
+ * Sets a line's price; the price the bill would charge anyway (`catalogPrice`: the price list's,
+ * from the preview, else the product's own) means "no change".
+ */
+export function setLinePrice(
+  cart: Cart,
+  index: number,
+  unitPrice: number | null,
+  catalogPrice?: number,
+): Cart {
   return update(cart, index, (l) => ({
     ...l,
-    unitPrice: unitPrice === null || unitPrice === l.item.salePrice ? null : unitPrice,
+    unitPrice:
+      unitPrice === null || unitPrice === (catalogPrice ?? l.item.salePrice) ? null : unitPrice,
   }));
+}
+
+/** Sells a line from one batch; null goes back to first expiry first out. */
+export function setLineBatch(
+  cart: Cart,
+  index: number,
+  batchId: string | null,
+  batchNo: string | null,
+): Cart {
+  return update(cart, index, (l) => ({ ...l, batchId, batchNo: batchId ? batchNo : null }));
 }
 
 export function setBillDiscount(cart: Cart, discount: Api.Discount | null): Cart {
@@ -126,15 +149,20 @@ export function saleLines(cart: Cart): Api.SaleLineInput[] {
     qty: l.qty,
     unitPrice: l.unitPrice,
     discount: l.discount,
-    batchId: null,
+    batchId: l.batchId ?? null,
   }));
 }
 
-export function previewInput(cart: Cart): Api.PreviewInput {
+/** The preview request; the till's open session picks the till's price list. */
+export function previewInput(
+  cart: Cart,
+  registerSessionId: string | null = null,
+): Api.PreviewInput {
   return {
     lines: saleLines(cart),
     billDiscount: cart.billDiscount,
     partyId: cart.party?.id ?? null,
+    registerSessionId,
   };
 }
 
@@ -218,6 +246,8 @@ export function toHeld(cart: Cart): Record<string, unknown> {
       qty: l.qty,
       discount: l.discount,
       unitPrice: l.unitPrice,
+      batchId: l.batchId ?? null,
+      batchNo: l.batchNo ?? null,
     })),
     party: cart.party,
     billDiscount: cart.billDiscount,
@@ -238,10 +268,24 @@ export function fromHeld(payload: unknown): Cart {
   for (const raw of payload.lines as unknown[]) {
     if (!isRecord(raw) || !isRecord(raw.item) || typeof raw.qty !== "number") continue;
     const item = raw.item as unknown as Api.SearchItem;
-    cart = addItem(cart, item, raw.qty);
+    // Recalled lines stay exactly as they were held (never merged into one another).
+    const key = lineKey(item);
+    const unique = cart.lines.some((l) => l.key === key) ? `${key}:${cart.lines.length}` : key;
+    cart = {
+      ...cart,
+      lines: [...cart.lines, { key: unique, item, qty: raw.qty, discount: null, unitPrice: null }],
+    };
     const index = cart.lines.length - 1;
     cart = setLineDiscount(cart, index, (raw.discount as Api.Discount | null) ?? null);
     cart = setLinePrice(cart, index, typeof raw.unitPrice === "number" ? raw.unitPrice : null);
+    if (typeof raw.batchId === "string") {
+      cart = setLineBatch(
+        cart,
+        index,
+        raw.batchId,
+        typeof raw.batchNo === "string" ? raw.batchNo : null,
+      );
+    }
   }
   return {
     ...cart,

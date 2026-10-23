@@ -14,7 +14,8 @@ import { Field, FieldLabel } from "@/components/ui/field";
 import { MoneyInput, QtyInput, RateInput } from "@/components/app/inputs";
 import { OfflineBadge } from "@/components/app/badges";
 import { useMoney, usePublicSettings } from "@/lib/business";
-import { showDateTime } from "@/lib/format";
+import { SelectField } from "@/components/ui/select-field";
+import { showDate, showDateTime, showQty } from "@/lib/format";
 import { useAction, useCommand } from "@/lib/queries";
 import { documentHtml, defaultPaper, printHtml, tillCloseHtml } from "@/features/sales/print";
 import { printDocument } from "@/features/printing/print-service";
@@ -75,32 +76,55 @@ export function DiscountEditor({
   );
 }
 
-/** F4: quantity, price and discount of one line. */
+const AUTO_BATCH = "";
+
+/** F4: quantity, price, discount and (batch products) batch of one line. */
 export function LineDialog({
   line,
+  catalogPrice,
   onClose,
   onSave,
 }: {
   line: CartLine | null;
+  /** The price the bill charges for this line (a price list's or the product's own). */
+  catalogPrice?: number;
   onClose: () => void;
   onSave: (change: {
     qty: number;
     unitPrice: number | null;
     discount: Api.Discount | null;
+    batchId: string | null;
+    batchNo: string | null;
+    catalogPrice?: number;
   }) => void;
 }) {
   const [qty, setQty] = useState<number | null>(null);
   const [price, setPrice] = useState<number | null>(null);
   const [discount, setDiscount] = useState<Api.Discount | null>(null);
+  const [batch, setBatch] = useState(AUTO_BATCH);
   const qtyRef = useRef<HTMLInputElement>(null);
+  const batches = useCommand(
+    "stock_batches",
+    { variantId: line?.item.variantId ?? "", warehouseId: null },
+    { enabled: Boolean(line?.item.trackBatches) },
+  );
   useEffect(() => {
     if (line) {
       setQty(line.qty);
-      setPrice(line.unitPrice ?? line.item.salePrice);
+      setPrice(line.unitPrice ?? catalogPrice ?? line.item.salePrice);
       setDiscount(line.discount);
+      setBatch(line.batchId ?? AUTO_BATCH);
       setTimeout(() => qtyRef.current?.focus(), 30);
     }
-  }, [line]);
+  }, [line, catalogPrice]);
+  const batchOptions = (batches.data ?? [])
+    .filter((b) => b.batchId)
+    .map((b) => ({
+      value: b.batchId ?? "",
+      label: `${b.batchNo ?? ""} · ${showQty(b.qty)} left${
+        b.expiryDate ? ` · exp ${showDate(b.expiryDate)}${b.expired ? " (expired)" : ""}` : ""
+      }`,
+    }));
   return (
     <Dialog open={line !== null} onOpenChange={(o) => !o && onClose()}>
       <DialogContent>
@@ -108,7 +132,16 @@ export function LineDialog({
           className="flex flex-col gap-4"
           onSubmit={(e) => {
             e.preventDefault();
-            if (qty !== null) onSave({ qty, unitPrice: price, discount });
+            const chosen = batches.data?.find((b) => b.batchId === batch);
+            if (qty !== null)
+              onSave({
+                qty,
+                unitPrice: price,
+                discount,
+                batchId: batch || null,
+                batchNo: chosen?.batchNo ?? null,
+                ...(catalogPrice !== undefined ? { catalogPrice } : {}),
+              });
           }}
         >
           <DialogHeader>
@@ -131,6 +164,20 @@ export function LineDialog({
             <FieldLabel>Discount on this item</FieldLabel>
             <DiscountEditor idPrefix="line-discount" value={discount} onChange={setDiscount} />
           </Field>
+          {line?.item.trackBatches && (
+            <Field>
+              <FieldLabel htmlFor="line-batch">Batch</FieldLabel>
+              <SelectField
+                id="line-batch"
+                value={batch}
+                onValueChange={setBatch}
+                options={[
+                  { value: AUTO_BATCH, label: "First to expire (automatic)" },
+                  ...batchOptions,
+                ]}
+              />
+            </Field>
+          )}
           <p className="text-xs text-muted-foreground">
             A changed price or a discount above your limit asks for a manager's approval.
           </p>

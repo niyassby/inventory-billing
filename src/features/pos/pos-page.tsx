@@ -43,9 +43,9 @@ function ButtonKey({ binding }: { binding: string }) {
   return text.length > 5 ? null : <Kbd className="ml-1">{text}</Kbd>;
 }
 
-function useBillPreview() {
+function useBillPreview(registerSessionId: string | null) {
   const cart = usePos((s) => s.cart);
-  const input = useDebounced(previewInput(cart), 120);
+  const input = useDebounced(previewInput(cart, registerSessionId), 120);
   return useCommand("sales_preview", input, {
     enabled: input.lines.length > 0,
     staleTime: 0,
@@ -61,14 +61,14 @@ export default function PosPage() {
   const queryClient = useQueryClient();
   const pos = usePos();
   const { cart } = pos;
-  const preview = useBillPreview();
+  const register = useCommand("register_current", {});
+  const preview = useBillPreview(register.data?.id ?? null);
   const connection = useConnection().data;
   const connectionView = connection ? describeConnection(connection) : null;
   const notice =
     connectionView && (connectionView.tone === "warning" || connectionView.tone === "error")
       ? connectionView
       : null;
-  const register = useCommand("register_current", {});
   const printers = useCommand("printers_config_get", {}, { staleTime: 60_000 });
   const search = useRef<PickerHandle>(null);
   const customer = useRef<PickerHandle>(null);
@@ -376,6 +376,7 @@ export default function PosPage() {
                               <p className="font-medium">{line.item.name}</p>
                               <p className="text-xs text-muted-foreground">
                                 {line.item.sku} · {line.item.unitCode}
+                                {line.batchNo && ` · batch ${line.batchNo}`}
                                 {!line.item.isService && line.qty > line.item.stock && (
                                   <span className="ml-1 text-warning">
                                     · only {showQty(line.item.stock)} in stock
@@ -552,12 +553,19 @@ export default function PosPage() {
 
       <LineDialog
         line={editingLine}
+        catalogPrice={
+          editing !== null &&
+          preview.data?.lines[editing]?.variantId === editingLine?.item.variantId
+            ? preview.data?.lines[editing]?.catalogPrice
+            : undefined
+        }
         onClose={() => setEditing(null)}
-        onSave={({ qty, unitPrice, discount }) => {
+        onSave={({ qty, unitPrice, discount, batchId, batchNo, catalogPrice }) => {
           if (editing === null) return;
           pos.setQty(editing, qty);
-          pos.setLinePrice(editing, unitPrice);
+          pos.setLinePrice(editing, unitPrice, catalogPrice);
           pos.setLineDiscount(editing, discount);
+          pos.setLineBatch(editing, batchId, batchNo);
           setEditing(null);
         }}
       />

@@ -619,7 +619,9 @@ pub fn allocate_fefo(
          WHERE l.variant_id = ?1 AND l.warehouse_id = ?2 AND l.qty > 0
          ORDER BY l.batch_id IS NULL, b.expiry_date IS NULL, b.expiry_date, b.created_at, l.batch_key",
     )?;
-    let rows: Vec<(Option<String>, Option<String>, Option<String>, i64)> = stmt
+    /// (batch id, batch number, expiry date, quantity on hand)
+    type Row = (Option<String>, Option<String>, Option<String>, i64);
+    let rows: Vec<Row> = stmt
         .query_map(params![variant_id, warehouse_id], |r| {
             Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?))
         })?

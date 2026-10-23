@@ -18,6 +18,8 @@ import {
   Wallet,
   CalendarCheck,
   Barcode,
+  BadgePercent,
+  CalendarClock,
 } from "lucide-react";
 
 export interface NavItem {
@@ -81,6 +83,18 @@ export const NAV: NavGroup[] = [
         to: "/inventory/labels",
         icon: Barcode,
         permission: "labels.print",
+      },
+      {
+        title: "Price lists",
+        to: "/inventory/price-lists",
+        icon: BadgePercent,
+        permission: "products.view",
+      },
+      {
+        title: "Expiry",
+        to: "/inventory/expiry",
+        icon: CalendarClock,
+        permission: "stock.view",
       },
       { title: "Purchases", to: "/purchases", icon: Truck, permission: "purchases.view" },
     ],

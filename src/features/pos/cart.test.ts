@@ -11,6 +11,7 @@ import {
   select,
   setBillDiscount,
   setLineDiscount,
+  setLineBatch,
   setLinePrice,
   setParty,
   setQty,
@@ -106,6 +107,31 @@ describe("cart", () => {
       partyId: "c1",
       billDiscount: { kind: "amount", amount: 500 },
     });
+  });
+
+  it("judges a price change against the price list's price", () => {
+    let cart = addItem(EMPTY_CART, item("a", 10_000));
+    // The customer's list charges 9,000: saying 9,000 is no change at all.
+    cart = setLinePrice(cart, 0, 9_000, 9_000);
+    expect(cart.lines[0]?.unitPrice).toBeNull();
+    cart = setLinePrice(cart, 0, 10_000, 9_000);
+    expect(cart.lines[0]?.unitPrice).toBe(10_000);
+    expect(previewInput(cart, "session-1").registerSessionId).toBe("session-1");
+    expect(previewInput(cart).registerSessionId).toBeNull();
+  });
+
+  it("sells a line from a chosen batch and keeps further scans apart", () => {
+    let cart = addItem(EMPTY_CART, item("a"));
+    cart = setLineBatch(cart, 0, "b-1", "B24");
+    expect(saleLines(cart)[0]?.batchId).toBe("b-1");
+    cart = addItem(cart, item("a"));
+    expect(cart.lines).toHaveLength(2);
+    expect(saleLines(cart)[1]?.batchId).toBeNull();
+    cart = setLineBatch(cart, 0, null, "B24");
+    expect(cart.lines[0]).toMatchObject({ batchId: null, batchNo: null });
+    const held = setLineBatch(cart, 1, "b-2", "B25");
+    const back = fromHeld(JSON.parse(JSON.stringify(toHeld(held))));
+    expect(back.lines[1]).toMatchObject({ batchId: "b-2", batchNo: "B25" });
   });
 
   it("round-trips a held bill", () => {

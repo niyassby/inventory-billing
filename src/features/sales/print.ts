@@ -70,7 +70,12 @@ export function receiptHtml(
       (line) => `<tr><td colspan="3">${esc(line.itemName)}</td></tr>
 <tr class="small"><td>${showQty(line.qty)} ${esc(line.unitName)} × ${showMoney(line.unitPrice, l)}</td>
 <td class="r">${line.lineDiscount ? `−${showMoney(line.lineDiscount, l)}` : ""}</td>
-<td class="r">${showMoney(line.lineTotal, l)}</td></tr>`,
+<td class="r">${showMoney(line.lineTotal, l)}</td></tr>${(line.batches ?? [])
+        .map(
+          (b) =>
+            `<tr class="small muted"><td colspan="3">Batch ${esc(b.batchNo)}${b.expiryDate ? ` exp ${esc(b.expiryDate.slice(5, 7))}/${esc(b.expiryDate.slice(0, 4))}` : ""}</td></tr>`,
+        )
+        .join("")}`,
     )
     .join("");
   const paid = invoice.payments

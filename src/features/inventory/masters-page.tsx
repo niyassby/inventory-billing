@@ -13,6 +13,7 @@ import {
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { UnitConversionsSection } from "./unit-conversions";
 import { confirm } from "@/components/app/dialogs";
 import { RateInput } from "@/components/app/inputs";
 import { Page, QueryView } from "@/components/app/page";
@@ -273,6 +274,9 @@ export default function MastersPage() {
               />
             )}
           </QueryView>
+          <div className="mt-4">
+            <UnitConversionsSection units={units.data ?? []} canManage={canManage} />
+          </div>
         </TabsContent>
         <TabsContent value="tax">
           <QueryView query={taxRates}>

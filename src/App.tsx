@@ -38,6 +38,8 @@ const ProductsPage = lazy(() => import("@/features/inventory/products-page"));
 const ProductEditor = lazy(() => import("@/features/inventory/product-editor"));
 const MastersPage = lazy(() => import("@/features/inventory/masters-page"));
 const LabelsPage = lazy(() => import("@/features/printing/labels-page"));
+const PriceListsPage = lazy(() => import("@/features/inventory/price-lists-page"));
+const ExpiryPage = lazy(() => import("@/features/inventory/expiry-page"));
 const Stock = {
   Moves: lazy(() =>
     import("@/features/inventory/stock-pages").then((m) => ({ default: m.StockMovesPage })),
@@ -181,6 +183,8 @@ function AppRoutes() {
           <Route path="inventory/products/:id" element={<ProductEditor />} />
           <Route path="inventory/masters" element={<MastersPage />} />
           <Route path="inventory/labels" element={<LabelsPage />} />
+          <Route path="inventory/price-lists" element={<PriceListsPage />} />
+          <Route path="inventory/expiry" element={<ExpiryPage />} />
           <Route path="inventory/stock" element={<Stock.Moves />} />
           <Route path="inventory/adjustments/new" element={<Stock.Adjust />} />
           <Route path="inventory/transfers/new" element={<Stock.Transfer />} />

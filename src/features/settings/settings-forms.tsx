@@ -360,13 +360,27 @@ export const SECTIONS: Record<
       },
       {
         kind: "select",
-        key: "valuationMethod",
-        label: "Stock valuation",
-        help: "FIFO is accepted but values stock at the weighted average for now.",
+        key: "expiredStockPolicy",
+        label: "Selling an expired batch",
+        help: "Batch products are sold first-to-expire first; this decides what happens to expired batches.",
         options: [
-          ["weighted_average", "Weighted average cost"],
-          ["fifo", "FIFO (reports as weighted average)"],
+          ["block", "Never sell it (safest)"],
+          ["warn", "Only when nothing else is left, with a warning"],
+          ["allow", "Sell it like any other batch"],
         ],
+      },
+      {
+        kind: "number",
+        key: "expiryAlertDays",
+        label: "Near-expiry warning (days before expiry)",
+        min: 1,
+        max: 365,
+      },
+      {
+        kind: "bool",
+        key: "expiryAlerts",
+        label: "Expiry notices on the dashboard",
+        help: "Batches that have expired or expire within the warning window.",
       },
       {
         kind: "bool",

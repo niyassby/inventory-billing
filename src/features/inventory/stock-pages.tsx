@@ -265,6 +265,65 @@ function StartCountDialog({ open, onClose }: { open: boolean; onClose: () => voi
 interface AdjustRow extends ItemLine {
   direction: "out" | "in";
   unitCost: number | null;
+  /** Stock out of a batch product: a chosen batch ("" = first to expire). */
+  batchId: string;
+  /** Stock in of a batch product: its batch and expiry. */
+  batchNo: string;
+  expiryDate: string;
+}
+
+/** The batch of an adjustment line: a choice for stock out, a number and expiry for stock in. */
+function BatchCell({
+  line,
+  warehouseId,
+  update,
+}: {
+  line: AdjustRow;
+  warehouseId: string | null;
+  update: (patch: Partial<AdjustRow>) => void;
+}) {
+  const batches = useCommand(
+    "stock_batches",
+    { variantId: line.item.variantId, warehouseId },
+    { enabled: line.item.trackBatches && line.direction === "out" },
+  );
+  if (!line.item.trackBatches) return <span className="text-xs text-muted-foreground">—</span>;
+  if (line.direction === "in") {
+    return (
+      <div className="flex min-w-48 gap-1">
+        <Input
+          aria-label="Batch"
+          placeholder="Batch"
+          value={line.batchNo}
+          onChange={(e) => update({ batchNo: e.target.value })}
+        />
+        <DatePicker
+          aria-label="Expiry"
+          placeholder="Expiry"
+          clearable
+          value={line.expiryDate}
+          onChange={(expiryDate) => update({ expiryDate })}
+        />
+      </div>
+    );
+  }
+  return (
+    <SelectField
+      aria-label="Batch"
+      className="min-w-48"
+      value={line.batchId}
+      onValueChange={(batchId) => update({ batchId })}
+      options={[
+        { value: "", label: "First to expire" },
+        ...(batches.data ?? [])
+          .filter((b) => b.batchId)
+          .map((b) => ({
+            value: b.batchId ?? "",
+            label: `${b.batchNo ?? ""} · ${showQty(b.qty)}${b.expiryDate ? ` · exp ${showDate(b.expiryDate)}` : ""}${b.expired ? " (expired)" : ""}`,
+          })),
+      ]}
+    />
+  );
 }
 
 const REASONS = [
@@ -303,6 +362,9 @@ export function AdjustmentPage() {
             Math.round(((l.qty ?? 0) * l.item.factorNum) / l.item.factorDen) *
             (l.direction === "out" ? -1 : 1),
           unitCost: l.direction === "in" ? l.unitCost : null,
+          batchId: l.direction === "out" && l.batchId ? l.batchId : null,
+          batchNo: l.direction === "in" && l.batchNo.trim() ? l.batchNo.trim() : null,
+          expiryDate: l.direction === "in" && l.expiryDate ? l.expiryDate : null,
         })),
       });
       toast.success(`Saved ${result.docNo}`);
@@ -367,8 +429,17 @@ export function AdjustmentPage() {
             qty: 1000,
             direction: "out",
             unitCost: null,
+            batchId: "",
+            batchNo: "",
+            expiryDate: "",
           })}
           columns={[
+            {
+              header: "Batch",
+              cell: (l, update) => (
+                <BatchCell line={l} warehouseId={warehouseId || null} update={update} />
+              ),
+            },
             {
               header: "Change",
               cell: (l, update) => (
@@ -803,6 +874,12 @@ export function CountPage() {
                           <td className="py-1.5">
                             <span className="font-medium">{l.name}</span>
                             <span className="ml-2 text-xs text-muted-foreground">{l.sku}</span>
+                            {l.batchNo && (
+                              <span className="block text-xs text-muted-foreground">
+                                Batch {l.batchNo}
+                                {l.expiryDate && ` · exp ${showDate(l.expiryDate)}`}
+                              </span>
+                            )}
                           </td>
                           <td className="text-right tabular-nums">{showQty(l.systemQty)}</td>
                           <td className="py-1">

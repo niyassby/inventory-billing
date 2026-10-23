@@ -53,6 +53,7 @@ interface PartyDraft {
   openingBalance: number | null;
   notes: string;
   isActive: boolean;
+  priceListId: string;
 }
 
 function draftOf(p: Api.PartyDetail | null, partyType: PartyType): PartyDraft {
@@ -71,6 +72,7 @@ function draftOf(p: Api.PartyDetail | null, partyType: PartyType): PartyDraft {
     openingBalance: null,
     notes: p?.notes ?? "",
     isActive: p?.isActive ?? true,
+    priceListId: p?.priceListId ?? "",
   };
 }
 
@@ -88,6 +90,7 @@ export function PartyDialog({
   onSaved?: (p: Api.PartyDetail) => void;
 }) {
   const queryClient = useQueryClient();
+  const priceLists = useCommand("price_lists_list", {}, { enabled: open });
   const [d, setD] = useState<PartyDraft>(() => draftOf(party, partyType));
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -119,6 +122,7 @@ export function PartyDialog({
         openingBalance: d.id ? null : d.openingBalance,
         notes: d.notes || null,
         isActive: d.isActive,
+        priceListId: d.priceListId || null,
       });
       void queryClient.invalidateQueries({ queryKey: ["parties_list"] });
       void queryClient.invalidateQueries({ queryKey: ["parties_get"] });
@@ -228,6 +232,22 @@ export function PartyDialog({
                 onChange={(e) => set({ creditDays: e.target.value.replace(/\D/g, "") })}
               />
             </Field>
+            {d.partyType !== "supplier" && (
+              <Field className="sm:col-span-2">
+                <FieldLabel htmlFor="p-pricelist">Price list</FieldLabel>
+                <SelectField
+                  id="p-pricelist"
+                  value={d.priceListId}
+                  onValueChange={(priceListId) => set({ priceListId })}
+                  options={[
+                    { value: "", label: "Till's or default prices" },
+                    ...(priceLists.data ?? [])
+                      .filter((l) => l.isActive)
+                      .map((l) => ({ value: l.id, label: l.name })),
+                  ]}
+                />
+              </Field>
+            )}
             {!party && (
               <Field className="sm:col-span-2">
                 <FieldLabel htmlFor="p-opening">

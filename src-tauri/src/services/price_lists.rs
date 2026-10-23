@@ -467,7 +467,7 @@ pub fn set_prices(ctx: &mut Ctx<'_>, input: &SetPricesInput) -> AppResult<SetPri
         .by(actor)
         .summary(format!("{}: {saved} saved, {removed} removed", list.name))
         .after(serde_json::to_value(
-            &input.upsert.iter().take(200).collect::<Vec<_>>(),
+            input.upsert.iter().take(200).collect::<Vec<_>>(),
         )?)
         .write(tx, &now)?;
         Ok(SetPricesResult {

@@ -94,6 +94,19 @@ describe("print", () => {
     expect(documentHtml(invoice, settings, "thermal_80")).toContain("size: 80mm auto");
   });
 
+  it("prints the batches a line was sold from", () => {
+    const batched = {
+      ...invoice,
+      lines: invoice.lines.map((l) => ({
+        ...l,
+        batches: [{ batchNo: "B<7>", expiryDate: "2027-03-31", qty: 2000 }],
+      })),
+    } as Api.InvoiceDetail;
+    const html = documentHtml(batched, settings, "thermal_58");
+    expect(html).toContain("Batch B&lt;7&gt;");
+    expect(html).toContain("03/2027");
+  });
+
   it("makes an A4 tax invoice", () => {
     const html = documentHtml({ ...invoice, status: "voided", balanceDue: 100 }, settings, "a4");
     expect(html).toContain("TAX INVOICE");
