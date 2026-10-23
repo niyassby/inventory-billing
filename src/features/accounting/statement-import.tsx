@@ -19,6 +19,7 @@ import { call } from "@/api/v2";
 import { useMoney } from "@/lib/business";
 import { showDate } from "@/lib/format";
 import { errorText, useAction } from "@/lib/queries";
+import { complete, guessMapping } from "./statement-mapping";
 
 const NONE = "";
 
@@ -71,9 +72,14 @@ export function StatementImport({
         apply: false,
       });
       setResult(r);
-      if (!m && r.mapping) {
-        setMapping(r.mapping);
-        setTwoColumns(r.mapping.amountColumn === null || r.mapping.amountColumn === undefined);
+      if (!m) {
+        // The account's saved columns, or a guess from the header.
+        const start = r.mapping ?? guessMapping(r.columns);
+        if (start) {
+          setMapping(start);
+          setTwoColumns(start.amountColumn === null || start.amountColumn === undefined);
+          if (!r.mapping && complete(start)) await ask(text, name, start);
+        }
       }
     } catch (e) {
       setError(errorText(e));
@@ -100,7 +106,7 @@ export function StatementImport({
       ...patch,
     };
     setMapping(next);
-    if (file) void ask(file.text, file.name, next);
+    if (file && complete(next)) void ask(file.text, file.name, next);
   };
   const columns = result?.columns ?? [];
   return (
@@ -267,7 +273,7 @@ export function StatementImport({
                   />
                 </Field>
               </div>
-              {mapping && (
+              {mapping && complete(mapping) && (
                 <section aria-label="What will be imported">
                   <p className="mb-2 text-sm">
                     {result.totalRows} line(s)
@@ -336,6 +342,7 @@ export function StatementImport({
             disabled={
               !file ||
               !mapping ||
+              !complete(mapping) ||
               !result ||
               result.errors > 0 ||
               result.newRows === 0 ||

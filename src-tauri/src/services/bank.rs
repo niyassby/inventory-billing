@@ -227,9 +227,14 @@ pub fn import(ctx: &mut Ctx<'_>, input: &StatementImportInput) -> AppResult<Stat
     let sample: Vec<Vec<String>> = rows.iter().take(8).cloned().collect();
     let width = rows.iter().take(50).map(Vec::len).max().unwrap_or(0);
     let skip = mapping.as_ref().map_or(0, |m| m.skip_rows);
-    let columns: Vec<String> = match &mapping {
-        Some(m) if m.has_header => {
-            let header = rows.get(skip).cloned().unwrap_or_default();
+    // Without a mapping yet, the first line is taken as the header (most statements have one).
+    let header_row = match &mapping {
+        Some(m) => m.has_header.then_some(skip),
+        None => Some(0),
+    };
+    let columns: Vec<String> = match header_row {
+        Some(at) => {
+            let header = rows.get(at).cloned().unwrap_or_default();
             (0..width)
                 .map(|i| {
                     header
@@ -240,7 +245,7 @@ pub fn import(ctx: &mut Ctx<'_>, input: &StatementImportInput) -> AppResult<Stat
                 })
                 .collect()
         }
-        _ => (0..width).map(|i| format!("Column {}", i + 1)).collect(),
+        None => (0..width).map(|i| format!("Column {}", i + 1)).collect(),
     };
     let mut result = StatementImportResult {
         sample,
