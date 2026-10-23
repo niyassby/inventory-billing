@@ -5,6 +5,53 @@ All notable changes to this project. The format follows
 
 ## [Unreleased]
 
+### Phase 11: accounting depth and reports (2026-10-23)
+
+Migration 0012 (journals, attachments, reopened days, year closes, bank statements and
+reconciliations, cheques, till reasons, report views and schedules, seven permissions).
+Decisions: ASSUMPTIONS A-118 to A-135.
+
+#### Added
+- Manual journals (Money → Journals): drafted, submitted, approved by the owner, then posted;
+  balanced lines, attachments (PDF or picture), sent back with a note; posted journals are
+  corrected only by a reviewed reversal. Control accounts need an owner's reason; receivable and
+  payable lines post to the customer's or supplier's account; stock accounts are never posted
+  by hand.
+- Closed-day lock (Settings → Accounting): documents and voids dated on or before the last
+  closed day need a manager's approval (period override) and are audited. The owner reopens a
+  day with a reason. Financial-year close (Money → Periods and year end) moves the year's profit
+  to Retained Earnings after a dry run, locks the year, and can be reopened.
+- Bank reconciliation (Money → Bank reconciliation): CSV statement import with columns guessed
+  and remembered per account, preview, duplicate-safe; automatic matching by amount, date and
+  reference; matching by hand (one line to several), ignore, tick; the reconciliation statement
+  and its history.
+- Cheques (Money → Cheques): post-dated cheques received or given, a due list and notices;
+  clearing records the payment, a bounce voids it.
+- Till close asks why the cash is short or over; a large difference needs a manager. The day
+  close shows the reasons and prints a summary (receipt printer or print dialog).
+- Audit log export to CSV and Excel with the viewer's filters.
+- Reports: grouping (day, month, customer, cashier, item, category; supplier and month on
+  purchases; month on expenses), rows that open the invoices or document behind them, a "Sales
+  invoices" report, the report's state in the address, saved views per user and scheduled CSV
+  export to a folder on the hub.
+- Commands: `journals_list/get/save/delete/submit/send_back/approve/allow_restricted/post/reverse`,
+  `attachments_add/get/remove`, `period_status`, `day_reopen`, `years_list`,
+  `year_close_preview`, `year_close`, `year_reopen`, `bank_import/view/auto_match/match/unmatch/
+  ignore/tick/reconciliation/finish/history`, `cheques_list/save/clear/bounce/cancel`,
+  `audit_export`, `report_views_list/save/delete/schedule/run_now`. Permissions
+  `journal.manage`, `journal.approve`, `journal.restricted`, `period.override`,
+  `period.manage`, `audit.export`, `bank.reconcile`. Settings section `accounting`.
+- Tests: journal review, reversal and immutability; control accounts keeping parties in step;
+  the lock on every document type; year close and reopen; bank import, matching and
+  reconciliation on fixtures; cheques; till differences; audit export; drill-down; scheduled
+  exports; a permission matrix of the new actions; the 0012 migration on a database in use; an
+  end-to-end journal, statement and audit-export flow.
+
+#### Changed
+- Profit and loss leaves out year-close entries. Trial balance on a closed year's last day is
+  the post-closing one.
+- Closing a till with a difference needs a reason.
+
 ### Phase 10: inventory depth (2026-10-23)
 
 Migration 0011 (cost layers, price-list dates and kinds, till price lists, booked sale cost, two

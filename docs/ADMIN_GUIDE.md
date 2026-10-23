@@ -217,3 +217,24 @@ managers).
   oldest layers first, and the stock valuation report shows the oldest stock date.
 - **Checks**: the weekly integrity check also compares the FIFO layers with the stock ledger. A
   difference shows as a notice; report it, do not adjust stock to hide it.
+
+## 9. Locked days, year end, journals and the bank
+
+- **Lock closed days** (Settings → Accounting, owner only): once on, anything dated on or before
+  the last closed day (bills, payments, expenses, stock changes, journals, and voids of them)
+  needs a manager's approval and is written to the audit log as `PERIOD_OVERRIDE`. To correct a
+  closed day properly, the owner reopens it (Money → Periods and year end → Reopen, with a
+  reason), makes the change, and closes the day again from Day close. A counter that was offline
+  may still send a sale dated in a closed day: it is kept, audited and shown as a notice.
+- **Year end** (Money → Periods and year end → Close the year, owner): only after the year has
+  ended and every journal of the year is posted. Check the dry run (income, expenses, net
+  profit), then close. The year is locked from then on; reopening reverses the closing entry.
+- **Who does what** with journals: accountants and managers write and post; only the owner
+  approves and allows control accounts. Change this in Settings → Users and roles.
+- **Statement columns** are remembered per bank account. If your bank changes its file layout,
+  import once with the new columns and tick *Remember these columns*.
+- **Scheduled exports** run on the hub (or a standalone PC) while the app is open, once per
+  period, into the folder you chose. A failed export (folder missing, user no longer allowed)
+  shows as a notice and in the view's schedule.
+- **Till differences**: the limit for a manager's approval is in Settings → Accounting (default
+  ₹100).

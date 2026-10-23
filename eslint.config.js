@@ -33,6 +33,8 @@ export default tseslint.config(
             "playwright.config.ts",
             "e2e/*.ts",
           ],
+          // The config files and every end-to-end spec are outside tsconfig.json.
+          maximumDefaultProjectFileMatchCount_THIS_WILL_SLOW_DOWN_LINTING: 16,
         },
         tsconfigRootDir: import.meta.dirname,
       },

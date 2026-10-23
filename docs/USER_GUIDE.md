@@ -60,7 +60,8 @@ the till offers **Print summary** (the cash-up with any difference, and signatur
 [screenshot: the till]
 
 **Open the till** (cash drawer) at the start of the shift and close it at the end: count the cash
-and the app shows any difference.
+and the app shows any difference. If the cash is short or over, choose why (counting error,
+wrong change, …); a large difference needs a manager's PIN.
 
 ### If a sale needs a manager
 
@@ -124,7 +125,31 @@ Each customer and supplier has a ledger: what they owe or are owed, with every b
 - **Day close**: at the end of the day, check the summary (sales, tax, returns, payments by
   mode, expenses) and close. It won't close while a till is still open.
 
+## 8a. Journals, bank and cheques
+
+- **Journals** (Money → Journals): for corrections the documents don't make (an accrual, a
+  wrong account, opening balances). Add lines until debits equal credits, attach the bill or
+  letter, and **Submit for approval**. The owner **Approves** (or sends it back with a note), then
+  **Post to the books**. A posted journal can't be edited: **Reverse** drafts a new journal with
+  every line swapped, which goes through the same steps. Receivables, payables and tax need the
+  owner's permission on that journal; stock is changed with a stock adjustment, never a journal.
+- **Bank reconciliation** (Money → Bank reconciliation): **Import statement** (the CSV file from
+  your bank's website), check the columns and the preview, **Import**. **Match automatically**
+  pairs the obvious ones; for the rest, choose a statement line on the left and the book lines it
+  stands for on the right, then **Match**. Book lines the bank cleared without a statement line
+  can be **Marked cleared**. Below, the reconciliation statement shows whether the books and the
+  statement agree; **Finish reconciliation** keeps it.
+- **Cheques** (Money → Cheques): **Record a cheque** you received or gave with a later date.
+  Nothing is booked until it clears: when its date comes you get a notice; **Cleared** records the
+  payment, **Bounced** undoes it, **Cancel** if it won't be deposited.
+
 ## 9. Reports
+
+Choose **By …** to group a report (by day, month, customer, cashier, item or category for sales;
+supplier or month for purchases). Click a row to see the invoices behind it, and an invoice to
+open it. **Save view** keeps the period, grouping and filters under your own name; on the hub an
+owner or manager can **Schedule export** of a view as a CSV file into a folder every day, week or
+month.
 
 Reports → pick one → choose the period (today, this month, this year, or dates). Every report can
 be printed, saved as PDF (choose "Save as PDF" in the print window) or exported to CSV or Excel

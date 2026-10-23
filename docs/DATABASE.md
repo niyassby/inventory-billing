@@ -1,6 +1,6 @@
 # Database (v2)
 
-*Schema version 11 · SQLite (bundled 3.45, STRICT tables, WAL) · Source:
+*Schema version 12 · SQLite (bundled 3.45, STRICT tables, WAL) · Source:
 `src-tauri/src/db/migrations/*.sql` · Tests: `src-tauri/src/db/tests.rs`*
 
 The v2 database replaces the v1 `inventory_app.db`. It is created by versioned migrations and
@@ -340,6 +340,34 @@ A-97).
 - `sales_invoice_items.cost_value`: the exact cost the line was booked at (null on older sales).
 - Permissions `price_lists.manage` (owner, manager) and `inventory.valuation` (owner).
 - Batches stay in `batches` (0002); expiry settings live in the settings JSON.
+
+### 3.8 Accounting depth (migration 0012, Phase 11)
+
+- `manual_journals` and `manual_journal_lines`: reviewed journals (draft, submitted, approved,
+  posted, reversed). Posting writes an ordinary `journal_entries` row (`source_type =
+  'manual_journal'`) and sets `journal_entry_id`. Triggers: lines change only while the journal
+  is a draft; a posted journal changes only to `reversed`; nothing is deleted. `reversal_of` and
+  `reversed_by_journal` link a journal and its reversal; `allow_restricted` with
+  `restricted_reason` and `restricted_by` is the owner's permission for control accounts.
+- `attachments`: files on a record (`entity_type = 'manual_journal'`), stored in the
+  `attachments` folder beside the database under `storage_key`.
+- `day_closes.status` (`closed` or `reopened`) with `reopened_at`, `reopened_by`,
+  `reopen_reason`.
+- `fiscal_year_closes`: one row per close (status `closed` or `reopened`), with the closing
+  `journal_entry_id` (`source_type = 'year_close'`) and the net profit moved to Retained Earnings
+  (new system account 3100). At most one closed row per year start.
+- `register_sessions.difference_reason` and `difference_approved_by`.
+- `bank_statement_imports`, `bank_statement_lines` (positive = money in; `line_hash` unique per
+  account; status `unmatched`, `matched` or `ignored`), `bank_matches` (a cleared journal line,
+  with its statement line or ticked; soft-deleted when unmatched; one live match per journal
+  line), `bank_import_profiles` (the column mapping per account), `bank_reconciliations`
+  (append-only history).
+- `cheques`: post-dated cheques (pending, cleared, bounced, cancelled) and the `payment_id`
+  recorded when one clears. Never deleted.
+- `report_views` (per user) and `report_schedules` (one live schedule per view).
+- Permissions `journal.manage`, `journal.approve`, `journal.restricted`, `period.override`,
+  `period.manage`, `audit.export`, `bank.reconcile` and their grants.
+- Settings section `accounting` (`lockClosedDays`, `tillDifferenceApproval`, `bankMatchDays`).
 
 ## 4. Invariants the database enforces
 

@@ -22,6 +22,11 @@ const SCREENS = [
   "/inventory/labels",
   "/inventory/price-lists",
   "/inventory/expiry",
+  "/accounting/journals",
+  "/accounting/bank",
+  "/accounting/cheques",
+  "/accounting/periods",
+  "/settings/accounting",
 ];
 
 for (const theme of ["light", "dark"] as const) {

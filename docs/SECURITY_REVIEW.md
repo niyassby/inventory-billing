@@ -61,6 +61,26 @@ plain HTTP. Not covered: a hostile device already on the shop network beyond wha
   set a negative price.
 - Selling expired stock is blocked by default; offline counters warn instead (A-109).
 
+## Accounting depth (Phase 11)
+
+- No new dependencies, secrets or third-party calls. The CSV reader and amount parser are our own
+  (`domain::csv`, `domain::statement`) with unit tests; a statement is at most 3 MB and 20,000
+  lines, and nothing from it reaches SQL except as bound parameters.
+- Segregation of duties: journals are approved only with `journal.approve` (owner) and, except
+  for owners, by someone other than the writer; control accounts need `journal.restricted` with a
+  reason; stock accounts are refused. Posted journals and finished reconciliations are protected
+  by triggers, not just by the services.
+- The closed-day lock is checked in one helper by every dated document and void; overriding it
+  needs `period.override` (own or a manager's approval) and is audited; only `period.manage` can
+  switch the lock off, reopen days or close and reopen years.
+- Attachments are checked by their bytes (PDF, PNG, JPEG, WebP), limited to 5 MB and 10 per
+  journal, named by id on disk (the original name is only shown), and served through the
+  authenticated API with the journal's permissions.
+- Scheduled exports write only to an existing absolute folder chosen by a user with
+  `reports.export` and `settings.manage`, run with that user's permissions re-checked every time,
+  and never leave the PC. File names are cleaned.
+- Audit export needs `audit.export` and is itself audited with its filters.
+
 ## Dependencies (checked 2026-10-20)
 
 - **npm** (`npm audit --omit=dev`): the one finding (`xlsx`, SheetJS, unfixed prototype-pollution

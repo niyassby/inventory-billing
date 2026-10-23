@@ -15,7 +15,9 @@ offline. Multi-counter shops connect their devices to one **hub** PC over the lo
 > Phase 9 (printing and labels: thermal receipts, cash drawer, barcode labels, the hub's print
 > queue) is done: see [docs/PHASE9_REPORT.md](docs/PHASE9_REPORT.md). Phase 10 (batches and
 > expiry, price lists, FIFO valuation, unit conversions) is done: see
-> [docs/PHASE10_REPORT.md](docs/PHASE10_REPORT.md).
+> [docs/PHASE10_REPORT.md](docs/PHASE10_REPORT.md). Phase 11 (reviewed journals, locked days and
+> year end, bank reconciliation, cheques, report drill-down and saved views) is done: see
+> [docs/PHASE11_REPORT.md](docs/PHASE11_REPORT.md).
 
 ## Stack
 
