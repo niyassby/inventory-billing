@@ -57,6 +57,11 @@ function taxRows(invoice: Api.InvoiceDetail, l: Locale): string {
     .join("");
 }
 
+/** "Batch B7 exp 03/2027": the batch a line was sold from, with its expiry month. */
+function batchText(b: Api.LineBatch): string {
+  return `Batch ${esc(b.batchNo)}${b.expiryDate ? ` exp ${esc(b.expiryDate.slice(5, 7))}/${esc(b.expiryDate.slice(0, 4))}` : ""}`;
+}
+
 /** A thermal (58 or 80 mm) receipt. */
 export function receiptHtml(
   invoice: Api.InvoiceDetail,
@@ -71,10 +76,7 @@ export function receiptHtml(
 <tr class="small"><td>${showQty(line.qty)} ${esc(line.unitName)} × ${showMoney(line.unitPrice, l)}</td>
 <td class="r">${line.lineDiscount ? `−${showMoney(line.lineDiscount, l)}` : ""}</td>
 <td class="r">${showMoney(line.lineTotal, l)}</td></tr>${(line.batches ?? [])
-        .map(
-          (b) =>
-            `<tr class="small muted"><td colspan="3">Batch ${esc(b.batchNo)}${b.expiryDate ? ` exp ${esc(b.expiryDate.slice(5, 7))}/${esc(b.expiryDate.slice(0, 4))}` : ""}</td></tr>`,
-        )
+        .map((b) => `<tr class="small muted"><td colspan="3">${batchText(b)}</td></tr>`)
         .join("")}`,
     )
     .join("");
@@ -124,7 +126,11 @@ export function invoiceHtml(
       (
         line,
         i,
-      ) => `<tr><td>${i + 1}</td><td>${esc(line.itemName)}${line.hsnSac ? `<div class="small muted">HSN ${esc(line.hsnSac)}</div>` : ""}</td>
+      ) => `<tr><td>${i + 1}</td><td>${esc(line.itemName)}${line.hsnSac ? `<div class="small muted">HSN ${esc(line.hsnSac)}</div>` : ""}${(
+        line.batches ?? []
+      )
+        .map((b) => `<div class="small muted">${batchText(b)}</div>`)
+        .join("")}</td>
 <td class="r">${showQty(line.qty)} ${esc(line.unitName)}</td><td class="r">${showMoney(line.unitPrice, l)}</td>
 <td class="r">${line.lineDiscount + line.billDiscountShare ? showMoney(line.lineDiscount + line.billDiscountShare, l) : ""}</td>
 <td class="r">${showMoney(line.taxable, l)}</td><td class="r">${showRate(line.taxRate)}</td>

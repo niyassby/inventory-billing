@@ -3,7 +3,7 @@ const BRIDGE = "http://127.0.0.1:1431";
 export const EMAIL = "demo@example.test";
 export const PASSWORD = "Demo-shop-2026";
 
-async function call<T>(command: string, token: string, input: unknown): Promise<T> {
+export async function call<T>(command: string, token: string, input: unknown): Promise<T> {
   const response = await fetch(`${BRIDGE}/v1/call/${command}`, {
     method: "POST",
     headers: { "content-type": "application/json" },

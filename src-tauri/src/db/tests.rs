@@ -267,6 +267,109 @@ fn the_printing_migration_applies_to_a_database_in_use() {
     assert!(err_text(bad).contains("CHECK"));
 }
 
+#[test]
+fn the_inventory_depth_migration_keeps_weighted_average_history() {
+    // A version-10 shop on weighted average: two receipts at different costs, a sale out of
+    // stock and a price list with a slab, then 0011 on top.
+    let mut conn = crate::db::open_in_memory().unwrap();
+    migrate::run_migrations(&mut conn, &migrate::MIGRATIONS[..10]).unwrap();
+    seed_basics(&conn);
+    insert_movement(&conn, "m1", "opening", 10_000, 40_000).unwrap();
+    insert_movement(&conn, "m2", "purchase", 10_000, 50_000).unwrap();
+    insert_movement(&conn, "m3", "sale", -4_000, 45_000).unwrap();
+    finalized_invoice(&conn, "i1", "INV/26-27/00001");
+    conn.execute_batch(&format!(
+        "INSERT INTO price_lists (id, name, created_at, updated_at) VALUES ('pl1', 'Wholesale', '{NOW}', '{NOW}');
+         INSERT INTO price_list_items (id, price_list_id, variant_id, min_qty, price, created_at, updated_at)
+           VALUES ('pi1', 'pl1', 'v1', 0, 9000, '{NOW}', '{NOW}'), ('pi2', 'pl1', 'v1', 10000, 8500, '{NOW}', '{NOW}');"
+    ))
+    .unwrap();
+    let outcome = migrate::run(&mut conn).unwrap();
+    assert_eq!(outcome.applied, vec![11]);
+
+    let (qty, value): (i64, i64) = conn
+        .query_row(
+            "SELECT sum(qty), sum(value) FROM stock_movements WHERE variant_id = 'v1'",
+            [],
+            |r| Ok((r.get(0)?, r.get(1)?)),
+        )
+        .unwrap();
+    assert_eq!(
+        (qty, value),
+        (16_000, 720_000),
+        "the stock history is untouched"
+    );
+    let level: i64 = conn
+        .query_row(
+            "SELECT qty FROM stock_levels WHERE variant_id = 'v1'",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_eq!(level, 16_000);
+    // Weighted average stays in force: no layers, nothing to reconcile, old sales keep no cost value.
+    let (layers, mismatches, costed): (i64, i64, i64) = conn
+        .query_row(
+            "SELECT (SELECT count(*) FROM cost_layers), (SELECT count(*) FROM v_cost_layer_mismatches),
+                    (SELECT count(*) FROM sales_invoice_items WHERE cost_value IS NOT NULL)",
+            [],
+            |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+        )
+        .unwrap();
+    assert_eq!((layers, mismatches, costed), (0, 0, 0));
+    // Prices survive the rebuilt unique index, valid always, and the list is a custom list.
+    let prices: Vec<(i64, i64, Option<String>, String)> = {
+        let mut stmt = conn
+            .prepare(
+                "SELECT i.min_qty, i.price, i.valid_from, l.kind FROM price_list_items i
+                 JOIN price_lists l ON l.id = i.price_list_id ORDER BY i.min_qty",
+            )
+            .unwrap();
+        let rows = stmt
+            .query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)))
+            .unwrap();
+        rows.map(Result::unwrap).collect()
+    };
+    assert_eq!(
+        prices,
+        [
+            (0, 9_000, None, "custom".to_owned()),
+            (10_000, 8_500, None, "custom".to_owned())
+        ]
+    );
+    // The same slab from another date is allowed; the same slab and date twice is not.
+    conn.execute(
+        &format!("INSERT INTO price_list_items (id, price_list_id, variant_id, min_qty, price, valid_from, created_at, updated_at)
+                  VALUES ('pi3', 'pl1', 'v1', 0, 8800, '2026-11-01', '{NOW}', '{NOW}')"),
+        [],
+    )
+    .unwrap();
+    let twice = conn.execute(
+        &format!("INSERT INTO price_list_items (id, price_list_id, variant_id, min_qty, price, valid_from, created_at, updated_at)
+                  VALUES ('pi4', 'pl1', 'v1', 0, 8700, '2026-11-01', '{NOW}', '{NOW}')"),
+        [],
+    );
+    assert!(err_text(twice).contains("UNIQUE"));
+    let grants: Vec<String> = {
+        let mut stmt = conn
+            .prepare(
+                "SELECT r.code || ':' || rp.permission_code FROM role_permissions rp JOIN roles r ON r.id = rp.role_id
+                 WHERE rp.permission_code IN ('price_lists.manage', 'inventory.valuation') ORDER BY 1",
+            )
+            .unwrap();
+        let rows = stmt.query_map([], |r| r.get(0)).unwrap();
+        rows.map(Result::unwrap).collect()
+    };
+    assert_eq!(
+        grants,
+        [
+            "manager:price_lists.manage",
+            "owner:inventory.valuation",
+            "owner:price_lists.manage"
+        ]
+    );
+}
+
 // ---------------------------------------------------------------- seed data
 
 #[test]

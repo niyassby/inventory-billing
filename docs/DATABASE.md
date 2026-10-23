@@ -1,6 +1,6 @@
 # Database (v2)
 
-*Schema version 10 · SQLite (bundled 3.45, STRICT tables, WAL) · Source:
+*Schema version 11 · SQLite (bundled 3.45, STRICT tables, WAL) · Source:
 `src-tauri/src/db/migrations/*.sql` · Tests: `src-tauri/src/db/tests.rs`*
 
 The v2 database replaces the v1 `inventory_app.db`. It is created by versioned migrations and
@@ -327,6 +327,20 @@ handed over beyond the bill is `tendered` and `change_given`, never "paid" (audi
 Printers and routes are **not** in the database: they are per PC (`printers.json`, ASSUMPTIONS
 A-97).
 
+### 3.7 Inventory depth (migration 0011, Phase 10)
+
+- `cost_layers`: FIFO cost layers, one per receipt into an item, store and batch (`batch_key`),
+  with `qty_in`, `qty_left`, `unit_cost` and the exact `value_left`; `movement_id` is the
+  movement that created it. Only used while `inventory.valuationMethod` is `fifo`.
+- `cost_layer_uses`: what each outgoing movement took from each layer (append-only).
+- `price_lists.kind` (`retail`, `wholesale`, `custom`; existing lists become `custom`) and
+  `notes`; `price_list_items.valid_from` / `valid_to` (dates, both optional); the unique index
+  on list items now includes `valid_from`, so the same slab can have a later price.
+- `cash_registers.price_list_id`: the till's price list.
+- `sales_invoice_items.cost_value`: the exact cost the line was booked at (null on older sales).
+- Permissions `price_lists.manage` (owner, manager) and `inventory.valuation` (owner).
+- Batches stay in `batches` (0002); expiry settings live in the settings JSON.
+
 ## 4. Invariants the database enforces
 
 | Rule | How |
@@ -355,6 +369,7 @@ Errors raised by triggers start with a stable code (`DOCUMENT_FINALIZED`, `APPEN
 |---|---|---|
 | `v_stock_level_mismatches` | yes | cached stock ≠ ledger |
 | `v_party_balance_mismatches` | yes | cached balance ≠ party ledger |
+| `v_cost_layer_mismatches` | yes | under FIFO: open cost layers ≠ stock level (qty or value) for an item, store and batch |
 | `v_unbalanced_journal_entries` | yes for v2 entries | debits ≠ credits (v1 entries that were already unbalanced are listed in the migration report) |
 
 The weekly integrity job (Phase 4) runs these plus `PRAGMA quick_check` and reports, never "fixes".

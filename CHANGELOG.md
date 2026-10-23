@@ -5,6 +5,44 @@ All notable changes to this project. The format follows
 
 ## [Unreleased]
 
+### Phase 10: inventory depth (2026-10-23)
+
+Migration 0011 (cost layers, price-list dates and kinds, till price lists, booked sale cost, two
+permissions). Decisions: ASSUMPTIONS A-108 to A-117.
+
+#### Added
+- Batches everywhere: first-to-expire allocation (FEFO) on sales, returns to suppliers,
+  transfers and stock outs, splitting a line across batches; a batch can be chosen on the till
+  and on adjustments. Batch and expiry on opening stock, stock-in adjustments and stock counts
+  (one count line per batch). Receipts, A4 invoices and the invoice page show the batches sold.
+- Expiry: Stock → Expiry (expired and near-expiry batches, write-off as a stock adjustment), a
+  dashboard card, the "Expiry" report, and hourly notices. Settings → Inventory: what to do with
+  expired stock (block, warn or allow), the warning window and the notices.
+- Price lists (Stock → Price lists): retail, wholesale or custom lists; per-variant, per-pack
+  and quantity-slab prices with valid-from and valid-until dates; a list per customer and per
+  till, and a default list; bulk change by % or amount with rounding and a preview, for a list
+  or for the products' own prices. The same price rule in Rust and TypeScript with golden
+  vectors (`test-vectors/price-lists.json`).
+- FIFO valuation with cost layers per item, store and batch; returns go back at the cost they
+  left with; transfers carry their layers. Settings → Inventory → Stock valuation: an owner-only,
+  audited switch between weighted average and FIFO with a dry run.
+- Masters → Units: shop-wide unit conversions (1 box = 12 pcs).
+- Commands: `price_lists_list/save/delete/items/set_prices/bulk_update/tills/set_till`,
+  `stock_batches`, `stock_write_off`, `inventory_expiry_summary`, `inventory_expiry_list`,
+  `inventory_valuation_preview`, `inventory_valuation_switch`,
+  `unit_conversions_list/save/delete`. Permissions `price_lists.manage` and
+  `inventory.valuation`.
+- Tests: FEFO and expired-stock policies, two counters racing for the last unit of a batch,
+  FIFO golden cases (multi-layer sale, return, transfer, switch both ways), layers reconciled
+  with the ledger in every test, price-list precedence and slabs, the 0011 migration on a
+  database with weighted-average history, an end-to-end price-list sale and expiry write-off.
+
+#### Changed
+- Item profit uses the exact cost each sale was booked at; stock valuation is titled by the
+  method and shows the oldest stock under FIFO.
+- The valuation method can no longer be changed in the settings form (only by the switch).
+- Customers have a price list on their form.
+
 ### Phase 9: printing and labels (2026-10-22)
 
 Migration 0010 (print queue, label templates, three permissions). Decisions: ASSUMPTIONS A-96 to

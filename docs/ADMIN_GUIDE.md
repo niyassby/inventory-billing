@@ -197,3 +197,23 @@ managers).
   network, backup. Changes apply at once and are written to the audit log with before and after
   values. **Users and roles** are owner-only; the Owner role can't be edited.
 - **Audit log** lists who did what and who approved it; it can't be edited or deleted.
+
+## 8. Batches, expiry, price lists and stock valuation
+
+- **Expired stock** (Settings → Inventory): *Block* (default) never sells an expired batch;
+  *Warn* sells it only when nothing else is left and marks the bill; *Allow* sells it like any
+  other. A counter selling while the hub is down always behaves as *Warn*. The warning window
+  (default 30 days) drives the Expiry screen, the dashboard card and the notices.
+- **Price lists** need `price_lists.manage` (owners and managers). A customer's list wins over
+  the till's, the till's over the default list. The till's list applies once the till is opened
+  for the shift. A counter that can't reach the hub uses the
+  customer's list or the default list (it does not know the till's list). A list in use by a
+  customer or a till can't be deleted: move them to another list first.
+- **Stock valuation** (Settings → Inventory → Stock valuation, owner only): weighted average
+  (the default) or FIFO. *Preview the switch* lists every item's quantity and value; the switch
+  needs a reason and only runs if the figures still match the preview. It does not change the
+  stock value or past profit, and it is refused while any item's stock is below zero (fix those
+  first with a count or an adjustment). Under FIFO each receipt is a cost layer; sales use the
+  oldest layers first, and the stock valuation report shows the oldest stock date.
+- **Checks**: the weekly integrity check also compares the FIFO layers with the stock ledger. A
+  difference shows as a notice; report it, do not adjust stock to hide it.

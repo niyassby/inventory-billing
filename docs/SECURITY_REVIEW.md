@@ -47,6 +47,20 @@ plain HTTP. Not covered: a hostile device already on the shop network beyond wha
 - Fonts are read from the Windows font folder or a path the owner names; a font file that fails
   to parse is ignored (the line prints as text).
 
+## Inventory depth (Phase 10)
+
+- No new dependencies, network calls or secrets. Price-list, batch and expiry data travel only
+  through the authenticated API; counters cache price lists like the rest of the catalogue.
+- New permissions `price_lists.manage` (owner, manager) and `inventory.valuation` (owner only).
+  Changing product prices in bulk needs `products.price_change`; write-offs need `stock.adjust`.
+- The valuation switch is owner-only, needs a reason, is refused unless the total matches the
+  dry run the owner saw and is audited (`VALUATION_SWITCHED`). The settings form can no longer
+  change the method. Price-list changes are audited (`PRICE_LIST_SAVED`, `PRICE_LIST_PRICES`,
+  `PRICE_BULK_UPDATE`, `PRICE_LIST_ASSIGNED`, `PRICE_LIST_DELETED`).
+- Every list query uses bound parameters; sort keys come from fixed lists. Bulk updates never
+  set a negative price.
+- Selling expired stock is blocked by default; offline counters warn instead (A-109).
+
 ## Dependencies (checked 2026-10-20)
 
 - **npm** (`npm audit --omit=dev`): the one finding (`xlsx`, SheetJS, unfixed prototype-pollution

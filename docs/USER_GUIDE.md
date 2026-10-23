@@ -45,6 +45,15 @@ out. Without a receipt printer, P opens the print dialog (58 mm, 80 mm or A4) as
 If the printer fails (paper out, cable, switched off) **the sale is still saved**: a message says
 what is wrong and has a **Reprint** button. Fix the printer and press it.
 
+**Prices** come from the customer's price list, else the till's (once the till is open), else the
+default list, else the product's own price; quantity slabs (for example "10 kg or more") apply by themselves as the
+quantity grows.
+
+**Batches** (medicines, food): the till sells the batch that expires first, splitting a line
+across batches when one runs out, and the line shows which batch. To sell a particular batch,
+double-click the line and choose it. Expired batches are not sold unless the owner allows it
+(Settings → Inventory); the receipt and invoice show each batch and its expiry month.
+
 Holding a bill prints a small slip with its name when a printer is set for held bills. Closing
 the till offers **Print summary** (the cash-up with any difference, and signature lines).
 
@@ -78,6 +87,23 @@ a correction is a new entry that points at the old one.
 - **Stock moves** shows every change, with the reason. Use **Adjust** for damage or found stock,
   **Transfer** between stores, and **Count** to compare shelves with the system.
 - The low-stock list is on the dashboard and under Products → _Low stock_.
+- **Batches and expiry**: tick *Track batches* on a product. Opening stock, goods receipts,
+  bills and *stock in* adjustments then ask for the batch number and expiry; *stock out*,
+  transfers and returns to the supplier take the batch that expires first unless you choose one.
+  A stock count lists each batch on its own line.
+- **Expiry** (Stock → Expiry): batches that have expired or will expire soon, soonest first, with
+  their value. *Write off* takes a batch out of stock as an adjustment ("Expired"). The
+  dashboard shows a card when something is expiring, and a notice comes up once when a batch
+  enters the warning window and once when it expires.
+- **Price lists** (Stock → Price lists, owners and managers): make a list (retail, wholesale or
+  custom), then add prices: per piece or per pack, from a quantity, from and until a date. Give a
+  list to a customer (on the customer's form) or to a till (on the same screen); one list can be
+  the default for everyone else. *Change by %* raises or lowers every price on the list (or a
+  category) by a percentage or an amount, rounded if you like, and shows the old and new prices
+  before you apply it. *Change product prices* does the same to the products' own prices.
+- **Units** (Masters → Units): besides each product's pack sizes, a shop-wide conversion such as
+  "1 box = 12 pcs" lets any product counted in pieces be sold by the box. Stock is always shown
+  in the product's base unit.
 
 [screenshot: products]
 

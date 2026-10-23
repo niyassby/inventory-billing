@@ -105,6 +105,7 @@ describe("print", () => {
     const html = documentHtml(batched, settings, "thermal_58");
     expect(html).toContain("Batch B&lt;7&gt;");
     expect(html).toContain("03/2027");
+    expect(documentHtml(batched, settings, "a4")).toContain("Batch B&lt;7&gt; exp 03/2027");
   });
 
   it("makes an A4 tax invoice", () => {
