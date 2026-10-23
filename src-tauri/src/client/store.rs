@@ -100,6 +100,8 @@ pub struct CachedContext {
     pub branch_id: String,
     pub branch_state: Option<String>,
     pub warehouse_id: String,
+    #[serde(default)]
+    pub price_lists: Vec<crate::services::sync::CachedPriceList>,
 }
 
 pub fn save_catalogue(conn: &mut Connection, snapshot: &CatalogueSnapshot) -> AppResult<()> {
@@ -133,6 +135,7 @@ pub fn save_catalogue(conn: &mut Connection, snapshot: &CatalogueSnapshot) -> Ap
         branch_id: snapshot.branch_id.clone(),
         branch_state: snapshot.branch_state.clone(),
         warehouse_id: snapshot.warehouse_id.clone(),
+        price_lists: snapshot.price_lists.clone(),
     };
     set_meta(&tx, "context", &serde_json::to_string(&context)?)?;
     tx.commit()?;

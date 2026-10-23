@@ -41,6 +41,9 @@ pub struct PartyInput {
     pub is_active: bool,
     /// New parties only: > 0 they owe us, < 0 we owe them.
     pub opening_balance: Option<i64>,
+    /// Customers: the price list they buy at (none: the till's or the default list).
+    #[serde(default)]
+    pub price_list_id: Option<String>,
 }
 
 fn yes() -> bool {
@@ -67,6 +70,8 @@ pub struct PartyDetail {
     pub notes: Option<String>,
     pub is_active: bool,
     pub updated_at: String,
+    #[serde(default)]
+    pub price_list_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Default, Deserialize, JsonSchema)]
@@ -143,7 +148,7 @@ pub struct OpenDocument {
 }
 
 const PARTY_SELECT: &str = "SELECT id, party_type, code, name, phone, email, gstin, state_code, billing_address, shipping_address,
-    credit_limit, credit_days, balance, notes, is_active, updated_at FROM parties";
+    credit_limit, credit_days, balance, notes, is_active, updated_at, price_list_id FROM parties";
 
 fn map_party(r: &rusqlite::Row<'_>) -> rusqlite::Result<PartyDetail> {
     Ok(PartyDetail {
@@ -163,6 +168,7 @@ fn map_party(r: &rusqlite::Row<'_>) -> rusqlite::Result<PartyDetail> {
         notes: r.get(13)?,
         is_active: r.get(14)?,
         updated_at: r.get(15)?,
+        price_list_id: r.get(16)?,
     })
 }
 
@@ -225,6 +231,19 @@ pub fn save(ctx: &mut Ctx<'_>, input: &PartyInput) -> AppResult<PartyDetail> {
     let now = ctx.now_str();
     let actor = ctx.actor;
     write(ctx.conn, |tx| {
+        if let Some(list) = &input.price_list_id {
+            let ok: i64 = tx.query_row(
+                "SELECT count(*) FROM price_lists WHERE id = ?1 AND is_active = 1 AND deleted_at IS NULL",
+                [list],
+                |r| r.get(0),
+            )?;
+            if ok == 0 {
+                return Err(AppError::field(
+                    "priceListId",
+                    "Choose an active price list.",
+                ));
+            }
+        }
         let id = match &input.id {
             None => {
                 let id = new_id();
@@ -310,6 +329,22 @@ pub fn save(ctx: &mut Ctx<'_>, input: &PartyInput) -> AppResult<PartyDetail> {
                 id.clone()
             }
         };
+        let current: Option<String> = tx.query_row(
+            "SELECT price_list_id FROM parties WHERE id = ?1",
+            [&id],
+            |r| r.get(0),
+        )?;
+        if current != input.price_list_id {
+            tx.execute(
+                "UPDATE parties SET price_list_id = ?1 WHERE id = ?2",
+                params![input.price_list_id, id],
+            )?;
+            AuditEntry::new("PRICE_LIST_ASSIGNED", "parties", Some(&id))
+                .by(actor)
+                .before(serde_json::json!({ "priceListId": current }))
+                .after(serde_json::json!({ "priceListId": input.price_list_id }))
+                .write(tx, &now)?;
+        }
         get_unchecked(tx, &id)
     })
 }

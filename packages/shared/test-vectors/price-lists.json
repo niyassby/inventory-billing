@@ -1,0 +1,253 @@
+{
+  "$comment": "Price-list resolution (packages/shared/src/price-lists.ts and Rust domain::price_lists must both give these results).",
+  "cases": [
+    {
+      "name": "base price for the base unit",
+      "query": {
+        "entries": [
+          { "unitId": null, "minQty": 0, "price": 10000, "validFrom": null, "validTo": null }
+        ],
+        "soldUnitId": "pcs",
+        "baseUnitId": "pcs",
+        "factorNum": 1,
+        "factorDen": 1,
+        "qty": 1000,
+        "date": "2026-10-22"
+      },
+      "expected": { "price": 10000, "entryIndex": 0 }
+    },
+    {
+      "name": "no price valid on the day",
+      "query": {
+        "entries": [
+          {
+            "unitId": null,
+            "minQty": 0,
+            "price": 10000,
+            "validFrom": null,
+            "validTo": "2026-10-21"
+          }
+        ],
+        "soldUnitId": "pcs",
+        "baseUnitId": "pcs",
+        "factorNum": 1,
+        "factorDen": 1,
+        "qty": 1000,
+        "date": "2026-10-22"
+      },
+      "expected": { "price": null, "entryIndex": null }
+    },
+    {
+      "name": "valid-to is inclusive",
+      "query": {
+        "entries": [
+          {
+            "unitId": null,
+            "minQty": 0,
+            "price": 10000,
+            "validFrom": "2026-10-01",
+            "validTo": "2026-10-22"
+          }
+        ],
+        "soldUnitId": "pcs",
+        "baseUnitId": "pcs",
+        "factorNum": 1,
+        "factorDen": 1,
+        "qty": 1000,
+        "date": "2026-10-22"
+      },
+      "expected": { "price": 10000, "entryIndex": 0 }
+    },
+    {
+      "name": "below the slab",
+      "query": {
+        "entries": [
+          { "unitId": null, "minQty": 0, "price": 10000, "validFrom": null, "validTo": null },
+          { "unitId": null, "minQty": 10000, "price": 9000, "validFrom": null, "validTo": null }
+        ],
+        "soldUnitId": "pcs",
+        "baseUnitId": "pcs",
+        "factorNum": 1,
+        "factorDen": 1,
+        "qty": 9999,
+        "date": "2026-10-22"
+      },
+      "expected": { "price": 10000, "entryIndex": 0 }
+    },
+    {
+      "name": "reaches the slab",
+      "query": {
+        "entries": [
+          { "unitId": null, "minQty": 0, "price": 10000, "validFrom": null, "validTo": null },
+          { "unitId": null, "minQty": 10000, "price": 9000, "validFrom": null, "validTo": null }
+        ],
+        "soldUnitId": "pcs",
+        "baseUnitId": "pcs",
+        "factorNum": 1,
+        "factorDen": 1,
+        "qty": 10000,
+        "date": "2026-10-22"
+      },
+      "expected": { "price": 9000, "entryIndex": 1 }
+    },
+    {
+      "name": "only a slab, not reached",
+      "query": {
+        "entries": [
+          { "unitId": null, "minQty": 5000, "price": 9000, "validFrom": null, "validTo": null }
+        ],
+        "soldUnitId": "pcs",
+        "baseUnitId": "pcs",
+        "factorNum": 1,
+        "factorDen": 1,
+        "qty": 1000,
+        "date": "2026-10-22"
+      },
+      "expected": { "price": null, "entryIndex": null }
+    },
+    {
+      "name": "a pack price wins over the base price",
+      "query": {
+        "entries": [
+          { "unitId": null, "minQty": 0, "price": 10000, "validFrom": null, "validTo": null },
+          { "unitId": "box", "minQty": 0, "price": 110000, "validFrom": null, "validTo": null }
+        ],
+        "soldUnitId": "box",
+        "baseUnitId": "pcs",
+        "factorNum": 12,
+        "factorDen": 1,
+        "qty": 1000,
+        "date": "2026-10-22"
+      },
+      "expected": { "price": 110000, "entryIndex": 1 }
+    },
+    {
+      "name": "base price scaled to the pack, with the slab counted in base units",
+      "query": {
+        "entries": [
+          { "unitId": null, "minQty": 0, "price": 10000, "validFrom": null, "validTo": null },
+          { "unitId": null, "minQty": 12000, "price": 9000, "validFrom": null, "validTo": null }
+        ],
+        "soldUnitId": "box",
+        "baseUnitId": "pcs",
+        "factorNum": 12,
+        "factorDen": 1,
+        "qty": 1000,
+        "date": "2026-10-22"
+      },
+      "expected": { "price": 108000, "entryIndex": 1 }
+    },
+    {
+      "name": "scaling rounds half up",
+      "query": {
+        "entries": [
+          { "unitId": null, "minQty": 0, "price": 333, "validFrom": null, "validTo": null }
+        ],
+        "soldUnitId": "pack",
+        "baseUnitId": "pcs",
+        "factorNum": 3,
+        "factorDen": 2,
+        "qty": 1000,
+        "date": "2026-10-22"
+      },
+      "expected": { "price": 500, "entryIndex": 0 }
+    },
+    {
+      "name": "a future price waits for its day",
+      "query": {
+        "entries": [
+          { "unitId": null, "minQty": 0, "price": 10000, "validFrom": null, "validTo": null },
+          {
+            "unitId": null,
+            "minQty": 0,
+            "price": 12000,
+            "validFrom": "2026-11-01",
+            "validTo": null
+          }
+        ],
+        "soldUnitId": "pcs",
+        "baseUnitId": "pcs",
+        "factorNum": 1,
+        "factorDen": 1,
+        "qty": 1000,
+        "date": "2026-10-22"
+      },
+      "expected": { "price": 10000, "entryIndex": 0 }
+    },
+    {
+      "name": "the newest valid price wins",
+      "query": {
+        "entries": [
+          { "unitId": null, "minQty": 0, "price": 10000, "validFrom": null, "validTo": null },
+          {
+            "unitId": null,
+            "minQty": 0,
+            "price": 12000,
+            "validFrom": "2026-11-01",
+            "validTo": null
+          }
+        ],
+        "soldUnitId": "pcs",
+        "baseUnitId": "pcs",
+        "factorNum": 1,
+        "factorDen": 1,
+        "qty": 1000,
+        "date": "2026-11-02"
+      },
+      "expected": { "price": 12000, "entryIndex": 1 }
+    },
+    {
+      "name": "an entry naming the base unit counts as a base price",
+      "query": {
+        "entries": [
+          { "unitId": "pcs", "minQty": 0, "price": 7000, "validFrom": null, "validTo": null }
+        ],
+        "soldUnitId": "pcs",
+        "baseUnitId": "pcs",
+        "factorNum": 1,
+        "factorDen": 1,
+        "qty": 1000,
+        "date": "2026-10-22"
+      },
+      "expected": { "price": 7000, "entryIndex": 0 }
+    },
+    {
+      "name": "equal entries: the first one",
+      "query": {
+        "entries": [
+          {
+            "unitId": null,
+            "minQty": 0,
+            "price": 7000,
+            "validFrom": "2026-10-01",
+            "validTo": null
+          },
+          { "unitId": null, "minQty": 0, "price": 7100, "validFrom": "2026-10-01", "validTo": null }
+        ],
+        "soldUnitId": "pcs",
+        "baseUnitId": "pcs",
+        "factorNum": 1,
+        "factorDen": 1,
+        "qty": 1000,
+        "date": "2026-10-22"
+      },
+      "expected": { "price": 7000, "entryIndex": 0 }
+    },
+    {
+      "name": "pack slab in packs",
+      "query": {
+        "entries": [
+          { "unitId": "box", "minQty": 0, "price": 110000, "validFrom": null, "validTo": null },
+          { "unitId": "box", "minQty": 5000, "price": 100000, "validFrom": null, "validTo": null }
+        ],
+        "soldUnitId": "box",
+        "baseUnitId": "pcs",
+        "factorNum": 12,
+        "factorDen": 1,
+        "qty": 5000,
+        "date": "2026-10-22"
+      },
+      "expected": { "price": 100000, "entryIndex": 1 }
+    }
+  ]
+}

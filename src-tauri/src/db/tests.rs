@@ -124,7 +124,7 @@ fn amount_paid(conn: &Connection, invoice_id: &str) -> (i64, String) {
 fn migrates_a_fresh_database_and_is_idempotent() {
     let mut conn = open_in_memory().unwrap();
     let first = migrate::run(&mut conn).unwrap();
-    assert_eq!(first.applied, vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+    assert_eq!(first.applied, vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
     assert_eq!(first.version, migrate::latest_version());
 
     let second = migrate::run(&mut conn).unwrap();
@@ -221,8 +221,8 @@ fn the_printing_migration_applies_to_a_database_in_use() {
     insert_movement(&conn, "m1", "opening", 10_000, 42_000).unwrap();
     finalized_invoice(&conn, "i1", "INV/26-27/00001");
     let outcome = migrate::run(&mut conn).unwrap();
-    assert_eq!(outcome.applied, vec![10]);
-    assert_eq!(outcome.version, 10);
+    assert_eq!(outcome.applied, vec![10, 11]);
+    assert_eq!(outcome.version, 11);
 
     let (qty, invoices): (i64, i64) = conn
         .query_row(

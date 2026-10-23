@@ -106,13 +106,29 @@ pub enum NegativeStockPolicy {
     Allow,
 }
 
+/// Selling or issuing a batch past its expiry date.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum ExpiredStockPolicy {
+    /// Expired batches are never picked and can't be chosen (the default).
+    Block,
+    /// Unexpired batches first; expired ones only when nothing else is left, with a warning.
+    Warn,
+    Allow,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
 #[serde(rename_all = "camelCase", default)]
 pub struct InventorySettings {
     pub negative_stock_policy: NegativeStockPolicy,
-    /// "weighted_average" (implemented) or "fifo" (reports only, Phase 6).
+    /// "weighted_average" or "fifo". Changed only through the audited switch
+    /// (`inventory_valuation_switch`), never by saving settings.
     pub valuation_method: String,
     pub low_stock_alerts: bool,
+    pub expired_stock_policy: ExpiredStockPolicy,
+    /// Batches expiring within this many days are "near expiry" (report, dashboard, notices).
+    pub expiry_alert_days: i64,
+    pub expiry_alerts: bool,
 }
 
 impl Default for InventorySettings {
@@ -121,6 +137,9 @@ impl Default for InventorySettings {
             negative_stock_policy: NegativeStockPolicy::Block,
             valuation_method: "weighted_average".into(),
             low_stock_alerts: true,
+            expired_stock_policy: ExpiredStockPolicy::Block,
+            expiry_alert_days: 30,
+            expiry_alerts: true,
         }
     }
 }
@@ -370,6 +389,12 @@ fn validate(section: &str, value: &Value) -> AppResult<Value> {
                     "Use weighted_average or fifo.",
                 ));
             }
+            if !(1..=365).contains(&s.expiry_alert_days) {
+                return Err(AppError::field(
+                    "expiryAlertDays",
+                    "Warn 1 to 365 days before expiry.",
+                ));
+            }
             serde_json::to_value(s)?
         }
         "security" => {
@@ -492,6 +517,18 @@ pub fn update(ctx: &mut Ctx<'_>, input: &UpdateSettingsInput) -> AppResult<Setti
     let actor = ctx.actor;
     write(ctx.conn, |tx| {
         let before = serde_json::to_value(load(tx)?)?[&input.section].clone();
+        // The valuation method needs its switch routine (layers are built or dropped there).
+        if input.section == "inventory"
+            && input
+                .value
+                .get("valuationMethod")
+                .is_some_and(|m| *m != before["valuationMethod"])
+        {
+            return Err(AppError::field(
+                "valuationMethod",
+                "Change the valuation method with Inventory → Valuation method (it checks and converts the stock).",
+            ));
+        }
         let after = store(tx, &input.section, &input.value, Some(&actor.user_id), &now)?;
         AuditEntry::new("SETTINGS_UPDATE", "settings", Some(&input.section))
             .by(actor)
@@ -511,6 +548,14 @@ pub fn get(ctx: &Ctx<'_>) -> AppResult<Settings> {
 #[serde(rename_all = "camelCase")]
 pub struct PublicInventory {
     pub negative_stock_policy: NegativeStockPolicy,
+    #[serde(default = "default_expired_policy")]
+    pub expired_stock_policy: ExpiredStockPolicy,
+    #[serde(default)]
+    pub valuation_method: String,
+}
+
+fn default_expired_policy() -> ExpiredStockPolicy {
+    ExpiredStockPolicy::Block
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
@@ -531,6 +576,8 @@ impl From<&Settings> for PublicSettings {
             invoice: s.invoice.clone(),
             inventory: PublicInventory {
                 negative_stock_policy: s.inventory.negative_stock_policy,
+                expired_stock_policy: s.inventory.expired_stock_policy,
+                valuation_method: s.inventory.valuation_method.clone(),
             },
             offline_sales_policy: s.network.offline_sales_policy,
         }

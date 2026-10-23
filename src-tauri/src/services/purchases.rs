@@ -133,41 +133,16 @@ fn batch_for(
     now: &str,
     user: &str,
 ) -> AppResult<Option<String>> {
-    let Some(batch_no) = optional(
-        &format!("lines.{index}.batchNo"),
+    stock_posting::batch_for(
+        tx,
+        variant_id,
+        &format!("lines.{index}"),
         line.batch_no.as_deref(),
-        40,
-    )?
-    else {
-        return Ok(None);
-    };
-    let expiry = line
-        .expiry_date
-        .as_deref()
-        .map(|d| date(&format!("lines.{index}.expiryDate"), d))
-        .transpose()?;
-    let mfg = line
-        .mfg_date
-        .as_deref()
-        .map(|d| date(&format!("lines.{index}.mfgDate"), d))
-        .transpose()?;
-    if let Some(id) = tx
-        .query_row(
-            "SELECT id FROM batches WHERE variant_id = ?1 AND lower(batch_no) = lower(?2) AND deleted_at IS NULL",
-            params![variant_id, batch_no],
-            |r| r.get::<_, String>(0),
-        )
-        .optional()?
-    {
-        return Ok(Some(id));
-    }
-    let id = new_id();
-    tx.execute(
-        "INSERT INTO batches (id, variant_id, batch_no, mfg_date, expiry_date, created_at, updated_at, created_by, updated_by)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?6, ?7, ?7)",
-        params![id, variant_id, batch_no, mfg, expiry, now, user],
-    )?;
-    Ok(Some(id))
+        line.mfg_date.as_deref(),
+        line.expiry_date.as_deref(),
+        now,
+        user,
+    )
 }
 
 /// Cost per base unit from an amount for `base_qty` (thousandths).
@@ -581,7 +556,7 @@ pub fn receive_goods(
                      VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?14)",
                     params![line_id, id, index + 1, line.po_item_id, r.variant_id, batch, r.unit_id, r.factor_num, r.factor_den, r.name, r.qty, r.base_qty, unit_cost, now],
                 )?;
-                    stock_posting::post(
+                    let posted = stock_posting::post(
                         tx,
                         settings.inventory.negative_stock_policy,
                         &today,
@@ -597,12 +572,11 @@ pub fn receive_goods(
                             source_type: "goods_receipt",
                             source_id: &id,
                             source_line_id: Some(&line_id),
-                            reversal_of: None,
-                            note: None,
                             update_average_cost: true,
+                            ..Move::default()
                         },
                     )?;
-                    value += money::multiply_by_qty(unit_cost, r.base_qty, RoundingMode::HalfUp);
+                    value += posted.value;
                     progress.push((line.po_item_id.clone(), r.qty));
                 }
                 if let Some(po) = &input.purchase_order_id {
@@ -938,7 +912,7 @@ pub fn create_bill(ctx: &mut Ctx<'_>, input: &PurchaseBillInput) -> AppResult<Pu
                     if line.is_service {
                         service_value += lr.taxable + shares[index];
                     } else if receives_stock {
-                        warnings.extend(stock_posting::post(
+                        let posted = stock_posting::post(
                             tx,
                             settings.inventory.negative_stock_policy,
                             &business_date,
@@ -954,13 +928,12 @@ pub fn create_bill(ctx: &mut Ctx<'_>, input: &PurchaseBillInput) -> AppResult<Pu
                                 source_type: "purchase_bill",
                                 source_id: &id,
                                 source_line_id: Some(&line_id),
-                                reversal_of: None,
-                                note: None,
                                 update_average_cost: true,
+                                ..Move::default()
                             },
-                        )?);
-                        inventory_value +=
-                            money::multiply_by_qty(landed, line.base_qty, RoundingMode::HalfUp);
+                        )?;
+                        warnings.extend(posted.warning);
+                        inventory_value += posted.value;
                         progress.push((raw.po_item_id.clone(), line.qty));
                     }
                 }
@@ -1227,6 +1200,7 @@ pub fn create_return(
                 struct Out {
                     original_item_id: Option<String>,
                     variant_id: String,
+                    batch_id: Option<String>,
                     unit_id: String,
                     num: i64,
                     den: i64,
@@ -1263,10 +1237,10 @@ pub fn create_return(
                                 ));
                             }
                             #[allow(clippy::type_complexity)]
-                        let (variant_id, unit_id, num, den, base_qty, cgst, sgst, igst, other, cess, tax_rate): (String, String, i64, i64, i64, i64, i64, i64, i64, i64, i64) = tx.query_row(
-                            "SELECT variant_id, unit_id, unit_factor_num, unit_factor_den, base_qty, cgst, sgst, igst, other_tax, cess, tax_rate FROM purchase_bill_items WHERE id = ?1",
+                        let (variant_id, unit_id, num, den, base_qty, cgst, sgst, igst, other, cess, tax_rate, batch_id): (String, String, i64, i64, i64, i64, i64, i64, i64, i64, i64, Option<String>) = tx.query_row(
+                            "SELECT variant_id, unit_id, unit_factor_num, unit_factor_den, base_qty, cgst, sgst, igst, other_tax, cess, tax_rate, batch_id FROM purchase_bill_items WHERE id = ?1",
                             [item],
-                            |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?, r.get(5)?, r.get(6)?, r.get(7)?, r.get(8)?, r.get(9)?, r.get(10)?)),
+                            |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?, r.get(5)?, r.get(6)?, r.get(7)?, r.get(8)?, r.get(9)?, r.get(10)?, r.get(11)?)),
                         )?;
                             let part = |v: i64| {
                                 i64::try_from(money::div_round(
@@ -1291,6 +1265,7 @@ pub fn create_return(
                             outs.push(Out {
                                 original_item_id: Some(item.clone()),
                                 variant_id,
+                                batch_id,
                                 unit_id,
                                 num,
                                 den,
@@ -1345,6 +1320,7 @@ pub fn create_return(
                             outs.push(Out {
                                 original_item_id: None,
                                 variant_id: r.variant_id.clone(),
+                                batch_id: None,
                                 unit_id: r.unit_id.clone(),
                                 num: 1,
                                 den: 1,
@@ -1383,33 +1359,33 @@ pub fn create_return(
                 for (index, o) in outs.iter().enumerate() {
                     tx.execute(
                     "INSERT INTO purchase_return_items (id, return_id, line_no, original_item_id, variant_id, unit_id, unit_factor_num, unit_factor_den, item_name,
-                        qty, base_qty, unit_cost, taxable, tax_rate, cgst, sgst, igst, other_tax, cess, tax_total, line_total, created_at, updated_at)
-                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?22)",
-                    params![new_id(), id, index + 1, o.original_item_id, o.variant_id, o.unit_id, o.num, o.den, o.name, o.qty, o.base_qty, o.unit_cost, o.taxable, o.tax_rate, o.cols.cgst, o.cols.sgst, o.cols.igst, o.cols.other, o.cols.cess, o.tax, o.taxable + o.tax, now],
+                        qty, base_qty, unit_cost, taxable, tax_rate, cgst, sgst, igst, other_tax, cess, tax_total, line_total, created_at, updated_at, batch_id)
+                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?22, ?23)",
+                    params![new_id(), id, index + 1, o.original_item_id, o.variant_id, o.unit_id, o.num, o.den, o.name, o.qty, o.base_qty, o.unit_cost, o.taxable, o.tax_rate, o.cols.cgst, o.cols.sgst, o.cols.igst, o.cols.other, o.cols.cess, o.tax, o.taxable + o.tax, now, o.batch_id],
                 )?;
-                    stock_posting::post(
+                    // Expired goods go back to the supplier: the expiry policy doesn't apply here.
+                    for posted in stock_posting::post_out(
                         tx,
                         settings.inventory.negative_stock_policy,
+                        settings::ExpiredStockPolicy::Allow,
                         &today,
                         &now,
                         Some(&actor.user_id),
                         &Move {
                             warehouse_id: &warehouse_id,
                             variant_id: &o.variant_id,
-                            batch_id: None,
+                            batch_id: o.batch_id.as_deref(),
                             qty: -o.base_qty,
                             unit_cost: o.stock_cost,
                             kind: "purchase_return",
                             source_type: "purchase_return",
                             source_id: &id,
-                            source_line_id: None,
-                            reversal_of: None,
                             note: Some(&reason),
-                            update_average_cost: false,
+                            ..Move::default()
                         },
-                    )?;
-                    stock_value +=
-                        money::multiply_by_qty(o.stock_cost, o.base_qty, RoundingMode::HalfUp);
+                    )? {
+                        stock_value -= posted.value;
+                    }
                 }
                 tx.execute("UPDATE purchase_returns SET status = 'finalized', finalized_at = ?1, finalized_by = ?2 WHERE id = ?3", params![now, actor.user_id, id])?;
                 party_ledger::post(

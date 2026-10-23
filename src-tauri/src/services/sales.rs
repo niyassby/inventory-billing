@@ -105,6 +105,8 @@ pub(crate) struct ResolvedLine {
     pub hsn_sac: Option<String>,
     pub unit_id: String,
     pub unit_name: String,
+    /// The product's base unit (price lists may price it or a pack).
+    pub base_unit_id: String,
     pub factor_num: i64,
     pub factor_den: i64,
     pub qty: i64,
@@ -189,6 +191,7 @@ pub(crate) fn resolve_line(
             "This product is not available for sale.",
         ));
     };
+    let base_unit_id = base_unit.clone();
     let (unit_id, unit_name, num, den) = match unit_id.filter(|u| *u != base_unit) {
         None => (base_unit, base_code, 1, 1),
         Some(unit) => conn
@@ -227,6 +230,7 @@ pub(crate) fn resolve_line(
         hsn_sac,
         unit_id,
         unit_name,
+        base_unit_id,
         factor_num: num,
         factor_den: den,
         qty,
@@ -545,6 +549,12 @@ pub(crate) struct Priced {
     pub prices_include_tax: bool,
 }
 
+/// The price list on a bill and the date its prices are read for.
+pub(crate) struct ListContext<'a> {
+    pub list_id: Option<String>,
+    pub date: &'a str,
+}
+
 #[allow(clippy::too_many_arguments)]
 fn price(
     conn: &Connection,
@@ -554,6 +564,7 @@ fn price(
     prices_include_tax: Option<bool>,
     place_of_supply: Option<&str>,
     branch_state: Option<&str>,
+    list: &ListContext<'_>,
 ) -> AppResult<Priced> {
     price_lines(
         settings,
@@ -563,14 +574,29 @@ fn price(
         place_of_supply,
         branch_state,
         |index, line| {
-            resolve_line(
+            let mut r = resolve_line(
                 conn,
                 index,
                 &line.variant_id,
                 line.unit_id.as_deref(),
                 line.qty,
                 line.batch_id.as_deref(),
-            )
+            )?;
+            if let Some(list_id) = &list.list_id {
+                if let Some(price) = super::price_lists::price_for(
+                    super::price_lists::entries(conn, list_id, &r.variant_id)?,
+                    &r.unit_id,
+                    &r.base_unit_id,
+                    r.factor_num,
+                    r.factor_den,
+                    r.qty,
+                    list.date,
+                ) {
+                    r.catalog_price = price;
+                    r.unit_price = price;
+                }
+            }
+            Ok(r)
         },
     )
 }
@@ -684,6 +710,75 @@ fn check_pricing_approvals(
     Ok(approved_by)
 }
 
+/// Where a returned quantity goes back into stock: the batches the original line was sold from
+/// (the last one first), less what was already returned to each, at the cost each batch left at.
+/// A line without batches goes back as it was sold.
+pub(crate) fn return_batches(
+    conn: &Connection,
+    original_item_id: Option<&str>,
+    batch_id: Option<&str>,
+    qty: i64,
+    unit_cost: i64,
+) -> AppResult<Vec<(Option<String>, i64, i64)>> {
+    let Some(item) = original_item_id else {
+        return Ok(vec![(batch_id.map(String::from), qty, unit_cost)]);
+    };
+    let sold: Vec<(Option<String>, i64, i64)> = conn
+        .prepare(
+            "SELECT batch_id, -sum(qty), -sum(value) FROM stock_movements
+             WHERE source_type = 'sales_invoice' AND source_line_id = ?1 AND movement_type = 'sale'
+             GROUP BY batch_id ORDER BY max(rowid) DESC",
+        )?
+        .query_map([item], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))?
+        .collect::<Result<_, _>>()?;
+    if sold.len() <= 1 {
+        let batch = sold
+            .first()
+            .map_or(batch_id.map(String::from), |s| s.0.clone());
+        let cost = sold
+            .first()
+            .filter(|s| s.1 > 0)
+            .map_or(unit_cost, |s| stock_posting::per_unit(s.2, s.1));
+        return Ok(vec![(batch, qty, cost)]);
+    }
+    let returned: Vec<(Option<String>, i64)> = conn
+        .prepare(
+            "SELECT m.batch_id, sum(m.qty) FROM stock_movements m JOIN sales_return_items ri ON ri.id = m.source_line_id
+             WHERE m.source_type = 'sales_return' AND ri.original_item_id = ?1 GROUP BY m.batch_id",
+        )?
+        .query_map([item], |r| Ok((r.get(0)?, r.get(1)?)))?
+        .collect::<Result<_, _>>()?;
+    let mut left = qty;
+    let mut out = Vec::new();
+    for (batch, sold_qty, sold_value) in &sold {
+        if left == 0 {
+            break;
+        }
+        let back = returned.iter().find(|r| r.0 == *batch).map_or(0, |r| r.1);
+        let room = (sold_qty - back).max(0);
+        let q = left.min(room);
+        if q > 0 {
+            out.push((
+                batch.clone(),
+                q,
+                stock_posting::per_unit(*sold_value, *sold_qty),
+            ));
+            left -= q;
+        }
+    }
+    if left > 0 {
+        match out.last_mut() {
+            Some(last) => last.1 += left,
+            None => out.push((
+                sold[0].0.clone(),
+                left,
+                stock_posting::per_unit(sold[0].2, sold[0].1),
+            )),
+        }
+    }
+    Ok(out)
+}
+
 // ------------------------------------------------------------------ invoice read models
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
@@ -711,6 +806,17 @@ pub struct InvoiceLine {
     pub tax_total: i64,
     pub line_total: i64,
     pub returned_qty: i64,
+    /// Batch products: the batches the line came from (base-unit quantities).
+    #[serde(default)]
+    pub batches: Vec<LineBatch>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct LineBatch {
+    pub batch_no: String,
+    pub expiry_date: Option<String>,
+    pub qty: i64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
@@ -895,9 +1001,28 @@ pub fn invoice_detail(conn: &Connection, id: &str) -> AppResult<InvoiceDetail> {
                 tax_total: r.get(19)?,
                 line_total: r.get(20)?,
                 returned_qty: r.get(21)?,
+                batches: Vec::new(),
             })
         })?
         .collect::<Result<_, _>>()?;
+    {
+        let mut stmt = conn.prepare(
+            "SELECT b.batch_no, b.expiry_date, -sum(m.qty) FROM stock_movements m JOIN batches b ON b.id = m.batch_id
+             WHERE m.source_type = 'sales_invoice' AND m.source_line_id = ?1 AND m.movement_type = 'sale'
+             GROUP BY b.id ORDER BY b.expiry_date IS NULL, b.expiry_date, b.batch_no",
+        )?;
+        for line in &mut detail.lines {
+            line.batches = stmt
+                .query_map([&line.id], |r| {
+                    Ok(LineBatch {
+                        batch_no: r.get(0)?,
+                        expiry_date: r.get(1)?,
+                        qty: r.get(2)?,
+                    })
+                })?
+                .collect::<Result<_, _>>()?;
+        }
+    }
     detail.payments = conn
         .prepare(
             "SELECT p.id, p.doc_no, p.business_date, p.mode, a.amount, p.tendered, p.change_given, p.status
@@ -1054,6 +1179,9 @@ pub fn list_invoices(ctx: &Ctx<'_>, query: &InvoiceListQuery) -> AppResult<Page<
 pub struct PreviewInput {
     pub warehouse_id: Option<String>,
     pub party_id: Option<String>,
+    /// The till's open session (its price list applies when the customer has none).
+    #[serde(default)]
+    pub register_session_id: Option<String>,
     pub place_of_supply: Option<String>,
     pub prices_include_tax: Option<bool>,
     pub lines: Vec<SaleLineInput>,
@@ -1101,6 +1229,15 @@ pub fn preview(ctx: &Ctx<'_>, input: &PreviewInput) -> AppResult<Preview> {
     };
     let pos = input.place_of_supply.clone().or(party_state);
     let state = branch_state.or_else(|| settings.business.state_code.clone());
+    let today = settings.business_date(ctx.now);
+    let list = ListContext {
+        list_id: super::price_lists::list_for(
+            ctx.conn,
+            input.party_id.as_deref(),
+            input.register_session_id.as_deref(),
+        )?,
+        date: &today,
+    };
     let priced = price(
         ctx.conn,
         &settings,
@@ -1109,6 +1246,7 @@ pub fn preview(ctx: &Ctx<'_>, input: &PreviewInput) -> AppResult<Preview> {
         input.prices_include_tax,
         pos.as_deref(),
         state.as_deref(),
+        &list,
     )?;
     Ok(Preview {
         lines: priced
@@ -1235,6 +1373,14 @@ pub(crate) fn create_invoice_inner(
         .or_else(|| party.as_ref().and_then(|p| p.state_code.clone()))
         .or_else(|| customer_gstin.as_ref().map(|g| g[..2].to_string()));
     let own_state = branch_state.or_else(|| settings.business.state_code.clone());
+    let list = ListContext {
+        list_id: super::price_lists::list_for(
+            ctx.conn,
+            input.party_id.as_deref(),
+            input.register_session_id.as_deref(),
+        )?,
+        date: &business_date,
+    };
     let priced = price(
         ctx.conn,
         &settings,
@@ -1243,6 +1389,7 @@ pub(crate) fn create_invoice_inner(
         input.prices_include_tax,
         place_of_supply.as_deref(),
         own_state.as_deref(),
+        &list,
     )?;
     if let Some(expected) = input.expected_total {
         if expected != priced.result.total {
@@ -1368,6 +1515,12 @@ pub(crate) fn create_invoice_inner(
                     actor.user_id
                 ],
             )?;
+                if list.list_id.is_some() {
+                    tx.execute(
+                        "UPDATE sales_invoices SET price_list_id = ?1 WHERE id = ?2",
+                        params![list.list_id, id],
+                    )?;
+                }
                 if let Some(origin) = offline {
                     tx.execute(
                         "UPDATE sales_invoices SET origin = 'offline', device_id = ?1, client_created_at = ?2 WHERE id = ?3",
@@ -1384,17 +1537,87 @@ pub(crate) fn create_invoice_inner(
                 for (index, (line, lr)) in priced.lines.iter().zip(&r.lines).enumerate() {
                     let cols = tax_columns(&lr.taxes);
                     let line_id = new_id();
+                    // Stock first: the line records what the ledger actually charged (FIFO layers,
+                    // or the average cost) and, for batch products, the batch(es) it came from.
+                    let mut cost_value = 0;
+                    let mut batch_id = line.batch_id.clone();
+                    if !line.is_service {
+                        // A sale made offline already happened: it is posted even if stock goes
+                        // below zero or a batch had expired, and that is reported for a manager.
+                        let (policy, expired_policy) = if offline.is_some() {
+                            (
+                                settings::NegativeStockPolicy::Warn,
+                                settings::ExpiredStockPolicy::Warn,
+                            )
+                        } else {
+                            (
+                                settings.inventory.negative_stock_policy,
+                                settings.inventory.expired_stock_policy,
+                            )
+                        };
+                        let posted = stock_posting::post_out(
+                            tx,
+                            policy,
+                            expired_policy,
+                            &business_date,
+                            &now,
+                            Some(&actor.user_id),
+                            &Move {
+                                warehouse_id: &warehouse_id,
+                                variant_id: &line.variant_id,
+                                batch_id: line.batch_id.as_deref(),
+                                qty: -line.base_qty,
+                                unit_cost: line.cost,
+                                kind: "sale",
+                                source_type: "sales_invoice",
+                                source_id: &id,
+                                source_line_id: Some(&line_id),
+                                ..Move::default()
+                            },
+                        )?;
+                        if posted.len() == 1 {
+                            batch_id = posted[0].batch_id.clone();
+                        }
+                        for p in posted {
+                            cost_value -= p.value;
+                            if let (Some(origin), Some(w)) = (offline, &p.warning) {
+                                if w.expired_batch.is_none() {
+                                    super::sync::record_exception(
+                                        tx,
+                                        &super::sync::Exception {
+                                            kind: "offline_oversell",
+                                            device_id: &origin.device_id,
+                                            source: ("sales_invoice", &id),
+                                            variant_id: Some(&line.variant_id),
+                                            warehouse_id: Some(&warehouse_id),
+                                            amount: w.requested - w.available.max(0),
+                                            details: json!({ "docNo": number.doc_no, "available": w.available, "requested": w.requested }),
+                                        },
+                                        &now,
+                                    )?;
+                                }
+                            }
+                            warnings.extend(p.warning);
+                        }
+                        cogs += cost_value;
+                    }
+                    let unit_cost = if line.is_service {
+                        line.cost
+                    } else {
+                        stock_posting::per_unit(cost_value, line.base_qty)
+                    };
                     tx.execute(
                     "INSERT INTO sales_invoice_items (id, invoice_id, line_no, variant_id, batch_id, unit_id, unit_factor_num, unit_factor_den,
                         item_name, sku, hsn_sac, unit_name, qty, base_qty, unit_price, mrp, line_discount, bill_discount_share, taxable,
-                        tax_rate_id, tax_rate, cgst, sgst, igst, other_tax, cess, tax_total, line_total, unit_cost, created_at, updated_at)
+                        tax_rate_id, tax_rate, cgst, sgst, igst, other_tax, cess, tax_total, line_total, unit_cost, created_at, updated_at,
+                        cost_value)
                      VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24,
-                        ?25, ?26, ?27, ?28, ?29, ?30, ?30)",
+                        ?25, ?26, ?27, ?28, ?29, ?30, ?30, ?31)",
                     params![
-                        line_id, id, index + 1, line.variant_id, line.batch_id, line.unit_id, line.factor_num, line.factor_den, line.name,
+                        line_id, id, index + 1, line.variant_id, batch_id, line.unit_id, line.factor_num, line.factor_den, line.name,
                         line.sku, line.hsn_sac, line.unit_name, line.qty, line.base_qty, line.unit_price, line.mrp, lr.line_discount,
                         lr.bill_discount, lr.taxable, line.tax_rate_id, line.tax_rate + line.cess_rate, cols.cgst, cols.sgst, cols.igst,
-                        cols.other, cols.cess, lr.tax, lr.total, line.cost, now
+                        cols.other, cols.cess, lr.tax, lr.total, unit_cost, now, (!line.is_service).then_some(cost_value)
                     ],
                 )?;
                     if let Some(origin) = offline.filter(|_| line.unit_price != line.catalog_price)
@@ -1412,54 +1635,6 @@ pub(crate) fn create_invoice_inner(
                             },
                             &now,
                         )?;
-                    }
-                    if !line.is_service {
-                        // A sale made offline already happened: it is posted even if stock goes
-                        // below zero, and the shortfall is reported for a manager.
-                        let policy = if offline.is_some() {
-                            settings::NegativeStockPolicy::Warn
-                        } else {
-                            settings.inventory.negative_stock_policy
-                        };
-                        let warning = stock_posting::post(
-                            tx,
-                            policy,
-                            &business_date,
-                            &now,
-                            Some(&actor.user_id),
-                            &Move {
-                                warehouse_id: &warehouse_id,
-                                variant_id: &line.variant_id,
-                                batch_id: line.batch_id.as_deref(),
-                                qty: -line.base_qty,
-                                unit_cost: line.cost,
-                                kind: "sale",
-                                source_type: "sales_invoice",
-                                source_id: &id,
-                                source_line_id: Some(&line_id),
-                                reversal_of: None,
-                                note: None,
-                                update_average_cost: false,
-                            },
-                        )?;
-                        if let (Some(origin), Some(w)) = (offline, &warning) {
-                            super::sync::record_exception(
-                                tx,
-                                &super::sync::Exception {
-                                    kind: "offline_oversell",
-                                    device_id: &origin.device_id,
-                                    source: ("sales_invoice", &id),
-                                    variant_id: Some(&line.variant_id),
-                                    warehouse_id: Some(&warehouse_id),
-                                    amount: w.requested - w.available.max(0),
-                                    details: json!({ "docNo": number.doc_no, "available": w.available, "requested": w.requested }),
-                                },
-                                &now,
-                            )?;
-                        }
-                        warnings.extend(warning);
-                        cogs +=
-                            money::multiply_by_qty(line.cost, line.base_qty, RoundingMode::HalfUp);
                     }
                 }
                 tx.execute(
@@ -2082,6 +2257,7 @@ pub fn create_return(ctx: &mut Ctx<'_>, input: &ReturnInput) -> AppResult<Return
             )?;
                 let mut restock_value = 0;
                 for (index, c) in calcs.iter().enumerate() {
+                    let item_id = new_id();
                     tx.execute(
                     "INSERT INTO sales_return_items (id, return_id, line_no, original_item_id, variant_id, batch_id, unit_id, unit_factor_num,
                         unit_factor_den, item_name, sku, hsn_sac, qty, base_qty, unit_price, discount, taxable, tax_rate, cgst, sgst, igst,
@@ -2089,35 +2265,40 @@ pub fn create_return(ctx: &mut Ctx<'_>, input: &ReturnInput) -> AppResult<Return
                      VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24,
                         ?25, ?26, ?27, ?28, ?28)",
                     params![
-                        new_id(), id, index + 1, c.original_item_id, c.variant_id, c.batch_id, c.unit_id, c.factor_num, c.factor_den,
+                        item_id, id, index + 1, c.original_item_id, c.variant_id, c.batch_id, c.unit_id, c.factor_num, c.factor_den,
                         c.item_name, c.sku, c.hsn_sac, c.qty, c.base_qty, c.unit_price, c.discount, c.taxable, c.tax_rate, c.cols.cgst,
                         c.cols.sgst, c.cols.igst, c.cols.other, c.cols.cess, c.tax_total, c.taxable + c.tax_total, c.unit_cost, c.restock, now
                     ],
                 )?;
                     if c.restock && !c.is_service {
-                        stock_posting::post(
+                        for (batch_id, qty, unit_cost) in return_batches(
                             tx,
-                            settings.inventory.negative_stock_policy,
-                            &today,
-                            &now,
-                            Some(&actor.user_id),
-                            &Move {
-                                warehouse_id: &warehouse_id,
-                                variant_id: &c.variant_id,
-                                batch_id: c.batch_id.as_deref(),
-                                qty: c.base_qty,
-                                unit_cost: c.unit_cost,
-                                kind: "sale_return",
-                                source_type: "sales_return",
-                                source_id: &id,
-                                source_line_id: None,
-                                reversal_of: None,
-                                note: None,
-                                update_average_cost: false,
-                            },
-                        )?;
-                        restock_value +=
-                            money::multiply_by_qty(c.unit_cost, c.base_qty, RoundingMode::HalfUp);
+                            c.original_item_id.as_deref(),
+                            c.batch_id.as_deref(),
+                            c.base_qty,
+                            c.unit_cost,
+                        )? {
+                            let posted = stock_posting::post(
+                                tx,
+                                settings.inventory.negative_stock_policy,
+                                &today,
+                                &now,
+                                Some(&actor.user_id),
+                                &Move {
+                                    warehouse_id: &warehouse_id,
+                                    variant_id: &c.variant_id,
+                                    batch_id: batch_id.as_deref(),
+                                    qty,
+                                    unit_cost,
+                                    kind: "sale_return",
+                                    source_type: "sales_return",
+                                    source_id: &id,
+                                    source_line_id: Some(&item_id),
+                                    ..Move::default()
+                                },
+                            )?;
+                            restock_value += posted.value;
+                        }
                     }
                 }
                 tx.execute("UPDATE sales_returns SET status = 'finalized', finalized_at = ?1, finalized_by = ?2 WHERE id = ?3", params![now, actor.user_id, id])?;
@@ -2325,6 +2506,10 @@ pub fn save_sales_doc(ctx: &mut Ctx<'_>, input: &SalesDocInput) -> AppResult<Sal
     let (branch_id, _, branch_state) = branch_of(ctx.conn, None)?;
     let own = branch_state.or_else(|| settings.business.state_code.clone());
     let pos = party.as_ref().and_then(|p| p.state_code.clone());
+    let list = ListContext {
+        list_id: super::price_lists::list_for(ctx.conn, input.party_id.as_deref(), None)?,
+        date: &today,
+    };
     let priced = price(
         ctx.conn,
         &settings,
@@ -2333,6 +2518,7 @@ pub fn save_sales_doc(ctx: &mut Ctx<'_>, input: &SalesDocInput) -> AppResult<Sal
         input.prices_include_tax,
         pos.as_deref(),
         own.as_deref(),
+        &list,
     )?;
     let approved_by = check_pricing_approvals(ctx.actor, ctx.approver, &priced, false)?;
     let customer_name = match &party {

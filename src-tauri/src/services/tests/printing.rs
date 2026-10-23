@@ -569,6 +569,8 @@ fn in_store_barcodes_are_valid_unique_and_checked_on_save() {
             reorder_qty: 0,
             is_active: true,
             opening_stock: None,
+            opening_batch_no: None,
+            opening_expiry_date: None,
         }],
         unit_conversions: pack
             .map(|p| UnitConversionInput {

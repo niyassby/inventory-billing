@@ -373,6 +373,11 @@ pub struct VariantInput {
     pub is_active: bool,
     /// Opening stock in the default store (new variants only, thousandths).
     pub opening_stock: Option<i64>,
+    /// Batch of the opening stock (batch-tracked products).
+    #[serde(default)]
+    pub opening_batch_no: Option<String>,
+    #[serde(default)]
+    pub opening_expiry_date: Option<String>,
 }
 
 fn yes() -> bool {
@@ -871,7 +876,21 @@ pub fn save_product(ctx: &mut Ctx<'_>, input: &ProductInput) -> AppResult<Produc
             };
             if opening != 0 {
                 let cost = v.input.cost_price.unwrap_or(0);
-                stock_posting::post(
+                let batch = if input.track_batches {
+                    stock_posting::batch_for(
+                        tx,
+                        &variant_id,
+                        "variants.opening",
+                        v.input.opening_batch_no.as_deref(),
+                        None,
+                        v.input.opening_expiry_date.as_deref(),
+                        &now,
+                        &actor.user_id,
+                    )?
+                } else {
+                    None
+                };
+                let posted = stock_posting::post(
                     tx,
                     settings.inventory.negative_stock_policy,
                     &today,
@@ -880,19 +899,18 @@ pub fn save_product(ctx: &mut Ctx<'_>, input: &ProductInput) -> AppResult<Produc
                     &Move {
                         warehouse_id: &warehouse_id,
                         variant_id: &variant_id,
-                        batch_id: None,
+                        batch_id: batch.as_deref(),
                         qty: opening,
                         unit_cost: cost,
                         kind: "opening",
                         source_type: "product",
                         source_id: &product_id,
                         source_line_id: Some(&variant_id),
-                        reversal_of: None,
                         note: Some("Opening stock"),
-                        update_average_cost: false,
+                        ..Move::default()
                     },
                 )?;
-                opening_value += money::multiply_by_qty(cost, opening, RoundingMode::HalfUp);
+                opening_value += posted.value;
             }
         }
         journal::post(

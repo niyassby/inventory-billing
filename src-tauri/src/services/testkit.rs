@@ -204,6 +204,8 @@ impl Kit {
                     reorder_qty: 0,
                     is_active: true,
                     opening_stock: Some(stock_units * 1000),
+                    opening_batch_no: None,
+                    opening_expiry_date: None,
                 }],
                 unit_conversions: Vec::new(),
             },
@@ -260,6 +262,7 @@ impl Kit {
                 notes: None,
                 is_active: true,
                 opening_balance: None,
+                price_list_id: None,
             },
         )
         .unwrap()
@@ -293,6 +296,7 @@ impl Kit {
             "v_stock_level_mismatches",
             "v_party_balance_mismatches",
             "v_unbalanced_journal_entries",
+            "v_cost_layer_mismatches",
         ] {
             let n: i64 = conn
                 .query_row(&format!("SELECT count(*) FROM {view}"), [], |r| r.get(0))

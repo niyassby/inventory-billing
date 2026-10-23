@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import vectors from "../test-vectors/money.json";
 import pricing from "../test-vectors/pricing.json";
+import priceLists from "../test-vectors/price-lists.json";
+import type { ListPriceQuery } from "./price-lists";
+import { resolveListPrice } from "./price-lists";
 import { fromLegacyFloat, money } from "./money";
 import { allocateProportionally, divRound } from "./rounding";
 import type { DocumentInput } from "./tax";
@@ -24,6 +27,12 @@ describe("shared money vectors", () => {
   it.each(vectors.legacyFloat)("fromLegacyFloat($major)", (v) => {
     const result = fromLegacyFloat(v.major, { code: "TEST", minorDigits: v.minorDigits });
     expect(result).toEqual({ amount: money(v.amount), lossy: v.lossy });
+  });
+});
+
+describe("shared price-list vectors", () => {
+  it.each(priceLists.cases)("$name", (c) => {
+    expect(resolveListPrice(c.query as ListPriceQuery)).toEqual(c.expected);
   });
 });
 

@@ -159,6 +159,13 @@ export type CutMode = "none" | "partial" | "full";
  */
 export type DrawerPin = "pin5" | "pin2";
 /**
+ * Selling or issuing a batch past its expiry date.
+ *
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "ExpiredStockPolicy".
+ */
+export type ExpiredStockPolicy = "allow" | "block" | "warn";
+/**
  * This interface was referenced by `ApiContract`'s JSON-Schema
  * via the `definition` "LabelLanguage".
  */
@@ -348,6 +355,22 @@ export interface ApiContract {
       input: NoInput;
       output: HubInfo;
     };
+    inventory_expiry_list: {
+      input: ExpiryQuery;
+      output: ExpiryRow[];
+    };
+    inventory_expiry_summary: {
+      input: NoInput;
+      output: ExpirySummary;
+    };
+    inventory_valuation_preview: {
+      input: NoInput;
+      output: ValuationPreview;
+    };
+    inventory_valuation_switch: {
+      input: ValuationSwitchInput;
+      output: ValuationSwitchResult;
+    };
     labels_items: {
       input: LabelSourceInput;
       output: LabelItem[];
@@ -439,6 +462,38 @@ export interface ApiContract {
     permissions_list: {
       input: NoInput;
       output: PermissionInfo[];
+    };
+    price_lists_bulk_update: {
+      input: BulkUpdateInput;
+      output: BulkUpdateResult;
+    };
+    price_lists_delete: {
+      input: IdInput;
+      output: null;
+    };
+    price_lists_items: {
+      input: PriceListItemQuery;
+      output: PageFor_PriceListItemRow;
+    };
+    price_lists_list: {
+      input: NoInput;
+      output: PriceListSummary[];
+    };
+    price_lists_save: {
+      input: PriceListInput;
+      output: PriceListSummary;
+    };
+    price_lists_set_prices: {
+      input: SetPricesInput;
+      output: SetPricesResult;
+    };
+    price_lists_set_till: {
+      input: SetTillPriceListInput;
+      output: TillPriceList[];
+    };
+    price_lists_tills: {
+      input: NoInput;
+      output: TillPriceList[];
     };
     print_document: {
       input: PrintInput;
@@ -696,6 +751,10 @@ export interface ApiContract {
       input: AdjustInput;
       output: StockDocResult;
     };
+    stock_batches: {
+      input: BatchQuery;
+      output: BatchStock[];
+    };
     stock_card: {
       input: StockCardQuery;
       output: StockCard;
@@ -732,6 +791,10 @@ export interface ApiContract {
       input: NoInput;
       output: Warehouse[];
     };
+    stock_write_off: {
+      input: WriteOffInput;
+      output: StockDocResult;
+    };
     sync_exceptions: {
       input: ExceptionQuery;
       output: PageFor_SyncException;
@@ -747,6 +810,18 @@ export interface ApiContract {
     tax_rates_save: {
       input: TaxRateInput;
       output: IdOut;
+    };
+    unit_conversions_delete: {
+      input: IdInput;
+      output: UnitConversion[];
+    };
+    unit_conversions_list: {
+      input: NoInput;
+      output: UnitConversion[];
+    };
+    unit_conversions_save: {
+      input: UnitConversionInput2;
+      output: UnitConversion[];
     };
     units_list: {
       input: NoInput;
@@ -1186,6 +1261,7 @@ export interface CachedCustomer {
   id: string;
   name: string;
   phone?: string | null;
+  priceListId?: string | null;
   stateCode?: string | null;
 }
 /**
@@ -1502,6 +1578,10 @@ export interface InvoiceDetail {
  * via the `definition` "InvoiceLine".
  */
 export interface InvoiceLine {
+  /**
+   * Batch products: the batches the line came from (base-unit quantities).
+   */
+  batches?: LineBatch[];
   billDiscountShare: number;
   cess: number;
   cgst: number;
@@ -1524,6 +1604,15 @@ export interface InvoiceLine {
   unitName?: string | null;
   unitPrice: number;
   variantId: string;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "LineBatch".
+ */
+export interface LineBatch {
+  batchNo: string;
+  expiryDate?: string | null;
+  qty: number;
 }
 /**
  * This interface was referenced by `ApiContract`'s JSON-Schema
@@ -1553,13 +1642,17 @@ export interface TaxSummaryRow {
   taxable: number;
 }
 /**
- * A movement allowed under the "warn" policy that took stock below zero.
+ * A movement allowed under the "warn" policy that took stock below zero, or sold an expired batch.
  *
  * This interface was referenced by `ApiContract`'s JSON-Schema
  * via the `definition` "StockWarning".
  */
 export interface StockWarning {
   available: number;
+  /**
+   * Set when the warning is about an expired batch (its batch number).
+   */
+  expiredBatch?: string | null;
   name: string;
   requested: number;
   variantId: string;
@@ -1693,6 +1786,106 @@ export interface ExpenseCategoryInput {
 export interface VoidExpenseInput {
   id: string;
   reason: string;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "ExpiryQuery".
+ */
+export interface ExpiryQuery {
+  /**
+   * Look this many days ahead (default: the alert window from the settings).
+   */
+  days?: number | null;
+  warehouseId?: string | null;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "ExpiryRow".
+ */
+export interface ExpiryRow {
+  batchId: string;
+  batchNo: string;
+  daysLeft: number;
+  expired: boolean;
+  expiryDate: string;
+  name: string;
+  qty: number;
+  sku: string;
+  value: number;
+  variantId: string;
+  warehouseId: string;
+  warehouseName: string;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "ExpirySummary".
+ */
+export interface ExpirySummary {
+  alertDays: number;
+  expiredBatches: number;
+  expiredValue: number;
+  nearBatches: number;
+  nearValue: number;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "ValuationPreview".
+ */
+export interface ValuationPreview {
+  /**
+   * "weighted_average" or "fifo".
+   */
+  current: string;
+  /**
+   * Items that stop the switch (negative stock), in words.
+   */
+  problems: string[];
+  /**
+   * What the switch will create (to FIFO: one opening layer per row) or set (to average).
+   */
+  rows: ValuationRow[];
+  target: string;
+  totalQty: number;
+  totalValue: number;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "ValuationRow".
+ */
+export interface ValuationRow {
+  batchNo?: string | null;
+  name: string;
+  qty: number;
+  sku: string;
+  unitCost: number;
+  value: number;
+  variantId: string;
+  warehouseName: string;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "ValuationSwitchInput".
+ */
+export interface ValuationSwitchInput {
+  /**
+   * The total value the preview showed; refused if stock moved since.
+   */
+  expectedTotalValue: number;
+  reason: string;
+  /**
+   * "fifo" or "weighted_average": must be the other method.
+   */
+  target: string;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "ValuationSwitchResult".
+ */
+export interface ValuationSwitchResult {
+  itemsRepriced: number;
+  layersCreated: number;
+  method: string;
+  totalValue: number;
 }
 /**
  * This interface was referenced by `ApiContract`'s JSON-Schema
@@ -1869,6 +2062,7 @@ export interface PartyDetail {
   notes?: string | null;
   partyType: string;
   phone?: string | null;
+  priceListId?: string | null;
   shippingAddress?: string | null;
   stateCode?: string | null;
   updatedAt: string;
@@ -1961,6 +2155,10 @@ export interface PartyInput {
    */
   partyType: string;
   phone?: string | null;
+  /**
+   * Customers: the price list they buy at (none: the till's or the default list).
+   */
+  priceListId?: string | null;
   shippingAddress?: string | null;
   stateCode?: string | null;
 }
@@ -2145,6 +2343,198 @@ export interface VoidPaymentInput {
 export interface PermissionInfo {
   code: string;
   description: string;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "BulkUpdateInput".
+ */
+export interface BulkUpdateInput {
+  /**
+   * false: only show what would change.
+   */
+  apply?: boolean;
+  categoryId?: string | null;
+  /**
+   * "percent" (value in ppm: 50000 = +5%) or "amount" (minor units).
+   */
+  mode: string;
+  /**
+   * A price list; None: the products' own selling prices.
+   */
+  priceListId?: string | null;
+  /**
+   * Round each new price to a multiple of this (minor units: 100 = ₹1); 0 = no rounding.
+   */
+  roundTo?: number;
+  value: number;
+  /**
+   * Only these products (variants); empty: all in the category (or all).
+   */
+  variantIds?: string[];
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "BulkUpdateResult".
+ */
+export interface BulkUpdateResult {
+  applied: boolean;
+  changed: number;
+  rows: BulkRow[];
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "BulkRow".
+ */
+export interface BulkRow {
+  minQty: number;
+  name: string;
+  newPrice: number;
+  oldPrice: number;
+  sku: string;
+  unitCode: string;
+  variantId: string;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "PriceListItemQuery".
+ */
+export interface PriceListItemQuery {
+  /**
+   * Sort the other way round.
+   */
+  descending?: boolean;
+  page?: number | null;
+  pageSize?: number | null;
+  priceListId: string;
+  search?: string | null;
+  /**
+   * Which column to sort by: one of the keys the list documents (unknown keys are refused).
+   */
+  sort?: string | null;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "Page_for_PriceListItemRow".
+ */
+export interface PageFor_PriceListItemRow {
+  items: PriceListItemRow[];
+  page: number;
+  pageSize: number;
+  total: number;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "PriceListItemRow".
+ */
+export interface PriceListItemRow {
+  /**
+   * The product's own price per base unit, for comparison.
+   */
+  basePrice: number;
+  id: string;
+  minQty: number;
+  name: string;
+  price: number;
+  sku: string;
+  unitCode: string;
+  /**
+   * None: the product's base unit.
+   */
+  unitId?: string | null;
+  validFrom?: string | null;
+  validTo?: string | null;
+  variantId: string;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "PriceListSummary".
+ */
+export interface PriceListSummary {
+  customerCount: number;
+  id: string;
+  isActive: boolean;
+  isDefault: boolean;
+  itemCount: number;
+  /**
+   * "retail", "wholesale" or "custom".
+   */
+  kind: string;
+  name: string;
+  notes?: string | null;
+  tillCount: number;
+  updatedAt: string;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "PriceListInput".
+ */
+export interface PriceListInput {
+  expectedUpdatedAt?: string | null;
+  id?: string | null;
+  isActive?: boolean;
+  isDefault?: boolean;
+  kind: string;
+  name: string;
+  notes?: string | null;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "SetPricesInput".
+ */
+export interface SetPricesInput {
+  priceListId: string;
+  /**
+   * Price ids to remove.
+   */
+  remove?: string[];
+  upsert?: PriceItemInput[];
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "PriceItemInput".
+ */
+export interface PriceItemInput {
+  /**
+   * An existing price to change.
+   */
+  id?: string | null;
+  /**
+   * Quantity slab start (thousandths of the price's unit); 0 = from the first unit.
+   */
+  minQty?: number;
+  price: number;
+  /**
+   * A pack unit of the product; empty: the base unit.
+   */
+  unitId?: string | null;
+  validFrom?: string | null;
+  validTo?: string | null;
+  variantId: string;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "SetPricesResult".
+ */
+export interface SetPricesResult {
+  removed: number;
+  saved: number;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "SetTillPriceListInput".
+ */
+export interface SetTillPriceListInput {
+  priceListId?: string | null;
+  registerId: string;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "TillPriceList".
+ */
+export interface TillPriceList {
+  priceListId?: string | null;
+  registerId: string;
+  registerName: string;
 }
 /**
  * This interface was referenced by `ApiContract`'s JSON-Schema
@@ -2789,6 +3179,11 @@ export interface VariantInput {
   id?: string | null;
   isActive?: boolean;
   mrp?: number | null;
+  /**
+   * Batch of the opening stock (batch-tracked products).
+   */
+  openingBatchNo?: string | null;
+  openingExpiryDate?: string | null;
   /**
    * Opening stock in the default store (new variants only, thousandths).
    */
@@ -3542,6 +3937,10 @@ export interface PreviewInput {
   partyId?: string | null;
   placeOfSupply?: string | null;
   pricesIncludeTax?: boolean | null;
+  /**
+   * The till's open session (its price list applies when the customer has none).
+   */
+  registerSessionId?: string | null;
   warehouseId?: string | null;
 }
 /**
@@ -3628,10 +4027,19 @@ export interface BusinessSettings {
  * via the `definition` "InventorySettings".
  */
 export interface InventorySettings {
+  /**
+   * Selling or issuing a batch past its expiry date.
+   */
+  expiredStockPolicy?: "allow" | "block" | "warn";
+  /**
+   * Batches expiring within this many days are "near expiry" (report, dashboard, notices).
+   */
+  expiryAlertDays?: number;
+  expiryAlerts?: boolean;
   lowStockAlerts?: boolean;
   negativeStockPolicy?: "allow" | "block" | "warn";
   /**
-   * "weighted_average" (implemented) or "fifo" (reports only, Phase 6).
+   * "weighted_average" or "fifo". Changed only through the audited switch (`inventory_valuation_switch`), never by saving settings.
    */
   valuationMethod?: string;
 }
@@ -3726,7 +4134,12 @@ export interface PublicSettings {
  * via the `definition` "PublicInventory".
  */
 export interface PublicInventory {
+  /**
+   * Selling or issuing a batch past its expiry date.
+   */
+  expiredStockPolicy?: "allow" | "block" | "warn";
   negativeStockPolicy: NegativeStockPolicy;
+  valuationMethod?: string;
 }
 /**
  * This interface was referenced by `ApiContract`'s JSON-Schema
@@ -3929,7 +4342,15 @@ export interface AdjustInput {
  * via the `definition` "AdjustLine".
  */
 export interface AdjustLine {
+  /**
+   * An existing batch (stock out, or more of a known batch).
+   */
   batchId?: string | null;
+  /**
+   * Stock in for a batch-tracked product: the batch it belongs to (created if new).
+   */
+  batchNo?: string | null;
+  expiryDate?: string | null;
   /**
    * Signed change in thousandths of the base unit (+ found / received, − damaged / lost).
    */
@@ -3962,6 +4383,37 @@ export interface StockDocLine {
   unitCost: number;
   value: number;
   variantId: string;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "BatchQuery".
+ */
+export interface BatchQuery {
+  variantId: string;
+  warehouseId?: string | null;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "BatchStock".
+ */
+export interface BatchStock {
+  /**
+   * None: stock of the product that has no batch.
+   */
+  batchId?: string | null;
+  batchNo?: string | null;
+  /**
+   * Days until expiry (negative: expired); None without an expiry date.
+   */
+  daysLeft?: number | null;
+  expired: boolean;
+  expiryDate?: string | null;
+  mfgDate?: string | null;
+  /**
+   * The batch a sale takes first (first expiry, first out).
+   */
+  pickedFirst: boolean;
+  qty: number;
 }
 /**
  * This interface was referenced by `ApiContract`'s JSON-Schema
@@ -4058,7 +4510,13 @@ export interface CountDetail {
  * via the `definition` "CountLine".
  */
 export interface CountLine {
+  /**
+   * Batch-tracked products are counted per batch.
+   */
+  batchId?: string | null;
+  batchNo?: string | null;
   countedQty?: number | null;
+  expiryDate?: string | null;
   id: string;
   name: string;
   sku: string;
@@ -4187,6 +4645,17 @@ export interface Warehouse {
 }
 /**
  * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "WriteOffInput".
+ */
+export interface WriteOffInput {
+  batchId: string;
+  idempotencyKey: string;
+  notes?: string | null;
+  variantId: string;
+  warehouseId?: string | null;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
  * via the `definition` "ExceptionQuery".
  */
 export interface ExceptionQuery {
@@ -4270,6 +4739,33 @@ export interface TaxRateInput {
    * "gst", "vat", "none" or "other".
    */
   taxType: string;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "UnitConversion".
+ */
+export interface UnitConversion {
+  factorDen: number;
+  /**
+   * 1 from-unit = factor_num / factor_den to-units.
+   */
+  factorNum: number;
+  fromUnitCode: string;
+  fromUnitId: string;
+  id: string;
+  toUnitCode: string;
+  toUnitId: string;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "UnitConversionInput2".
+ */
+export interface UnitConversionInput2 {
+  factorDen: number;
+  factorNum: number;
+  fromUnitId: string;
+  id?: string | null;
+  toUnitId: string;
 }
 /**
  * This interface was referenced by `ApiContract`'s JSON-Schema

@@ -59,6 +59,8 @@ export const PERMISSIONS = [
   "printing.manage",
   "labels.print",
   "sales.open_drawer",
+  "price_lists.manage",
+  "inventory.valuation",
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
 
@@ -67,7 +69,9 @@ const ALL: readonly Permission[] = PERMISSIONS;
 /** Defaults for the built-in roles; owners can create custom roles in Settings → Users. */
 export const DEFAULT_ROLE_PERMISSIONS: Readonly<Record<Role, readonly Permission[]>> = {
   owner: ALL,
-  manager: ALL.filter((p) => p !== "users.manage" && p !== "backup.manage"),
+  manager: ALL.filter(
+    (p) => p !== "users.manage" && p !== "backup.manage" && p !== "inventory.valuation",
+  ),
   cashier: [
     "dashboard.view",
     "products.view",

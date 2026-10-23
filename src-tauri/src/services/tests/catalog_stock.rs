@@ -26,6 +26,8 @@ fn variant(sku: &str, price: i64) -> VariantInput {
         reorder_qty: 0,
         is_active: true,
         opening_stock: None,
+        opening_batch_no: None,
+        opening_expiry_date: None,
     }
 }
 
@@ -292,6 +294,7 @@ fn party_balances_only_move_through_the_ledger() {
         notes: None,
         is_active: true,
         opening_balance: Some(250_000),
+        price_list_id: None,
     };
     let party = parties::save(&mut ctx, &input).unwrap();
     assert_eq!(
@@ -376,6 +379,8 @@ fn adjustments_transfers_and_the_negative_stock_policy() {
                 variant_id: rice.clone(),
                 batch_id: None,
                 qty_change: -2000,
+                batch_no: None,
+                expiry_date: None,
                 unit_cost: None,
             }],
         },
@@ -394,6 +399,8 @@ fn adjustments_transfers_and_the_negative_stock_policy() {
                 variant_id: rice.clone(),
                 batch_id: None,
                 qty_change: -2000,
+                batch_no: None,
+                expiry_date: None,
                 unit_cost: None,
             }],
         },
@@ -414,6 +421,8 @@ fn adjustments_transfers_and_the_negative_stock_policy() {
                 variant_id: rice.clone(),
                 batch_id: None,
                 qty_change: -9000,
+                batch_no: None,
+                expiry_date: None,
                 unit_cost: None,
             }],
         },

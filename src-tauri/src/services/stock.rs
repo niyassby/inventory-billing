@@ -97,7 +97,13 @@ fn variant(conn: &Connection, id: &str) -> AppResult<VariantInfo> {
 #[serde(rename_all = "camelCase")]
 pub struct AdjustLine {
     pub variant_id: String,
+    /// An existing batch (stock out, or more of a known batch).
     pub batch_id: Option<String>,
+    /// Stock in for a batch-tracked product: the batch it belongs to (created if new).
+    #[serde(default)]
+    pub batch_no: Option<String>,
+    #[serde(default)]
+    pub expiry_date: Option<String>,
     /// Signed change in thousandths of the base unit (+ found / received, − damaged / lost).
     pub qty_change: i64,
     /// Cost per base unit for stock added (default: current average cost).
@@ -224,47 +230,78 @@ pub fn adjust(ctx: &mut Ctx<'_>, input: &AdjustInput) -> AppResult<StockDocResul
                     } else {
                         info.cost
                     };
+                    let batch_id = match (&line.batch_id, line.qty_change > 0) {
+                        (Some(b), _) => Some(b.clone()),
+                        (None, true) => stock_posting::batch_for(
+                            tx,
+                            &line.variant_id,
+                            &format!("lines.{index}"),
+                            line.batch_no.as_deref(),
+                            None,
+                            line.expiry_date.as_deref(),
+                            &now,
+                            &actor.user_id,
+                        )?,
+                        (None, false) => None,
+                    };
                     let line_id = new_id();
+                    let mv = Move {
+                        warehouse_id: &warehouse_id,
+                        variant_id: &line.variant_id,
+                        batch_id: batch_id.as_deref(),
+                        qty: line.qty_change,
+                        unit_cost,
+                        kind: if line.qty_change > 0 {
+                            "adjustment_in"
+                        } else {
+                            "adjustment_out"
+                        },
+                        source_type: "stock_adjustment",
+                        source_id: &id,
+                        source_line_id: Some(&line_id),
+                        note: Some(&reason),
+                        ..Move::default()
+                    };
+                    // Damaged and expired stock is written off whatever its expiry.
+                    let posted = if line.qty_change > 0 {
+                        vec![stock_posting::post(
+                            tx,
+                            settings.inventory.negative_stock_policy,
+                            &today,
+                            &now,
+                            Some(&actor.user_id),
+                            &mv,
+                        )?]
+                    } else {
+                        stock_posting::post_out(
+                            tx,
+                            settings.inventory.negative_stock_policy,
+                            settings::ExpiredStockPolicy::Allow,
+                            &today,
+                            &now,
+                            Some(&actor.user_id),
+                            &mv,
+                        )?
+                    };
+                    let value: i64 = posted.iter().map(|p| p.value).sum();
+                    let single_batch = match posted.as_slice() {
+                        [one] => one.batch_id.clone(),
+                        _ => None,
+                    };
+                    let recorded_cost = stock_posting::per_unit(value, line.qty_change);
                     tx.execute(
                     "INSERT INTO stock_adjustment_items (id, adjustment_id, line_no, variant_id, batch_id, qty_change, unit_cost, created_at, updated_at)
                      VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?8)",
-                    params![line_id, id, index + 1, line.variant_id, line.batch_id, line.qty_change, unit_cost, now],
+                    params![line_id, id, index + 1, line.variant_id, single_batch, line.qty_change, recorded_cost, now],
                 )?;
-                    let warning = stock_posting::post(
-                        tx,
-                        settings.inventory.negative_stock_policy,
-                        &today,
-                        &now,
-                        Some(&actor.user_id),
-                        &Move {
-                            warehouse_id: &warehouse_id,
-                            variant_id: &line.variant_id,
-                            batch_id: line.batch_id.as_deref(),
-                            qty: line.qty_change,
-                            unit_cost,
-                            kind: if line.qty_change > 0 {
-                                "adjustment_in"
-                            } else {
-                                "adjustment_out"
-                            },
-                            source_type: "stock_adjustment",
-                            source_id: &id,
-                            source_line_id: Some(&line_id),
-                            reversal_of: None,
-                            note: Some(&reason),
-                            update_average_cost: false,
-                        },
-                    )?;
-                    warnings.extend(warning);
-                    let value =
-                        money::multiply_by_qty(unit_cost, line.qty_change, RoundingMode::HalfUp);
+                    warnings.extend(posted.into_iter().filter_map(|p| p.warning));
                     net_value += value;
                     lines.push(StockDocLine {
                         variant_id: line.variant_id.clone(),
                         name: info.name,
                         sku: info.sku,
                         qty: line.qty_change,
-                        unit_cost,
+                        unit_cost: recorded_cost,
                         value,
                     });
                 }
@@ -365,44 +402,70 @@ pub fn transfer(ctx: &mut Ctx<'_>, input: &TransferInput) -> AppResult<StockDocR
                     positive(&format!("lines.{index}.qty"), line.qty)?;
                     let info = variant(tx, &line.variant_id)?;
                     let line_id = new_id();
-                    tx.execute(
-                    "INSERT INTO stock_transfer_items (id, transfer_id, line_no, variant_id, batch_id, qty, unit_cost, created_at, updated_at)
-                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?8)",
-                    params![line_id, id, index + 1, line.variant_id, line.batch_id, line.qty, info.cost, now],
-                )?;
-                    for (warehouse_id, qty, kind) in [
-                        (&from, -line.qty, "transfer_out"),
-                        (&to, line.qty, "transfer_in"),
-                    ] {
-                        warnings.extend(stock_posting::post(
+                    // Out of the first store (by first expiry for batch products), then into the
+                    // second with the same batches and, under FIFO, the same cost layers.
+                    let outs = stock_posting::post_out(
+                        tx,
+                        settings.inventory.negative_stock_policy,
+                        settings::ExpiredStockPolicy::Allow,
+                        &today,
+                        &now,
+                        Some(&actor.user_id),
+                        &Move {
+                            warehouse_id: &from,
+                            variant_id: &line.variant_id,
+                            batch_id: line.batch_id.as_deref(),
+                            qty: -line.qty,
+                            unit_cost: info.cost,
+                            kind: "transfer_out",
+                            source_type: "stock_transfer",
+                            source_id: &id,
+                            source_line_id: Some(&line_id),
+                            ..Move::default()
+                        },
+                    )?;
+                    let mut value = 0;
+                    for out in &outs {
+                        warnings.extend(out.warning.clone());
+                        let layers = (!out.pieces.is_empty()).then_some(out.pieces.as_slice());
+                        let inbound = stock_posting::post(
                             tx,
                             settings.inventory.negative_stock_policy,
                             &today,
                             &now,
                             Some(&actor.user_id),
                             &Move {
-                                warehouse_id,
+                                warehouse_id: &to,
                                 variant_id: &line.variant_id,
-                                batch_id: line.batch_id.as_deref(),
-                                qty,
-                                unit_cost: info.cost,
-                                kind,
+                                batch_id: out.batch_id.as_deref(),
+                                qty: -out.qty,
+                                unit_cost: out.unit_cost,
+                                kind: "transfer_in",
                                 source_type: "stock_transfer",
                                 source_id: &id,
                                 source_line_id: Some(&line_id),
-                                reversal_of: None,
-                                note: None,
-                                update_average_cost: false,
+                                layers,
+                                ..Move::default()
                             },
-                        )?);
+                        )?;
+                        value += inbound.value;
                     }
-                    let value = money::multiply_by_qty(info.cost, line.qty, RoundingMode::HalfUp);
+                    let unit_cost = stock_posting::per_unit(value, line.qty);
+                    let single_batch = match outs.as_slice() {
+                        [one] => one.batch_id.clone(),
+                        _ => None,
+                    };
+                    tx.execute(
+                    "INSERT INTO stock_transfer_items (id, transfer_id, line_no, variant_id, batch_id, qty, unit_cost, created_at, updated_at)
+                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?8)",
+                    params![line_id, id, index + 1, line.variant_id, single_batch, line.qty, unit_cost, now],
+                )?;
                     lines.push(StockDocLine {
                         variant_id: line.variant_id.clone(),
                         name: info.name,
                         sku: info.sku,
                         qty: line.qty,
-                        unit_cost: info.cost,
+                        unit_cost,
                         value,
                     });
                 }
@@ -580,6 +643,13 @@ pub struct CountLine {
     pub variant_id: String,
     pub name: String,
     pub sku: String,
+    /// Batch-tracked products are counted per batch.
+    #[serde(default)]
+    pub batch_id: Option<String>,
+    #[serde(default)]
+    pub batch_no: Option<String>,
+    #[serde(default)]
+    pub expiry_date: Option<String>,
     pub system_qty: i64,
     pub counted_qty: Option<i64>,
     pub variance_qty: Option<i64>,
@@ -633,9 +703,11 @@ fn count_detail(conn: &Connection, id: &str) -> AppResult<CountDetail> {
         .optional()?
         .ok_or_else(|| AppError::not_found("The stock count"))?;
     let mut stmt = conn.prepare(
-        "SELECT l.id, l.variant_id, p.name || coalesce(' — ' || v.variant_name, ''), v.sku, l.system_qty, l.counted_qty, l.variance_qty, l.unit_cost
+        "SELECT l.id, l.variant_id, p.name || coalesce(' — ' || v.variant_name, ''), v.sku, l.system_qty, l.counted_qty, l.variance_qty, l.unit_cost,
+                l.batch_id, b.batch_no, b.expiry_date
          FROM stock_count_lines l JOIN product_variants v ON v.id = l.variant_id JOIN products p ON p.id = v.product_id
-         WHERE l.count_id = ?1 ORDER BY lower(p.name), v.sku",
+         LEFT JOIN batches b ON b.id = l.batch_id
+         WHERE l.count_id = ?1 ORDER BY lower(p.name), v.sku, b.expiry_date IS NULL, b.expiry_date, b.batch_no",
     )?;
     let lines: Vec<CountLine> = stmt
         .query_map([id], |r| {
@@ -646,6 +718,9 @@ fn count_detail(conn: &Connection, id: &str) -> AppResult<CountDetail> {
                 variant_id: r.get(1)?,
                 name: r.get(2)?,
                 sku: r.get(3)?,
+                batch_id: r.get(8)?,
+                batch_no: r.get(9)?,
+                expiry_date: r.get(10)?,
                 system_qty: r.get(4)?,
                 counted_qty: r.get(5)?,
                 variance_qty: variance,
@@ -708,27 +783,49 @@ pub fn start_count(ctx: &mut Ctx<'_>, input: &CountStartInput) -> AppResult<Coun
         )?;
         let wanted: Option<Vec<String>> = input.variant_ids.clone();
         let mut stmt = tx.prepare(
-            "SELECT v.id, v.cost_price, coalesce((SELECT sum(qty) FROM stock_levels l WHERE l.variant_id = v.id AND l.warehouse_id = ?1), 0)
+            "SELECT v.id, v.cost_price, coalesce((SELECT sum(qty) FROM stock_levels l WHERE l.variant_id = v.id AND l.warehouse_id = ?1), 0),
+                    p.track_batches
              FROM product_variants v JOIN products p ON p.id = v.product_id
              WHERE v.deleted_at IS NULL AND p.deleted_at IS NULL AND p.is_service = 0 AND (?2 IS NULL OR p.category_id = ?2)",
         )?;
-        let rows: Vec<(String, i64, i64)> = stmt
+        let rows: Vec<(String, i64, i64, bool)> = stmt
             .query_map(params![warehouse_id, input.category_id], |r| {
-                Ok((r.get(0)?, r.get(1)?, r.get(2)?))
+                Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?))
             })?
             .collect::<Result<_, _>>()?;
+        let mut batch_stmt = tx.prepare(
+            "SELECT batch_id, qty FROM stock_levels WHERE variant_id = ?1 AND warehouse_id = ?2 AND qty <> 0 ORDER BY batch_key",
+        )?;
         let mut added = 0;
-        for (variant_id, cost, qty) in rows {
+        for (variant_id, cost, qty, tracked) in rows {
             if wanted.as_ref().is_some_and(|w| !w.contains(&variant_id)) {
                 continue;
             }
-            tx.execute(
-                "INSERT INTO stock_count_lines (id, count_id, variant_id, system_qty, unit_cost, created_at, updated_at)
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?6)",
-                params![new_id(), id, variant_id, qty, cost, now],
-            )?;
-            added += 1;
+            // Batch products: one line per batch on hand (or one empty line to record finds).
+            let per_batch: Vec<(Option<String>, i64)> = if tracked {
+                batch_stmt
+                    .query_map(params![variant_id, warehouse_id], |r| {
+                        Ok((r.get(0)?, r.get(1)?))
+                    })?
+                    .collect::<Result<_, _>>()?
+            } else {
+                Vec::new()
+            };
+            let lines = if per_batch.is_empty() {
+                vec![(None, qty)]
+            } else {
+                per_batch
+            };
+            for (batch_id, system_qty) in lines {
+                tx.execute(
+                    "INSERT INTO stock_count_lines (id, count_id, variant_id, batch_id, system_qty, unit_cost, created_at, updated_at)
+                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?7)",
+                    params![new_id(), id, variant_id, batch_id, system_qty, cost, now],
+                )?;
+                added += 1;
+            }
         }
+        drop(batch_stmt);
         if added == 0 {
             return Err(AppError::validation(
                 "There is nothing to count in this scope.",
@@ -816,7 +913,7 @@ pub fn finalize_count(ctx: &mut Ctx<'_>, input: &CountFinalizeInput) -> AppResul
                 {
                     let variance = line.variance_qty.unwrap_or(0);
                     *by_variant.entry(&line.variant_id).or_default() += variance;
-                    stock_posting::post(
+                    let posted = stock_posting::post(
                         tx,
                         super::settings::NegativeStockPolicy::Allow,
                         &today,
@@ -825,19 +922,18 @@ pub fn finalize_count(ctx: &mut Ctx<'_>, input: &CountFinalizeInput) -> AppResul
                         &Move {
                             warehouse_id: &detail.warehouse_id,
                             variant_id: &line.variant_id,
-                            batch_id: None,
+                            batch_id: line.batch_id.as_deref(),
                             qty: variance,
                             unit_cost: line.unit_cost,
                             kind: "count_variance",
                             source_type: "stock_count",
                             source_id: &detail.id,
                             source_line_id: Some(&line.id),
-                            reversal_of: None,
                             note: Some("Stock-take variance"),
-                            update_average_cost: false,
+                            ..Move::default()
                         },
                     )?;
-                    net_value += line.variance_value.unwrap_or(0);
+                    net_value += posted.value;
                 }
                 tx.execute(
                 "UPDATE stock_counts SET status = 'finalized', finalized_at = ?1, finalized_by = ?2, updated_at = ?1, updated_by = ?2 WHERE id = ?3",

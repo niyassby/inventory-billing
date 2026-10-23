@@ -189,6 +189,25 @@ pub struct CachedCustomer {
     pub phone: Option<String>,
     pub gstin: Option<String>,
     pub state_code: Option<String>,
+    #[serde(default)]
+    pub price_list_id: Option<String>,
+}
+
+/// One price of a cached price list (a base-unit price has no unit).
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct CachedListPrice {
+    pub variant_id: String,
+    pub entry: crate::domain::price_lists::ListPriceEntry,
+}
+
+/// An active price list, for offline billing.
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct CachedPriceList {
+    pub id: String,
+    pub is_default: bool,
+    pub prices: Vec<CachedListPrice>,
 }
 
 /// What a counter keeps locally for offline billing. Refreshed every
@@ -203,6 +222,46 @@ pub struct CatalogueSnapshot {
     pub warehouse_id: String,
     pub items: Vec<SearchItem>,
     pub customers: Vec<CachedCustomer>,
+    /// Active price lists (customers' and the default; tills' lists need the hub).
+    #[serde(default)]
+    pub price_lists: Vec<CachedPriceList>,
+}
+
+fn cached_price_lists(conn: &Connection) -> AppResult<Vec<CachedPriceList>> {
+    let lists: Vec<(String, bool)> = conn
+        .prepare(
+            "SELECT id, is_default FROM price_lists WHERE is_active = 1 AND deleted_at IS NULL",
+        )?
+        .query_map([], |r| Ok((r.get(0)?, r.get(1)?)))?
+        .collect::<Result<_, _>>()?;
+    let mut stmt = conn.prepare(
+        "SELECT i.variant_id, CASE WHEN i.unit_id = p.base_unit_id THEN NULL ELSE i.unit_id END, i.min_qty, i.price, i.valid_from, i.valid_to
+         FROM price_list_items i JOIN product_variants v ON v.id = i.variant_id JOIN products p ON p.id = v.product_id
+         WHERE i.price_list_id = ?1 AND i.deleted_at IS NULL AND v.deleted_at IS NULL ORDER BY i.created_at, i.id",
+    )?;
+    let mut out = Vec::with_capacity(lists.len());
+    for (id, is_default) in lists {
+        let prices = stmt
+            .query_map([&id], |r| {
+                Ok(CachedListPrice {
+                    variant_id: r.get(0)?,
+                    entry: crate::domain::price_lists::ListPriceEntry {
+                        unit_id: r.get(1)?,
+                        min_qty: r.get(2)?,
+                        price: r.get(3)?,
+                        valid_from: r.get(4)?,
+                        valid_to: r.get(5)?,
+                    },
+                })
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
+        out.push(CachedPriceList {
+            id,
+            is_default,
+            prices,
+        });
+    }
+    Ok(out)
 }
 
 pub fn catalogue(conn: &Connection, now: DateTime<Utc>) -> AppResult<CatalogueSnapshot> {
@@ -218,7 +277,7 @@ pub fn catalogue(conn: &Connection, now: DateTime<Utc>) -> AppResult<CatalogueSn
     let items = catalog::offline_catalogue(conn, &warehouse_id)?;
     let customers = conn
         .prepare(
-            "SELECT id, name, phone, gstin, state_code FROM parties
+            "SELECT id, name, phone, gstin, state_code, price_list_id FROM parties
              WHERE party_type IN ('customer', 'both') AND is_active = 1 AND deleted_at IS NULL ORDER BY lower(name)",
         )?
         .query_map([], |r| {
@@ -228,6 +287,7 @@ pub fn catalogue(conn: &Connection, now: DateTime<Utc>) -> AppResult<CatalogueSn
                 phone: r.get(2)?,
                 gstin: r.get(3)?,
                 state_code: r.get(4)?,
+                price_list_id: r.get(5)?,
             })
         })?
         .collect::<Result<Vec<_>, _>>()?;
@@ -239,6 +299,7 @@ pub fn catalogue(conn: &Connection, now: DateTime<Utc>) -> AppResult<CatalogueSn
         warehouse_id,
         items,
         customers,
+        price_lists: cached_price_lists(conn)?,
     })
 }
 

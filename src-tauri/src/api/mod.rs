@@ -223,9 +223,9 @@ macro_rules! commands {
 
 use crate::printing::labels::{LabelItem, LabelTemplate};
 use crate::services::{
-    accounting, backup, catalog, common::Page, devices, documents, expenses, images, notifications,
-    parties, payments, printing, purchases, reports, sales, settings, setup, stock, sync, upgrade,
-    users,
+    accounting, backup, catalog, common::Page, devices, documents, expenses, images, inventory,
+    notifications, parties, payments, price_lists, printing, purchases, reports, sales, settings,
+    setup, stock, sync, upgrade, users,
 };
 
 fn legacy_database_found(state: &AppState) -> bool {
@@ -371,6 +371,25 @@ commands! {
     authed labels_items(printing::LabelSourceInput) -> Vec<LabelItem> = |ctx: &mut Ctx<'_>, i: &printing::LabelSourceInput| printing::label_items(ctx, i);
     authed labels_preview(printing::LabelPreviewInput) -> Vec<printing::LabelPreview> = |ctx: &mut Ctx<'_>, i: &printing::LabelPreviewInput| printing::preview(ctx, i);
     authed products_generate_barcodes(printing::GenerateBarcodesInput) -> Vec<printing::GeneratedBarcode> = printing::generate_barcodes;
+
+    authed price_lists_list(NoInput) -> Vec<price_lists::PriceListSummary> = |ctx: &mut Ctx<'_>, _: &NoInput| price_lists::list(ctx);
+    authed price_lists_save(price_lists::PriceListInput) -> price_lists::PriceListSummary = price_lists::save;
+    authed price_lists_delete(users::IdInput) -> () = price_lists::delete;
+    authed price_lists_items(price_lists::PriceListItemQuery) -> Page<price_lists::PriceListItemRow> = |ctx: &mut Ctx<'_>, q: &price_lists::PriceListItemQuery| price_lists::items(ctx, q);
+    authed price_lists_set_prices(price_lists::SetPricesInput) -> price_lists::SetPricesResult = price_lists::set_prices;
+    authed price_lists_bulk_update(price_lists::BulkUpdateInput) -> price_lists::BulkUpdateResult = price_lists::bulk_update;
+    authed price_lists_tills(NoInput) -> Vec<price_lists::TillPriceList> = |ctx: &mut Ctx<'_>, _: &NoInput| price_lists::tills(ctx);
+    authed price_lists_set_till(price_lists::SetTillPriceListInput) -> Vec<price_lists::TillPriceList> = price_lists::set_till;
+
+    authed stock_batches(inventory::BatchQuery) -> Vec<inventory::BatchStock> = |ctx: &mut Ctx<'_>, q: &inventory::BatchQuery| inventory::batches(ctx, q);
+    authed stock_write_off(inventory::WriteOffInput) -> stock::StockDocResult = inventory::write_off_batch;
+    authed inventory_expiry_summary(NoInput) -> inventory::ExpirySummary = |ctx: &mut Ctx<'_>, _: &NoInput| inventory::expiry_summary(ctx);
+    authed inventory_expiry_list(inventory::ExpiryQuery) -> Vec<inventory::ExpiryRow> = |ctx: &mut Ctx<'_>, q: &inventory::ExpiryQuery| inventory::expiry_list(ctx, q);
+    authed inventory_valuation_preview(NoInput) -> inventory::ValuationPreview = |ctx: &mut Ctx<'_>, _: &NoInput| inventory::valuation_preview(ctx);
+    authed inventory_valuation_switch(inventory::ValuationSwitchInput) -> inventory::ValuationSwitchResult = inventory::valuation_switch;
+    authed unit_conversions_list(NoInput) -> Vec<inventory::UnitConversion> = |ctx: &mut Ctx<'_>, _: &NoInput| inventory::conversions(ctx);
+    authed unit_conversions_save(inventory::UnitConversionInput) -> Vec<inventory::UnitConversion> = inventory::save_conversion;
+    authed unit_conversions_delete(users::IdInput) -> Vec<inventory::UnitConversion> = inventory::delete_conversion;
 
     stateful hub_status(NoInput) -> crate::node::HubInfo = |state: &AppState, ctx: &mut Ctx<'_>, _: &NoInput| {
         ctx.require("devices.manage")?;

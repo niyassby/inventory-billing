@@ -93,6 +93,22 @@
     "AdjustLine": {
       "properties": {
         "batchId": {
+          "description": "An existing batch (stock out, or more of a known batch).",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "batchNo": {
+          "default": null,
+          "description": "Stock in for a batch-tracked product: the batch it belongs to (created if new).",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "expiryDate": {
+          "default": null,
           "type": [
             "string",
             "null"
@@ -619,6 +635,77 @@
       ],
       "type": "object"
     },
+    "BatchQuery": {
+      "properties": {
+        "variantId": {
+          "type": "string"
+        },
+        "warehouseId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "variantId"
+      ],
+      "type": "object"
+    },
+    "BatchStock": {
+      "properties": {
+        "batchId": {
+          "description": "None: stock of the product that has no batch.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "batchNo": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "daysLeft": {
+          "description": "Days until expiry (negative: expired); None without an expiry date.",
+          "format": "int64",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "expired": {
+          "type": "boolean"
+        },
+        "expiryDate": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "mfgDate": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "pickedFirst": {
+          "description": "The batch a sale takes first (first expiry, first out).",
+          "type": "boolean"
+        },
+        "qty": {
+          "format": "int64",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "expired",
+        "pickedFirst",
+        "qty"
+      ],
+      "type": "object"
+    },
     "Brand": {
       "properties": {
         "id": {
@@ -653,6 +740,116 @@
       },
       "required": [
         "name"
+      ],
+      "type": "object"
+    },
+    "BulkRow": {
+      "properties": {
+        "minQty": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "name": {
+          "type": "string"
+        },
+        "newPrice": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "oldPrice": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "sku": {
+          "type": "string"
+        },
+        "unitCode": {
+          "type": "string"
+        },
+        "variantId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "minQty",
+        "name",
+        "newPrice",
+        "oldPrice",
+        "sku",
+        "unitCode",
+        "variantId"
+      ],
+      "type": "object"
+    },
+    "BulkUpdateInput": {
+      "properties": {
+        "apply": {
+          "default": false,
+          "description": "false: only show what would change.",
+          "type": "boolean"
+        },
+        "categoryId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "mode": {
+          "description": "\"percent\" (value in ppm: 50000 = +5%) or \"amount\" (minor units).",
+          "type": "string"
+        },
+        "priceListId": {
+          "description": "A price list; None: the products' own selling prices.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "roundTo": {
+          "default": 0,
+          "description": "Round each new price to a multiple of this (minor units: 100 = ₹1); 0 = no rounding.",
+          "format": "int64",
+          "type": "integer"
+        },
+        "value": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "variantIds": {
+          "default": [],
+          "description": "Only these products (variants); empty: all in the category (or all).",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "mode",
+        "value"
+      ],
+      "type": "object"
+    },
+    "BulkUpdateResult": {
+      "properties": {
+        "applied": {
+          "type": "boolean"
+        },
+        "changed": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "rows": {
+          "items": {
+            "$ref": "#/definitions/BulkRow"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "applied",
+        "changed",
+        "rows"
       ],
       "type": "object"
     },
@@ -742,6 +939,13 @@
           "type": "string"
         },
         "phone": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "priceListId": {
+          "default": null,
           "type": [
             "string",
             "null"
@@ -1114,10 +1318,32 @@
     },
     "CountLine": {
       "properties": {
+        "batchId": {
+          "default": null,
+          "description": "Batch-tracked products are counted per batch.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "batchNo": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "countedQty": {
           "format": "int64",
           "type": [
             "integer",
+            "null"
+          ]
+        },
+        "expiryDate": {
+          "default": null,
+          "type": [
+            "string",
             "null"
           ]
         },
@@ -1957,6 +2183,140 @@
       },
       "type": "object"
     },
+    "ExpiredStockPolicy": {
+      "description": "Selling or issuing a batch past its expiry date.",
+      "oneOf": [
+        {
+          "enum": [
+            "allow"
+          ],
+          "type": "string"
+        },
+        {
+          "description": "Expired batches are never picked and can't be chosen (the default).",
+          "enum": [
+            "block"
+          ],
+          "type": "string"
+        },
+        {
+          "description": "Unexpired batches first; expired ones only when nothing else is left, with a warning.",
+          "enum": [
+            "warn"
+          ],
+          "type": "string"
+        }
+      ]
+    },
+    "ExpiryQuery": {
+      "properties": {
+        "days": {
+          "description": "Look this many days ahead (default: the alert window from the settings).",
+          "format": "int64",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "warehouseId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "type": "object"
+    },
+    "ExpiryRow": {
+      "properties": {
+        "batchId": {
+          "type": "string"
+        },
+        "batchNo": {
+          "type": "string"
+        },
+        "daysLeft": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "expired": {
+          "type": "boolean"
+        },
+        "expiryDate": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "qty": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "sku": {
+          "type": "string"
+        },
+        "value": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "variantId": {
+          "type": "string"
+        },
+        "warehouseId": {
+          "type": "string"
+        },
+        "warehouseName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "batchId",
+        "batchNo",
+        "daysLeft",
+        "expired",
+        "expiryDate",
+        "name",
+        "qty",
+        "sku",
+        "value",
+        "variantId",
+        "warehouseId",
+        "warehouseName"
+      ],
+      "type": "object"
+    },
+    "ExpirySummary": {
+      "properties": {
+        "alertDays": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "expiredBatches": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "expiredValue": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "nearBatches": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "nearValue": {
+          "format": "int64",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "alertDays",
+        "expiredBatches",
+        "expiredValue",
+        "nearBatches",
+        "nearValue"
+      ],
+      "type": "object"
+    },
     "FoundHub": {
       "properties": {
         "fingerprintShort": {
@@ -2430,6 +2790,20 @@
     },
     "InventorySettings": {
       "properties": {
+        "expiredStockPolicy": {
+          "$ref": "#/definitions/ExpiredStockPolicy",
+          "default": "block"
+        },
+        "expiryAlertDays": {
+          "default": 30,
+          "description": "Batches expiring within this many days are \"near expiry\" (report, dashboard, notices).",
+          "format": "int64",
+          "type": "integer"
+        },
+        "expiryAlerts": {
+          "default": true,
+          "type": "boolean"
+        },
         "lowStockAlerts": {
           "default": true,
           "type": "boolean"
@@ -2440,7 +2814,7 @@
         },
         "valuationMethod": {
           "default": "weighted_average",
-          "description": "\"weighted_average\" (implemented) or \"fifo\" (reports only, Phase 6).",
+          "description": "\"weighted_average\" or \"fifo\". Changed only through the audited switch (`inventory_valuation_switch`), never by saving settings.",
           "type": "string"
         }
       },
@@ -2630,6 +3004,14 @@
     },
     "InvoiceLine": {
       "properties": {
+        "batches": {
+          "default": [],
+          "description": "Batch products: the batches the line came from (base-unit quantities).",
+          "items": {
+            "$ref": "#/definitions/LineBatch"
+          },
+          "type": "array"
+        },
         "billDiscountShare": {
           "format": "int64",
           "type": "integer"
@@ -3120,6 +3502,28 @@
         "heightMm",
         "name",
         "widthMm"
+      ],
+      "type": "object"
+    },
+    "LineBatch": {
+      "properties": {
+        "batchNo": {
+          "type": "string"
+        },
+        "expiryDate": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "qty": {
+          "format": "int64",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "batchNo",
+        "qty"
       ],
       "type": "object"
     },
@@ -3839,6 +4243,37 @@
       ],
       "type": "object"
     },
+    "Page_for_PriceListItemRow": {
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/definitions/PriceListItemRow"
+          },
+          "type": "array"
+        },
+        "page": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "pageSize": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "total": {
+          "format": "int64",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "items",
+        "page",
+        "pageSize",
+        "total"
+      ],
+      "type": "object"
+    },
     "Page_for_PrintJob": {
       "properties": {
         "items": {
@@ -4202,6 +4637,13 @@
             "null"
           ]
         },
+        "priceListId": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "shippingAddress": {
           "type": [
             "string",
@@ -4306,6 +4748,14 @@
           "type": "string"
         },
         "phone": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "priceListId": {
+          "default": null,
+          "description": "Customers: the price list they buy at (none: the till's or the default list).",
           "type": [
             "string",
             "null"
@@ -4949,6 +5399,14 @@
             "null"
           ]
         },
+        "registerSessionId": {
+          "default": null,
+          "description": "The till's open session (its price list applies when the customer has none).",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "warehouseId": {
           "type": [
             "string",
@@ -5022,6 +5480,255 @@
         "unitName",
         "unitPrice",
         "variantId"
+      ],
+      "type": "object"
+    },
+    "PriceItemInput": {
+      "properties": {
+        "id": {
+          "description": "An existing price to change.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "minQty": {
+          "default": 0,
+          "description": "Quantity slab start (thousandths of the price's unit); 0 = from the first unit.",
+          "format": "int64",
+          "type": "integer"
+        },
+        "price": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "unitId": {
+          "description": "A pack unit of the product; empty: the base unit.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "validFrom": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "validTo": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "variantId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "price",
+        "variantId"
+      ],
+      "type": "object"
+    },
+    "PriceListInput": {
+      "properties": {
+        "expectedUpdatedAt": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "isActive": {
+          "default": true,
+          "type": "boolean"
+        },
+        "isDefault": {
+          "default": false,
+          "type": "boolean"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "notes": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "kind",
+        "name"
+      ],
+      "type": "object"
+    },
+    "PriceListItemQuery": {
+      "properties": {
+        "descending": {
+          "default": false,
+          "description": "Sort the other way round.",
+          "type": "boolean"
+        },
+        "page": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "pageSize": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "priceListId": {
+          "type": "string"
+        },
+        "search": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "sort": {
+          "description": "Which column to sort by: one of the keys the list documents (unknown keys are refused).",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "priceListId"
+      ],
+      "type": "object"
+    },
+    "PriceListItemRow": {
+      "properties": {
+        "basePrice": {
+          "description": "The product's own price per base unit, for comparison.",
+          "format": "int64",
+          "type": "integer"
+        },
+        "id": {
+          "type": "string"
+        },
+        "minQty": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "name": {
+          "type": "string"
+        },
+        "price": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "sku": {
+          "type": "string"
+        },
+        "unitCode": {
+          "type": "string"
+        },
+        "unitId": {
+          "description": "None: the product's base unit.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "validFrom": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "validTo": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "variantId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "basePrice",
+        "id",
+        "minQty",
+        "name",
+        "price",
+        "sku",
+        "unitCode",
+        "variantId"
+      ],
+      "type": "object"
+    },
+    "PriceListSummary": {
+      "properties": {
+        "customerCount": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "id": {
+          "type": "string"
+        },
+        "isActive": {
+          "type": "boolean"
+        },
+        "isDefault": {
+          "type": "boolean"
+        },
+        "itemCount": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "kind": {
+          "description": "\"retail\", \"wholesale\" or \"custom\".",
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "notes": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "tillCount": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "updatedAt": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "customerCount",
+        "id",
+        "isActive",
+        "isDefault",
+        "itemCount",
+        "kind",
+        "name",
+        "tillCount",
+        "updatedAt"
       ],
       "type": "object"
     },
@@ -6037,8 +6744,16 @@
     },
     "PublicInventory": {
       "properties": {
+        "expiredStockPolicy": {
+          "$ref": "#/definitions/ExpiredStockPolicy",
+          "default": "block"
+        },
         "negativeStockPolicy": {
           "$ref": "#/definitions/NegativeStockPolicy"
+        },
+        "valuationMethod": {
+          "default": "",
+          "type": "string"
         }
       },
       "required": [
@@ -8215,6 +8930,66 @@
       ],
       "type": "object"
     },
+    "SetPricesInput": {
+      "properties": {
+        "priceListId": {
+          "type": "string"
+        },
+        "remove": {
+          "default": [],
+          "description": "Price ids to remove.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "upsert": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/PriceItemInput"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "priceListId"
+      ],
+      "type": "object"
+    },
+    "SetPricesResult": {
+      "properties": {
+        "removed": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "saved": {
+          "format": "int64",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "removed",
+        "saved"
+      ],
+      "type": "object"
+    },
+    "SetTillPriceListInput": {
+      "properties": {
+        "priceListId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "registerId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "registerId"
+      ],
+      "type": "object"
+    },
     "Settings": {
       "properties": {
         "backup": {
@@ -8810,11 +9585,18 @@
       "type": "object"
     },
     "StockWarning": {
-      "description": "A movement allowed under the \"warn\" policy that took stock below zero.",
+      "description": "A movement allowed under the \"warn\" policy that took stock below zero, or sold an expired batch.",
       "properties": {
         "available": {
           "format": "int64",
           "type": "integer"
+        },
+        "expiredBatch": {
+          "description": "Set when the warning is about an expired batch (its batch number).",
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "name": {
           "type": "string"
@@ -9103,6 +9885,27 @@
       ],
       "type": "object"
     },
+    "TillPriceList": {
+      "properties": {
+        "priceListId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "registerId": {
+          "type": "string"
+        },
+        "registerName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "registerId",
+        "registerName"
+      ],
+      "type": "object"
+    },
     "TillSummary": {
       "properties": {
         "countedBy": {
@@ -9263,6 +10066,44 @@
       ],
       "type": "object"
     },
+    "UnitConversion": {
+      "properties": {
+        "factorDen": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "factorNum": {
+          "description": "1 from-unit = factor_num / factor_den to-units.",
+          "format": "int64",
+          "type": "integer"
+        },
+        "fromUnitCode": {
+          "type": "string"
+        },
+        "fromUnitId": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "toUnitCode": {
+          "type": "string"
+        },
+        "toUnitId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "factorDen",
+        "factorNum",
+        "fromUnitCode",
+        "fromUnitId",
+        "id",
+        "toUnitCode",
+        "toUnitId"
+      ],
+      "type": "object"
+    },
     "UnitConversionDetail": {
       "properties": {
         "barcode": {
@@ -9319,6 +10160,37 @@
         "factorDen",
         "factorNum",
         "fromUnitId"
+      ],
+      "type": "object"
+    },
+    "UnitConversionInput2": {
+      "properties": {
+        "factorDen": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "factorNum": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "fromUnitId": {
+          "type": "string"
+        },
+        "id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "toUnitId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "factorDen",
+        "factorNum",
+        "fromUnitId",
+        "toUnitId"
       ],
       "type": "object"
     },
@@ -9458,6 +10330,140 @@
       ],
       "type": "object"
     },
+    "ValuationPreview": {
+      "properties": {
+        "current": {
+          "description": "\"weighted_average\" or \"fifo\".",
+          "type": "string"
+        },
+        "problems": {
+          "description": "Items that stop the switch (negative stock), in words.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "rows": {
+          "description": "What the switch will create (to FIFO: one opening layer per row) or set (to average).",
+          "items": {
+            "$ref": "#/definitions/ValuationRow"
+          },
+          "type": "array"
+        },
+        "target": {
+          "type": "string"
+        },
+        "totalQty": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "totalValue": {
+          "format": "int64",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "current",
+        "problems",
+        "rows",
+        "target",
+        "totalQty",
+        "totalValue"
+      ],
+      "type": "object"
+    },
+    "ValuationRow": {
+      "properties": {
+        "batchNo": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "qty": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "sku": {
+          "type": "string"
+        },
+        "unitCost": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "value": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "variantId": {
+          "type": "string"
+        },
+        "warehouseName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "qty",
+        "sku",
+        "unitCost",
+        "value",
+        "variantId",
+        "warehouseName"
+      ],
+      "type": "object"
+    },
+    "ValuationSwitchInput": {
+      "properties": {
+        "expectedTotalValue": {
+          "description": "The total value the preview showed; refused if stock moved since.",
+          "format": "int64",
+          "type": "integer"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "target": {
+          "description": "\"fifo\" or \"weighted_average\": must be the other method.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "expectedTotalValue",
+        "reason",
+        "target"
+      ],
+      "type": "object"
+    },
+    "ValuationSwitchResult": {
+      "properties": {
+        "itemsRepriced": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "layersCreated": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "method": {
+          "type": "string"
+        },
+        "totalValue": {
+          "format": "int64",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "itemsRepriced",
+        "layersCreated",
+        "method",
+        "totalValue"
+      ],
+      "type": "object"
+    },
     "VariantDetail": {
       "properties": {
         "barcode": {
@@ -9558,6 +10564,21 @@
           "format": "int64",
           "type": [
             "integer",
+            "null"
+          ]
+        },
+        "openingBatchNo": {
+          "default": null,
+          "description": "Batch of the opening stock (batch-tracked products).",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "openingExpiryDate": {
+          "default": null,
+          "type": [
+            "string",
             "null"
           ]
         },
@@ -9756,6 +10777,37 @@
         "qty",
         "warehouseId",
         "warehouseName"
+      ],
+      "type": "object"
+    },
+    "WriteOffInput": {
+      "properties": {
+        "batchId": {
+          "type": "string"
+        },
+        "idempotencyKey": {
+          "type": "string"
+        },
+        "notes": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "variantId": {
+          "type": "string"
+        },
+        "warehouseId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "batchId",
+        "idempotencyKey",
+        "variantId"
       ],
       "type": "object"
     }
@@ -10467,6 +11519,73 @@
           ],
           "type": "object"
         },
+        "inventory_expiry_list": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/ExpiryQuery"
+            },
+            "output": {
+              "items": {
+                "$ref": "#/definitions/ExpiryRow"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "inventory_expiry_summary": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/NoInput"
+            },
+            "output": {
+              "$ref": "#/definitions/ExpirySummary"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "inventory_valuation_preview": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/NoInput"
+            },
+            "output": {
+              "$ref": "#/definitions/ValuationPreview"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "inventory_valuation_switch": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/ValuationSwitchInput"
+            },
+            "output": {
+              "$ref": "#/definitions/ValuationSwitchResult"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
         "labels_items": {
           "additionalProperties": false,
           "properties": {
@@ -10849,6 +11968,143 @@
             "output": {
               "items": {
                 "$ref": "#/definitions/PermissionInfo"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "price_lists_bulk_update": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/BulkUpdateInput"
+            },
+            "output": {
+              "$ref": "#/definitions/BulkUpdateResult"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "price_lists_delete": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/IdInput"
+            },
+            "output": {
+              "type": "null"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "price_lists_items": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/PriceListItemQuery"
+            },
+            "output": {
+              "$ref": "#/definitions/Page_for_PriceListItemRow"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "price_lists_list": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/NoInput"
+            },
+            "output": {
+              "items": {
+                "$ref": "#/definitions/PriceListSummary"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "price_lists_save": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/PriceListInput"
+            },
+            "output": {
+              "$ref": "#/definitions/PriceListSummary"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "price_lists_set_prices": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/SetPricesInput"
+            },
+            "output": {
+              "$ref": "#/definitions/SetPricesResult"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "price_lists_set_till": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/SetTillPriceListInput"
+            },
+            "output": {
+              "items": {
+                "$ref": "#/definitions/TillPriceList"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "price_lists_tills": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/NoInput"
+            },
+            "output": {
+              "items": {
+                "$ref": "#/definitions/TillPriceList"
               },
               "type": "array"
             }
@@ -11922,6 +13178,25 @@
           ],
           "type": "object"
         },
+        "stock_batches": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/BatchQuery"
+            },
+            "output": {
+              "items": {
+                "$ref": "#/definitions/BatchStock"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
         "stock_card": {
           "additionalProperties": false,
           "properties": {
@@ -12069,6 +13344,22 @@
           ],
           "type": "object"
         },
+        "stock_write_off": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/WriteOffInput"
+            },
+            "output": {
+              "$ref": "#/definitions/StockDocResult"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
         "sync_exceptions": {
           "additionalProperties": false,
           "properties": {
@@ -12128,6 +13419,63 @@
             },
             "output": {
               "$ref": "#/definitions/IdOut"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "unit_conversions_delete": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/IdInput"
+            },
+            "output": {
+              "items": {
+                "$ref": "#/definitions/UnitConversion"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "unit_conversions_list": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/NoInput"
+            },
+            "output": {
+              "items": {
+                "$ref": "#/definitions/UnitConversion"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "unit_conversions_save": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/UnitConversionInput2"
+            },
+            "output": {
+              "items": {
+                "$ref": "#/definitions/UnitConversion"
+              },
+              "type": "array"
             }
           },
           "required": [
@@ -12314,6 +13662,10 @@
         "expenses_save_category",
         "expenses_void",
         "hub_status",
+        "inventory_expiry_list",
+        "inventory_expiry_summary",
+        "inventory_valuation_preview",
+        "inventory_valuation_switch",
         "labels_items",
         "labels_preview",
         "labels_templates_delete",
@@ -12337,6 +13689,14 @@
         "payments_record",
         "payments_void",
         "permissions_list",
+        "price_lists_bulk_update",
+        "price_lists_delete",
+        "price_lists_items",
+        "price_lists_list",
+        "price_lists_save",
+        "price_lists_set_prices",
+        "price_lists_set_till",
+        "price_lists_tills",
         "print_document",
         "print_jobs_cancel",
         "print_jobs_list",
@@ -12401,6 +13761,7 @@
         "setup_import_legacy",
         "setup_status",
         "stock_adjust",
+        "stock_batches",
         "stock_card",
         "stock_count_enter",
         "stock_count_finalize",
@@ -12410,10 +13771,14 @@
         "stock_documents",
         "stock_transfer",
         "stock_warehouses",
+        "stock_write_off",
         "sync_exceptions",
         "sync_resolve_exception",
         "tax_rates_list",
         "tax_rates_save",
+        "unit_conversions_delete",
+        "unit_conversions_list",
+        "unit_conversions_save",
         "units_list",
         "units_save",
         "users_create",

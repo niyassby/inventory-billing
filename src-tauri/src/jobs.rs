@@ -17,17 +17,25 @@ use crate::services::{backup, images, printing};
 pub enum Job {
     Backup,
     LowStock,
+    Expiry,
     Integrity,
     Cleanup,
 }
 
 impl Job {
-    pub const ALL: [Job; 4] = [Job::Backup, Job::LowStock, Job::Integrity, Job::Cleanup];
+    pub const ALL: [Job; 5] = [
+        Job::Backup,
+        Job::LowStock,
+        Job::Expiry,
+        Job::Integrity,
+        Job::Cleanup,
+    ];
 
     pub fn name(self) -> &'static str {
         match self {
             Job::Backup => "backup",
             Job::LowStock => "low_stock",
+            Job::Expiry => "expiry",
             Job::Integrity => "integrity",
             Job::Cleanup => "cleanup",
         }
@@ -102,6 +110,7 @@ pub fn is_due(
             daily || interval
         }
         Job::LowStock => settings.inventory.low_stock_alerts && since(chrono::Duration::hours(1)),
+        Job::Expiry => settings.inventory.expiry_alerts && since(chrono::Duration::hours(1)),
         Job::Integrity => since(chrono::Duration::days(7)),
         Job::Cleanup => since(chrono::Duration::days(1)),
     }
@@ -183,6 +192,76 @@ fn low_stock(conn: &Connection, now: DateTime<Utc>) -> AppResult<String> {
     ))
 }
 
+/// Hourly: a notice per batch that has expired or expires within the alert window while there is
+/// stock of it; notices close when the stock is gone (sold or written off).
+fn expiry(conn: &Connection, settings: &Settings, now: DateTime<Utc>) -> AppResult<String> {
+    let now_str = now.to_rfc3339();
+    let today = settings.business_date(now);
+    let horizon = chrono::NaiveDate::parse_from_str(&today, "%Y-%m-%d")
+        .map(|d| {
+            (d + chrono::Duration::days(settings.inventory.expiry_alert_days))
+                .format("%Y-%m-%d")
+                .to_string()
+        })
+        .unwrap_or_else(|_| today.clone());
+    let batches: Vec<(String, String, String, String, i64)> = conn
+        .prepare(
+            "SELECT b.id, p.name || coalesce(' — ' || v.variant_name, ''), b.batch_no, b.expiry_date, sum(l.qty)
+             FROM batches b JOIN stock_levels l ON l.batch_id = b.id JOIN product_variants v ON v.id = b.variant_id
+             JOIN products p ON p.id = v.product_id
+             WHERE b.expiry_date IS NOT NULL AND b.expiry_date <= ?1 AND b.deleted_at IS NULL
+             GROUP BY b.id HAVING sum(l.qty) > 0",
+        )?
+        .query_map([&horizon], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?)))?
+        .collect::<Result<Vec<_>, _>>()?;
+    let mut raised = 0;
+    let mut keys = Vec::new();
+    for (batch_id, name, batch_no, expiry, qty) in &batches {
+        let expired = expiry.as_str() < today.as_str();
+        let key = format!(
+            "expiry:{batch_id}:{}",
+            if expired { "expired" } else { "near" }
+        );
+        let (severity, title) = if expired {
+            ("error", format!("Expired: {name} batch {batch_no}"))
+        } else {
+            ("warning", format!("Expires soon: {name} batch {batch_no}"))
+        };
+        let body = format!(
+            "{} in stock, expiry {expiry}. Sell it first, return it to the supplier or write it off.",
+            *qty as f64 / 1000.0
+        );
+        if notify(
+            conn,
+            "expiry",
+            severity,
+            &title,
+            &body,
+            &key,
+            Some(("batches", batch_id)),
+            &now_str,
+        )? {
+            raised += 1;
+        }
+        keys.push(key);
+    }
+    let open: Vec<String> = conn
+        .prepare("SELECT dedupe_key FROM notifications WHERE kind = 'expiry' AND read_at IS NULL")?
+        .query_map([], |r| r.get(0))?
+        .collect::<Result<Vec<_>, _>>()?;
+    let mut cleared = 0;
+    for key in open.iter().filter(|k| !keys.contains(k)) {
+        cleared += conn.execute(
+            "UPDATE notifications SET read_at = ?1 WHERE dedupe_key = ?2 AND read_at IS NULL",
+            params![now_str, key],
+        )?;
+    }
+    Ok(format!(
+        "{} batches, {raised} new, {cleared} cleared",
+        batches.len()
+    ))
+}
+
 /// Weekly: SQLite's own check plus the ledger-vs-cache views. Problems are reported, never
 /// silently "fixed".
 fn integrity(conn: &Connection, now: DateTime<Utc>) -> AppResult<String> {
@@ -201,6 +280,10 @@ fn integrity(conn: &Connection, now: DateTime<Utc>) -> AppResult<String> {
             "party balances differ from their ledger",
         ),
         ("v_unbalanced_journal_entries", "unbalanced journal entries"),
+        (
+            "v_cost_layer_mismatches",
+            "FIFO cost layers differ from the stock ledger",
+        ),
     ] {
         let n: i64 = conn.query_row(&format!("SELECT count(*) FROM {view}"), [], |r| r.get(0))?;
         if n > 0 {
@@ -267,6 +350,7 @@ fn run(state: &AppState, job: Job) -> AppResult<String> {
             ))
         }
         Job::LowStock => low_stock(&*state.conn()?, now),
+        Job::Expiry => expiry(&*state.conn()?, &settings::load(&*state.conn()?)?, now),
         Job::Integrity => integrity(&*state.conn()?, now),
         Job::Cleanup => {
             let report = cleanup(&*state.conn()?, now)?;

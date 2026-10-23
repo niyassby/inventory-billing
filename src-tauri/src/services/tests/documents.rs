@@ -70,6 +70,8 @@ fn stock_documents_and_stores_are_listed_and_opened() {
                 variant_id: rice.clone(),
                 batch_id: None,
                 qty_change: -2_000,
+                batch_no: None,
+                expiry_date: None,
                 unit_cost: None,
             }],
         },

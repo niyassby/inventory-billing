@@ -9,6 +9,7 @@ mod billing;
 mod catalog_stock;
 mod documents;
 mod images;
+mod inventory_depth;
 mod lists;
 mod network;
 mod perf;

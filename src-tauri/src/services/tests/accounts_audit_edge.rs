@@ -367,6 +367,7 @@ fn a_party_with_a_balance_can_not_be_deleted_and_an_opening_balance_can_not_be_r
             credit_limit: None,
             credit_days: None,
             opening_balance: Some(99_999),
+            price_list_id: None,
             notes: None,
             is_active: true,
         },

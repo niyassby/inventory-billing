@@ -4,4 +4,5 @@
 pub mod ids;
 pub mod money;
 pub mod numbering;
+pub mod price_lists;
 pub mod pricing;

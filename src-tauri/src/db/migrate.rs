@@ -68,6 +68,11 @@ pub const MIGRATIONS: &[Migration] = &[
         name: "printing",
         sql: include_str!("migrations/0010_printing.sql"),
     },
+    Migration {
+        version: 11,
+        name: "inventory_depth",
+        sql: include_str!("migrations/0011_inventory_depth.sql"),
+    },
 ];
 
 pub fn latest_version() -> i64 {

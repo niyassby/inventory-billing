@@ -136,6 +136,12 @@ fn resolved(item: &SearchItem, line: &SaleLineInput, index: usize) -> AppResult<
         hsn_sac: item.hsn_sac.clone(),
         unit_id: item.unit_id.clone(),
         unit_name: item.unit_code.clone(),
+        // The cache keeps base-unit prices without a unit, so only "is this the base unit" matters.
+        base_unit_id: if item.factor_num == item.factor_den {
+            item.unit_id.clone()
+        } else {
+            String::new()
+        },
         factor_num: item.factor_num,
         factor_den: item.factor_den,
         qty: line.qty,
@@ -154,7 +160,9 @@ fn resolved(item: &SearchItem, line: &SaleLineInput, index: usize) -> AppResult<
     })
 }
 
-/// Prices lines from the cache, applying the offline restrictions.
+/// Prices lines from the cache, applying the offline restrictions. Price lists: the customer's,
+/// else the default one (the same rule the hub uses, minus the till's list).
+#[allow(clippy::too_many_arguments, reason = "the bill's pricing context")]
 fn price(
     conn: &Connection,
     ctx: &CachedContext,
@@ -162,8 +170,18 @@ fn price(
     bill_discount: Option<&crate::domain::pricing::Discount>,
     prices_include_tax: Option<bool>,
     place_of_supply: Option<&str>,
+    party_id: Option<&str>,
+    now: DateTime<Utc>,
 ) -> AppResult<Priced> {
     let settings = &ctx.settings;
+    let today = settings.business_date(now);
+    let customer_list = match party_id {
+        Some(id) => store::customer(conn, id)?.and_then(|c| c.price_list_id),
+        None => None,
+    };
+    let list = customer_list
+        .and_then(|id| ctx.price_lists.iter().find(|l| l.id == id))
+        .or_else(|| ctx.price_lists.iter().find(|l| l.is_default));
     let own_state = ctx
         .branch_state
         .clone()
@@ -195,7 +213,28 @@ fn price(
                     ),
                 ));
             }
-            resolved(&item, line, index)
+            let mut r = resolved(&item, line, index)?;
+            if let Some(list) = list {
+                let entries = list
+                    .prices
+                    .iter()
+                    .filter(|p| p.variant_id == r.variant_id)
+                    .map(|p| p.entry.clone())
+                    .collect();
+                if let Some(price) = crate::services::price_lists::price_for(
+                    entries,
+                    &r.unit_id,
+                    &r.base_unit_id,
+                    r.factor_num,
+                    r.factor_den,
+                    r.qty,
+                    &today,
+                ) {
+                    r.catalog_price = price;
+                    r.unit_price = price;
+                }
+            }
+            Ok(r)
         },
     )
 }
@@ -231,6 +270,8 @@ pub fn preview(conn: &Connection, input: &PreviewInput) -> AppResult<Preview> {
         input.bill_discount.as_ref(),
         input.prices_include_tax,
         pos.as_deref(),
+        input.party_id.as_deref(),
+        Utc::now(),
     )?;
     Ok(Preview {
         lines: priced
@@ -309,6 +350,8 @@ pub fn create_invoice(
         input.bill_discount.as_ref(),
         input.prices_include_tax,
         pos.as_deref(),
+        input.party_id.as_deref(),
+        now,
     )?;
     if priced.lines.iter().any(|l| l.unit_price != l.catalog_price) {
         return Err(refuse("Changing an item's price needs the hub."));
@@ -434,6 +477,7 @@ pub fn create_invoice(
                 tax_total: lr.tax,
                 line_total: lr.total,
                 returned_qty: 0,
+                batches: Vec::new(),
             }
         })
         .collect();

@@ -20,12 +20,13 @@ use crate::error::{AppError, AppResult};
 /// Reports stop at this many rows (and say so) rather than freezing the screen.
 const MAX_ROWS: usize = 5_000;
 
-pub const REPORTS: [&str; 13] = [
+pub const REPORTS: [&str; 14] = [
     "sales_summary",
     "sales_by_item",
     "purchases",
     "stock_valuation",
     "stock_movement",
+    "expiry",
     "party_balances",
     "tax_summary",
     "day_book",
@@ -170,6 +171,7 @@ pub fn run(ctx: &Ctx<'_>, q: &ReportQuery) -> AppResult<ReportTable> {
         "sales_by_item" => sales_by_item(conn, q, range, &dates),
         "purchases" => purchases(conn, q, range, &dates),
         "stock_valuation" => stock_valuation(conn, q, range),
+        "expiry" => expiry(conn, q, range, &settings, &today),
         "stock_movement" => stock_movement(conn, q, range, &dates),
         "party_balances" => party_balances(conn, q, range),
         "tax_summary" => tax_summary(conn, q, range, &dates),
@@ -256,7 +258,7 @@ fn sales_by_item(
         conn,
         "SELECT item, sku, sum(qty), sum(revenue), sum(cost) FROM (
             SELECT l.item_name AS item, l.sku AS sku, l.base_qty AS qty, l.taxable AS revenue,
-                   (l.unit_cost * l.base_qty + 500) / 1000 AS cost
+                   coalesce(l.cost_value, (l.unit_cost * l.base_qty + 500) / 1000) AS cost
             FROM sales_invoice_items l JOIN sales_invoices i ON i.id = l.invoice_id
             WHERE i.status = 'finalized' AND i.business_date BETWEEN ?1 AND ?2
             UNION ALL
@@ -288,9 +290,13 @@ fn sales_by_item(
             ]
         })
         .collect();
+    let method = super::stock_posting::valuation(conn)?;
     let mut table = finish(
         q,
-        "Item profit",
+        match method {
+            super::stock_posting::Valuation::Fifo => "Item profit (FIFO cost)",
+            super::stock_posting::Valuation::WeightedAverage => "Item profit (average cost)",
+        },
         range,
         vec![
             col("item", "Item", "text"),
@@ -357,49 +363,137 @@ fn stock_valuation(
         }
         None => "",
     };
+    // Under FIFO the value is what the open cost layers hold (always equal to the ledger); the
+    // oldest layer shows how long the stock has been on the shelf.
+    let fifo = super::stock_posting::valuation(conn)? == super::stock_posting::Valuation::Fifo;
+    let layer_filter = if q.warehouse_id.is_some() {
+        "AND cl.warehouse_id = ?1"
+    } else {
+        ""
+    };
     let rows = query_rows(
         conn,
         &format!(
-            "SELECT p.name || coalesce(' — ' || v.variant_name, ''), v.sku, coalesce(c.name, ''), sum(l.qty), sum(l.value)
+            "SELECT p.name || coalesce(' — ' || v.variant_name, ''), v.sku, coalesce(c.name, ''), sum(l.qty), sum(l.value),
+                    (SELECT min(cl.business_date) FROM cost_layers cl WHERE cl.variant_id = v.id AND cl.qty_left > 0 {layer_filter})
              FROM stock_levels l JOIN product_variants v ON v.id = l.variant_id JOIN products p ON p.id = v.product_id
              LEFT JOIN categories c ON c.id = p.category_id
              WHERE p.is_service = 0 {filter} GROUP BY v.id HAVING sum(l.qty) <> 0 OR sum(l.value) <> 0
              ORDER BY lower(p.name)"
         ),
         &args,
-        5,
+        6,
     )?;
     let rows = rows
         .into_iter()
         .map(|r| {
             let (qty, value) = (r[3].as_i64().unwrap_or(0), r[4].as_i64().unwrap_or(0));
             let avg = if qty > 0 { value * 1000 / qty } else { 0 };
-            vec![
+            let mut row = vec![
                 r[0].clone(),
                 r[1].clone(),
                 r[2].clone(),
                 json!(qty),
                 json!(avg),
                 json!(value),
-            ]
+            ];
+            if fifo {
+                row.push(r[5].clone());
+            }
+            row
         })
         .collect();
+    let mut columns = vec![
+        col("item", "Item", "text"),
+        col("sku", "SKU", "text"),
+        col("category", "Category", "text"),
+        col("qty", "In stock", "qty"),
+        col(
+            "avgCost",
+            if fifo { "Unit cost" } else { "Average cost" },
+            "money",
+        ),
+        col("value", "Value", "money"),
+    ];
+    if fifo {
+        columns.push(col("oldest", "Oldest stock from", "date"));
+    }
     let mut table = finish(
         q,
-        "Stock valuation (weighted average cost)",
+        if fifo {
+            "Stock valuation (FIFO)"
+        } else {
+            "Stock valuation (weighted average cost)"
+        },
         range,
-        vec![
-            col("item", "Item", "text"),
-            col("sku", "SKU", "text"),
-            col("category", "Category", "text"),
-            col("qty", "In stock", "qty"),
-            col("avgCost", "Average cost", "money"),
-            col("value", "Value", "money"),
-        ],
+        columns,
         rows,
         &[5],
     );
     table.from = range.1.into();
+    Ok(table)
+}
+
+/// Batches that have expired or expire within the alert window, with what they're worth.
+fn expiry(
+    conn: &Connection,
+    q: &ReportQuery,
+    range: (&str, &str),
+    settings: &super::settings::Settings,
+    today: &str,
+) -> AppResult<ReportTable> {
+    let horizon = chrono::NaiveDate::parse_from_str(today, "%Y-%m-%d")
+        .map(|d| {
+            (d + chrono::Duration::days(settings.inventory.expiry_alert_days))
+                .format("%Y-%m-%d")
+                .to_string()
+        })
+        .unwrap_or_else(|_| today.to_string());
+    let mut args: Vec<Sql> = vec![horizon.into(), today.to_string().into()];
+    let filter = match &q.warehouse_id {
+        Some(w) => {
+            args.push(w.clone().into());
+            "AND l.warehouse_id = ?3"
+        }
+        None => "",
+    };
+    let rows = query_rows(
+        conn,
+        &format!(
+            "SELECT p.name || coalesce(' — ' || v.variant_name, ''), v.sku, b.batch_no, b.expiry_date,
+                    CAST(julianday(b.expiry_date) - julianday(?2) AS INTEGER), w.name, l.qty, l.value,
+                    CASE WHEN b.expiry_date < ?2 THEN 'Expired' ELSE 'Near expiry' END
+             FROM stock_levels l JOIN batches b ON b.id = l.batch_id JOIN product_variants v ON v.id = l.variant_id
+             JOIN products p ON p.id = v.product_id JOIN warehouses w ON w.id = l.warehouse_id
+             WHERE l.qty > 0 AND b.expiry_date IS NOT NULL AND b.expiry_date <= ?1 {filter}
+             ORDER BY b.expiry_date, lower(p.name)"
+        ),
+        &args,
+        9,
+    )?;
+    let mut table = finish(
+        q,
+        &format!(
+            "Expired and near-expiry stock (next {} days)",
+            settings.inventory.expiry_alert_days
+        ),
+        range,
+        vec![
+            col("item", "Item", "text"),
+            col("sku", "SKU", "text"),
+            col("batch", "Batch", "text"),
+            col("expiry", "Expires", "date"),
+            col("daysLeft", "Days left", "count"),
+            col("store", "Store", "text"),
+            col("qty", "In stock", "qty"),
+            col("value", "Value", "money"),
+            col("status", "Status", "text"),
+        ],
+        rows,
+        &[6, 7],
+    );
+    table.from = today.into();
+    table.to = today.into();
     Ok(table)
 }
 

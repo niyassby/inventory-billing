@@ -248,6 +248,15 @@ pub fn receipt(invoice: &InvoiceDetail, settings: &PublicSettings, reprint: bool
             left.push_str(&format!(" -{}", f.m(line.line_discount)));
         }
         doc.pair(left, f.m(line.line_total));
+        for b in &line.batches {
+            let expiry = b
+                .expiry_date
+                .as_deref()
+                .filter(|e| e.len() >= 7)
+                .map(|e| format!(" exp {}/{}", &e[5..7], &e[..4]))
+                .unwrap_or_default();
+            doc.text(format!("  Batch {}{expiry}", b.batch_no), Placement::Left);
+        }
     }
     doc.rule();
     doc.pair("Items total", f.m(invoice.gross));
