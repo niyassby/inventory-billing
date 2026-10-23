@@ -11,6 +11,7 @@ use super::common::{date, like_pattern, non_negative, optional, Page, PageQuery}
 use super::idempotency;
 use super::parties::open_documents;
 use super::party_ledger;
+use super::period;
 use super::sales::{record_payment, validate_payments, void_payment, PaymentInput};
 use super::settings;
 use super::users::IdInput;
@@ -232,6 +233,7 @@ pub fn record(ctx: &mut Ctx<'_>, input: &PaymentEntryInput) -> AppResult<Payment
     } else {
         ctx.approve("sales.backdate", "date a payment in the past")?
     };
+    let lock = period::check(ctx, &settings, &business_date, "a payment")?;
     let party = party_ledger::load_party(
         ctx.conn,
         &input.party_id,
@@ -316,6 +318,7 @@ pub fn record(ctx: &mut Ctx<'_>, input: &PaymentEntryInput) -> AppResult<Payment
                     &actor.user_id,
                     &now,
                 )?;
+                period::audit(&lock, tx, actor, "payments", &id, &now)?;
                 AuditEntry::new(
                     if input.direction == "in" {
                         "PAYMENT_RECEIVED"
@@ -402,10 +405,18 @@ pub fn void(ctx: &mut Ctx<'_>, input: &VoidPaymentInput) -> AppResult<PaymentDet
     let reason = super::common::required("reason", &input.reason, 300)?;
     let settings = settings::load(ctx.conn)?;
     let today = settings.business_date(ctx.now);
+    let lock = period::check_void(
+        ctx,
+        &settings,
+        &payment.business_date,
+        &today,
+        "voiding a payment",
+    )?;
     let now = ctx.now_str();
     let actor = ctx.actor;
     write(ctx.conn, |tx| {
         void_payment(tx, &payment.id, &today, &reason, actor, &now)?;
+        period::audit(&lock, tx, actor, "payments", &payment.id, &now)?;
         AuditEntry::new("PAYMENT_VOIDED", "payments", Some(&payment.id))
             .by(actor)
             .approved_by(approved_by.as_deref())
@@ -561,7 +572,21 @@ pub struct CloseRegisterInput {
     pub session_id: String,
     pub counted_cash: i64,
     pub notes: Option<String>,
+    /// Why the cash is short or over; required when it is (one of `DIFFERENCE_REASONS`).
+    #[serde(default)]
+    pub difference_reason: Option<String>,
 }
+
+/// Reasons a till's cash can differ from what the system expects.
+pub const DIFFERENCE_REASONS: [&str; 7] = [
+    "counting_error",
+    "wrong_change",
+    "float_error",
+    "unrecorded_sale",
+    "unrecorded_payout",
+    "loss_or_theft",
+    "other",
+];
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
@@ -579,6 +604,9 @@ pub struct RegisterSession {
     pub counted_cash: Option<i64>,
     pub difference: Option<i64>,
     pub closed_at: Option<String>,
+    pub difference_reason: Option<String>,
+    pub notes: Option<String>,
+    pub difference_approved_by: Option<String>,
 }
 
 fn session(conn: &Connection, id: &str) -> AppResult<RegisterSession> {
@@ -586,8 +614,9 @@ fn session(conn: &Connection, id: &str) -> AppResult<RegisterSession> {
         "SELECT s.id, s.register_id, r.name, s.status, s.opened_at, u.name, s.opening_float,
            coalesce((SELECT sum(amount) FROM payments WHERE register_session_id = s.id AND status = 'finalized' AND mode = 'cash' AND direction = 'in'), 0),
            coalesce((SELECT sum(amount) FROM payments WHERE register_session_id = s.id AND status = 'finalized' AND mode = 'cash' AND direction = 'out'), 0),
-           s.counted_cash, s.closed_at
-         FROM register_sessions s JOIN cash_registers r ON r.id = s.register_id LEFT JOIN users u ON u.id = s.opened_by WHERE s.id = ?1",
+           s.counted_cash, s.closed_at, s.difference_reason, s.notes, ap.name
+         FROM register_sessions s JOIN cash_registers r ON r.id = s.register_id LEFT JOIN users u ON u.id = s.opened_by
+         LEFT JOIN users ap ON ap.id = s.difference_approved_by WHERE s.id = ?1",
         [id],
         |r| {
             let float: i64 = r.get(6)?;
@@ -609,6 +638,9 @@ fn session(conn: &Connection, id: &str) -> AppResult<RegisterSession> {
                 counted_cash: counted,
                 difference: counted.map(|c| c - expected),
                 closed_at: r.get(10)?,
+                difference_reason: r.get(11)?,
+                notes: r.get(12)?,
+                difference_approved_by: r.get(13)?,
             })
         },
     )
@@ -652,11 +684,48 @@ pub fn open_register(ctx: &mut Ctx<'_>, input: &OpenRegisterInput) -> AppResult<
     session(ctx.conn, &id)
 }
 
-/// Closes a till with the counted cash; the difference to the expected cash is recorded and audited.
+/// Closes a till with the counted cash. A difference to the expected cash needs a reason (and a
+/// note for "other"); one larger than the limit in Settings → Accounting needs a manager's
+/// approval. All of it is recorded and audited.
 pub fn close_register(ctx: &mut Ctx<'_>, input: &CloseRegisterInput) -> AppResult<RegisterSession> {
     ctx.require("sales.create")?;
     non_negative("countedCash", input.counted_cash)?;
     let notes = optional("notes", input.notes.as_deref(), 500)?;
+    let settings = settings::load(ctx.conn)?;
+    let current = session(ctx.conn, &input.session_id)?;
+    if current.status != "open" {
+        return Err(AppError::conflict("This till session is already closed."));
+    }
+    let difference = input.counted_cash - current.expected_cash;
+    let reason = if difference == 0 {
+        None
+    } else {
+        let reason = input
+            .difference_reason
+            .as_deref()
+            .filter(|r| DIFFERENCE_REASONS.contains(r))
+            .ok_or_else(|| {
+                AppError::field("differenceReason", "Say why the cash is short or over.")
+            })?;
+        if reason == "other" && notes.is_none() {
+            return Err(AppError::field("notes", "Describe what happened."));
+        }
+        Some(reason.to_string())
+    };
+    let approved_by = if difference.abs() > settings.accounting.till_difference_approval {
+        ctx.approve(
+            "day_close.perform",
+            &format!(
+                "a till difference of {}",
+                crate::domain::money::format_minor(
+                    difference,
+                    settings.business.currency_minor_digits
+                )
+            ),
+        )?
+    } else {
+        None
+    };
     let now = ctx.now_str();
     let actor = ctx.actor;
     write(ctx.conn, |tx| {
@@ -664,16 +733,28 @@ pub fn close_register(ctx: &mut Ctx<'_>, input: &CloseRegisterInput) -> AppResul
         if current.status != "open" {
             return Err(AppError::conflict("This till session is already closed."));
         }
+        if current.expected_cash + difference != input.counted_cash {
+            return Err(AppError::conflict(
+                "A payment was taken on this till meanwhile. Count again.",
+            ));
+        }
         tx.execute(
-            "UPDATE register_sessions SET status = 'closed', closed_at = ?1, closed_by = ?2, expected_cash = ?3, counted_cash = ?4, notes = ?5, updated_at = ?1
-             WHERE id = ?6",
-            params![now, actor.user_id, current.expected_cash, input.counted_cash, notes, input.session_id],
+            "UPDATE register_sessions SET status = 'closed', closed_at = ?1, closed_by = ?2, expected_cash = ?3, counted_cash = ?4, notes = ?5,
+               difference_reason = ?6, difference_approved_by = ?7, updated_at = ?1
+             WHERE id = ?8",
+            params![now, actor.user_id, current.expected_cash, input.counted_cash, notes, reason, approved_by, input.session_id],
         )?;
         AuditEntry::new("TILL_CLOSED", "register_sessions", Some(&input.session_id))
             .by(actor)
+            .approved_by(approved_by.as_deref())
             .summary(format!(
-                "expected {} counted {}",
-                current.expected_cash, input.counted_cash
+                "expected {} counted {}{}",
+                current.expected_cash,
+                input.counted_cash,
+                reason
+                    .as_deref()
+                    .map(|r| format!(" ({r})"))
+                    .unwrap_or_default()
             ))
             .write(tx, &now)?;
         session(tx, &input.session_id)

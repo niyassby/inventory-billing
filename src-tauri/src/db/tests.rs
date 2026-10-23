@@ -124,7 +124,7 @@ fn amount_paid(conn: &Connection, invoice_id: &str) -> (i64, String) {
 fn migrates_a_fresh_database_and_is_idempotent() {
     let mut conn = open_in_memory().unwrap();
     let first = migrate::run(&mut conn).unwrap();
-    assert_eq!(first.applied, vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
+    assert_eq!(first.applied, vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
     assert_eq!(first.version, migrate::latest_version());
 
     let second = migrate::run(&mut conn).unwrap();
@@ -221,8 +221,8 @@ fn the_printing_migration_applies_to_a_database_in_use() {
     insert_movement(&conn, "m1", "opening", 10_000, 42_000).unwrap();
     finalized_invoice(&conn, "i1", "INV/26-27/00001");
     let outcome = migrate::run(&mut conn).unwrap();
-    assert_eq!(outcome.applied, vec![10, 11]);
-    assert_eq!(outcome.version, 11);
+    assert_eq!(outcome.applied, vec![10, 11, 12]);
+    assert_eq!(outcome.version, 12);
 
     let (qty, invoices): (i64, i64) = conn
         .query_row(
@@ -285,7 +285,7 @@ fn the_inventory_depth_migration_keeps_weighted_average_history() {
     ))
     .unwrap();
     let outcome = migrate::run(&mut conn).unwrap();
-    assert_eq!(outcome.applied, vec![11]);
+    assert_eq!(outcome.applied, vec![11, 12]);
 
     let (qty, value): (i64, i64) = conn
         .query_row(
@@ -366,6 +366,111 @@ fn the_inventory_depth_migration_keeps_weighted_average_history() {
             "manager:price_lists.manage",
             "owner:inventory.valuation",
             "owner:price_lists.manage"
+        ]
+    );
+}
+
+#[test]
+fn the_accounting_depth_migration_keeps_closed_days_and_guards_journals() {
+    // A version-11 shop with a closed day and a finalized invoice, then 0012 on top.
+    let mut conn = crate::db::open_in_memory().unwrap();
+    migrate::run_migrations(&mut conn, &migrate::MIGRATIONS[..11]).unwrap();
+    seed_basics(&conn);
+    finalized_invoice(&conn, "i1", "INV/26-27/00001");
+    conn.execute_batch(&format!(
+        "INSERT INTO day_closes (id, branch_id, business_date, closed_at, closed_by, summary_json, created_at, updated_at)
+         VALUES ('d1', 'b1', '{TODAY}', '{NOW}', 'u1', '{{}}', '{NOW}', '{NOW}');"
+    ))
+    .unwrap();
+    let outcome = migrate::run(&mut conn).unwrap();
+    assert_eq!(outcome.applied, vec![12]);
+
+    let (status, invoices): (String, i64) = conn
+        .query_row(
+            "SELECT (SELECT status FROM day_closes WHERE id = 'd1'), (SELECT count(*) FROM sales_invoices)",
+            [],
+            |r| Ok((r.get(0)?, r.get(1)?)),
+        )
+        .unwrap();
+    assert_eq!(
+        (status.as_str(), invoices),
+        ("closed", 1),
+        "the closed day stays closed"
+    );
+    let retained: String = conn
+        .query_row(
+            "SELECT name FROM accounts WHERE code = '3100' AND account_type = 'equity'",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_eq!(retained, "Retained Earnings");
+
+    // A draft journal's lines can change; once posted, neither the journal nor its lines can.
+    conn.execute_batch(&format!(
+        "INSERT INTO manual_journals (id, doc_no, number_period, doc_seq, business_date, narration, created_at, updated_at)
+           VALUES ('j1', 'JV/26-27/00001', '26-27', 1, '{TODAY}', 'Fees', '{NOW}', '{NOW}');
+         INSERT INTO manual_journal_lines (id, journal_id, line_no, account_id, debit, credit, created_at)
+           VALUES ('l1', 'j1', 1, '{CASH_ACCOUNT}', 100, 0, '{NOW}');
+         DELETE FROM manual_journal_lines WHERE id = 'l1';"
+    ))
+    .unwrap();
+    let posted_without_entry = conn.execute(
+        "UPDATE manual_journals SET status = 'posted', approved_by = 'u1' WHERE id = 'j1'",
+        [],
+    );
+    assert!(err_text(posted_without_entry).contains("CHECK"));
+    conn.execute_batch(&format!(
+        "INSERT INTO journal_entries (id, business_date, source_type, source_id, narration, created_at)
+           VALUES ('e1', '{TODAY}', 'manual_journal', 'j1', 'Fees', '{NOW}');
+         UPDATE manual_journals SET status = 'posted', approved_by = 'u1', journal_entry_id = 'e1' WHERE id = 'j1';"
+    ))
+    .unwrap();
+    let edit = conn.execute(
+        "UPDATE manual_journals SET narration = 'x' WHERE id = 'j1'",
+        [],
+    );
+    assert!(err_text(edit).contains("DOCUMENT_FINALIZED"));
+    let add_line = conn.execute(
+        &format!(
+            "INSERT INTO manual_journal_lines (id, journal_id, line_no, account_id, debit, credit, created_at)
+             VALUES ('l2', 'j1', 1, '{CASH_ACCOUNT}', 100, 0, '{NOW}')"
+        ),
+        [],
+    );
+    assert!(err_text(add_line).contains("DOCUMENT_FINALIZED"));
+    let delete = conn.execute("DELETE FROM manual_journals WHERE id = 'j1'", []);
+    assert!(err_text(delete).contains("DOCUMENT_FINALIZED"));
+    // A finished bank reconciliation is history: append-only.
+    conn.execute_batch(&format!(
+        "INSERT INTO bank_reconciliations (id, account_id, statement_date, statement_balance, book_balance, uncleared_in, uncleared_out, difference, created_at)
+         VALUES ('r1', '{CASH_ACCOUNT}', '{TODAY}', 0, 0, 0, 0, 0, '{NOW}');"
+    ))
+    .unwrap();
+    let change = conn.execute(
+        "UPDATE bank_reconciliations SET difference = 1 WHERE id = 'r1'",
+        [],
+    );
+    assert!(err_text(change).contains("APPEND_ONLY"));
+    let grants: Vec<String> = {
+        let mut stmt = conn
+            .prepare(
+                "SELECT r.code || ':' || rp.permission_code FROM role_permissions rp JOIN roles r ON r.id = rp.role_id
+                 WHERE rp.permission_code IN ('journal.approve', 'period.override', 'period.manage', 'audit.export') ORDER BY 1",
+            )
+            .unwrap();
+        let rows = stmt.query_map([], |r| r.get(0)).unwrap();
+        rows.map(Result::unwrap).collect()
+    };
+    assert_eq!(
+        grants,
+        [
+            "accountant:audit.export",
+            "manager:period.override",
+            "owner:audit.export",
+            "owner:journal.approve",
+            "owner:period.manage",
+            "owner:period.override",
         ]
     );
 }

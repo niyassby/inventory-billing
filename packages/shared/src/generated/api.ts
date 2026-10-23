@@ -64,6 +64,10 @@ export type PrintDocument =
       type: "till_close";
     }
   | {
+      summary: DaySummary;
+      type: "day_close";
+    }
+  | {
       slip: HeldSlip;
       type: "held_slip";
     }
@@ -195,9 +199,25 @@ export interface ApiContract {
       input: MoneyAccountInput;
       output: AccountRow;
     };
+    attachments_add: {
+      input: AttachmentAddInput;
+      output: AttachmentInfo;
+    };
+    attachments_get: {
+      input: AttachmentRef;
+      output: AttachmentFile;
+    };
+    attachments_remove: {
+      input: AttachmentRef;
+      output: null;
+    };
     audit_actions: {
       input: NoInput;
       output: string[];
+    };
+    audit_export: {
+      input: AuditQuery;
+      output: AuditExport;
     };
     audit_list: {
       input: AuditQuery;
@@ -247,6 +267,46 @@ export interface ApiContract {
       input: RestoreInput;
       output: VerifiedBackup;
     };
+    bank_auto_match: {
+      input: AccountInput;
+      output: AutoMatchResult;
+    };
+    bank_finish: {
+      input: FinishInput;
+      output: ReconciliationRecord;
+    };
+    bank_history: {
+      input: AccountInput;
+      output: ReconciliationRecord[];
+    };
+    bank_ignore: {
+      input: IgnoreInput;
+      output: null;
+    };
+    bank_import: {
+      input: StatementImportInput;
+      output: StatementImportResult;
+    };
+    bank_match: {
+      input: MatchInput;
+      output: null;
+    };
+    bank_reconciliation: {
+      input: ReconcileQuery;
+      output: Reconciliation;
+    };
+    bank_tick: {
+      input: TickInput;
+      output: null;
+    };
+    bank_unmatch: {
+      input: UnmatchInput;
+      output: null;
+    };
+    bank_view: {
+      input: BankQuery;
+      output: BankView;
+    };
     brands_list: {
       input: NoInput;
       output: Brand[];
@@ -267,6 +327,26 @@ export interface ApiContract {
       input: CategoryInput;
       output: IdOut;
     };
+    cheques_bounce: {
+      input: ChequeStatusInput;
+      output: Cheque;
+    };
+    cheques_cancel: {
+      input: ChequeStatusInput;
+      output: Cheque;
+    };
+    cheques_clear: {
+      input: ChequeClearInput;
+      output: Cheque;
+    };
+    cheques_list: {
+      input: ChequeQuery;
+      output: PageFor_Cheque;
+    };
+    cheques_save: {
+      input: ChequeInput;
+      output: Cheque;
+    };
     client_cached_customers: {
       input: CustomerSearch;
       output: CachedCustomer[];
@@ -282,6 +362,10 @@ export interface ApiContract {
     day_closes_list: {
       input: NoInput;
       output: DayCloseRow[];
+    };
+    day_reopen: {
+      input: ReopenDayInput;
+      output: null;
     };
     day_summary: {
       input: DayInput;
@@ -371,6 +455,46 @@ export interface ApiContract {
       input: ValuationSwitchInput;
       output: ValuationSwitchResult;
     };
+    journals_allow_restricted: {
+      input: JournalActionInput;
+      output: JournalDetail;
+    };
+    journals_approve: {
+      input: JournalActionInput;
+      output: JournalDetail;
+    };
+    journals_delete: {
+      input: JournalActionInput;
+      output: null;
+    };
+    journals_get: {
+      input: IdInput;
+      output: JournalDetail;
+    };
+    journals_list: {
+      input: JournalListQuery;
+      output: PageFor_JournalListItem;
+    };
+    journals_post: {
+      input: JournalActionInput;
+      output: JournalDetail;
+    };
+    journals_reverse: {
+      input: ReverseJournalInput;
+      output: JournalDetail;
+    };
+    journals_save: {
+      input: JournalInput;
+      output: JournalDetail;
+    };
+    journals_send_back: {
+      input: JournalActionInput;
+      output: JournalDetail;
+    };
+    journals_submit: {
+      input: JournalActionInput;
+      output: JournalDetail;
+    };
     labels_items: {
       input: LabelSourceInput;
       output: LabelItem[];
@@ -458,6 +582,10 @@ export interface ApiContract {
     payments_void: {
       input: VoidPaymentInput;
       output: PaymentDetail;
+    };
+    period_status: {
+      input: NoInput;
+      output: PeriodStatus;
     };
     permissions_list: {
       input: NoInput;
@@ -638,6 +766,26 @@ export interface ApiContract {
     register_open: {
       input: OpenRegisterInput;
       output: RegisterSession;
+    };
+    report_views_delete: {
+      input: IdInput;
+      output: null;
+    };
+    report_views_list: {
+      input: NoInput;
+      output: ReportView[];
+    };
+    report_views_run_now: {
+      input: IdInput;
+      output: string;
+    };
+    report_views_save: {
+      input: ReportViewInput;
+      output: ReportView;
+    };
+    report_views_schedule: {
+      input: ScheduleInput;
+      output: ReportView;
     };
     reports_run: {
       input: ReportQuery;
@@ -855,6 +1003,22 @@ export interface ApiContract {
       input: WarehouseInput;
       output: Warehouse;
     };
+    year_close: {
+      input: YearCloseInput;
+      output: YearRow;
+    };
+    year_close_preview: {
+      input: YearPreviewInput;
+      output: YearClosePreview;
+    };
+    year_reopen: {
+      input: YearReopenInput;
+      output: YearRow;
+    };
+    years_list: {
+      input: NoInput;
+      output: YearRow[];
+    };
   };
   error: AppError;
   localCommands: (
@@ -952,6 +1116,53 @@ export interface MoneyAccountInput {
 }
 /**
  * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "AttachmentAddInput".
+ */
+export interface AttachmentAddInput {
+  /**
+   * The file, base64 encoded (no `data:` prefix).
+   */
+  data: string;
+  entityId: string;
+  /**
+   * "manual_journal".
+   */
+  entityType: string;
+  fileName: string;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "AttachmentInfo".
+ */
+export interface AttachmentInfo {
+  contentType: string;
+  createdAt: string;
+  createdByName?: string | null;
+  fileName: string;
+  id: string;
+  sizeBytes: number;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "AttachmentRef".
+ */
+export interface AttachmentRef {
+  id: string;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "AttachmentFile".
+ */
+export interface AttachmentFile {
+  contentType: string;
+  /**
+   * The file, base64 encoded.
+   */
+  data: string;
+  fileName: string;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
  * via the `definition` "AuditQuery".
  */
 export interface AuditQuery {
@@ -973,13 +1184,14 @@ export interface AuditQuery {
 }
 /**
  * This interface was referenced by `ApiContract`'s JSON-Schema
- * via the `definition` "Page_for_AuditRow".
+ * via the `definition` "AuditExport".
  */
-export interface PageFor_AuditRow {
-  items: AuditRow[];
-  page: number;
-  pageSize: number;
-  total: number;
+export interface AuditExport {
+  rows: AuditRow[];
+  /**
+   * More rows matched than were exported.
+   */
+  truncated: boolean;
 }
 /**
  * This interface was referenced by `ApiContract`'s JSON-Schema
@@ -995,6 +1207,16 @@ export interface AuditRow {
   occurredAt: string;
   summary?: string | null;
   userName?: string | null;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "Page_for_AuditRow".
+ */
+export interface PageFor_AuditRow {
+  items: AuditRow[];
+  page: number;
+  pageSize: number;
+  total: number;
 }
 /**
  * This interface was referenced by `ApiContract`'s JSON-Schema
@@ -1193,6 +1415,326 @@ export interface BackupSettings {
 }
 /**
  * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "AccountInput".
+ */
+export interface AccountInput {
+  accountId: string;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "AutoMatchResult".
+ */
+export interface AutoMatchResult {
+  /**
+   * Lines with more than one equally good candidate (left for a person to choose).
+   */
+  ambiguous: number;
+  matched: number;
+  unmatched: number;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "FinishInput".
+ */
+export interface FinishInput {
+  accountId: string;
+  /**
+   * Required when a difference remains.
+   */
+  notes?: string | null;
+  statementBalance: number;
+  statementDate: string;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "ReconciliationRecord".
+ */
+export interface ReconciliationRecord {
+  bookBalance: number;
+  createdAt: string;
+  createdByName?: string | null;
+  difference: number;
+  id: string;
+  notes?: string | null;
+  statementBalance: number;
+  statementDate: string;
+  unclearedIn: number;
+  unclearedOut: number;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "IgnoreInput".
+ */
+export interface IgnoreInput {
+  /**
+   * A note ignores the line (not a real movement: an opening-balance row, a duplicate); none brings it back.
+   */
+  note?: string | null;
+  statementLineId: string;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "StatementImportInput".
+ */
+export interface StatementImportInput {
+  accountId: string;
+  /**
+   * false: check and show what would be imported; true: import.
+   */
+  apply?: boolean;
+  /**
+   * The file's text.
+   */
+  csv: string;
+  fileName: string;
+  /**
+   * None: the mapping saved for this account (if any); without one only the sample comes back.
+   */
+  mapping?: StatementMapping | null;
+  /**
+   * Remember this mapping for the account.
+   */
+  saveMapping?: boolean;
+}
+/**
+ * Which column holds what (0-based), and how dates are written.
+ *
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "StatementMapping".
+ */
+export interface StatementMapping {
+  /**
+   * One signed column (positive = money in)…
+   */
+  amountColumn?: number | null;
+  balanceColumn?: number | null;
+  dateColumn: number;
+  /**
+   * One of `domain::statement::DATE_FORMATS`.
+   */
+  dateFormat: string;
+  depositColumn?: number | null;
+  descriptionColumn: number;
+  hasHeader?: boolean;
+  referenceColumn?: number | null;
+  /**
+   * Lines before the header (bank name, account number…).
+   */
+  skipRows?: number;
+  /**
+   * …or separate withdrawal and deposit columns.
+   */
+  withdrawalColumn?: number | null;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "StatementImportResult".
+ */
+export interface StatementImportResult {
+  /**
+   * Column names (the header, or "Column 1"…).
+   */
+  columns: string[];
+  dateFormats: string[];
+  duplicates: number;
+  errors: number;
+  fromDate?: string | null;
+  importId?: string | null;
+  imported: boolean;
+  mapping?: StatementMapping | null;
+  newRows: number;
+  /**
+   * The first rows as they would be imported.
+   */
+  rows: StatementPreviewRow[];
+  /**
+   * The first rows of the file as read (for choosing columns).
+   */
+  sample: string[][];
+  toDate?: string | null;
+  totalRows: number;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "StatementPreviewRow".
+ */
+export interface StatementPreviewRow {
+  amount?: number | null;
+  balance?: number | null;
+  description: string;
+  /**
+   * Already imported for this account.
+   */
+  duplicate: boolean;
+  error?: string | null;
+  reference?: string | null;
+  /**
+   * Line number in the file (1-based).
+   */
+  rowNo: number;
+  txnDate?: string | null;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "MatchInput".
+ */
+export interface MatchInput {
+  /**
+   * One or more uncleared book lines whose amounts add up to the statement line's.
+   */
+  journalLineIds: string[];
+  statementLineId: string;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "ReconcileQuery".
+ */
+export interface ReconcileQuery {
+  accountId: string;
+  /**
+   * The balance on the bank statement that day; default: the last imported line's balance.
+   */
+  statementBalance?: number | null;
+  statementDate: string;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "Reconciliation".
+ */
+export interface Reconciliation {
+  accountId: string;
+  accountName: string;
+  bookBalance: number;
+  /**
+   * Statement balance − expected (zero when reconciled).
+   */
+  difference?: number | null;
+  /**
+   * What the statement should show: book − uncleared in + uncleared out + not in books.
+   */
+  expectedStatementBalance: number;
+  /**
+   * Statement lines not matched to the books (bank charges, interest…).
+   */
+  notInBooks: StatementLineRow[];
+  notInBooksTotal: number;
+  statementBalance?: number | null;
+  statementDate: string;
+  /**
+   * Money in the books but not yet on the statement (deposits in transit).
+   */
+  unclearedIn: BookLineRow[];
+  unclearedInTotal: number;
+  /**
+   * Money out in the books but not yet on the statement (cheques not presented).
+   */
+  unclearedOut: BookLineRow[];
+  unclearedOutTotal: number;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "StatementLineRow".
+ */
+export interface StatementLineRow {
+  amount: number;
+  balance?: number | null;
+  description: string;
+  id: string;
+  ignoreNote?: string | null;
+  /**
+   * The book lines it is matched to.
+   */
+  journalLineIds: string[];
+  reference?: string | null;
+  /**
+   * unmatched, matched or ignored.
+   */
+  status: string;
+  txnDate: string;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "BookLineRow".
+ */
+export interface BookLineRow {
+  /**
+   * Positive = money in.
+   */
+  amount: number;
+  businessDate: string;
+  clearedDate?: string | null;
+  /**
+   * The payment's number and reference, when the line is a payment.
+   */
+  docNo?: string | null;
+  journalLineId: string;
+  /**
+   * auto, manual or ticked.
+   */
+  method?: string | null;
+  narration: string;
+  reference?: string | null;
+  sourceId?: string | null;
+  sourceType: string;
+  statementLineId?: string | null;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "TickInput".
+ */
+export interface TickInput {
+  accountId: string;
+  /**
+   * The day the bank cleared them.
+   */
+  clearedDate: string;
+  journalLineIds: string[];
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "UnmatchInput".
+ */
+export interface UnmatchInput {
+  /**
+   * …or clear the tick of one book line.
+   */
+  journalLineId?: string | null;
+  /**
+   * Unmatch a statement line (all its book lines)…
+   */
+  statementLineId?: string | null;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "BankQuery".
+ */
+export interface BankQuery {
+  accountId: string;
+  /**
+   * Cleared items and matched lines from this day (default: 60 days before `to`).
+   */
+  from?: string | null;
+  /**
+   * Default: today.
+   */
+  to?: string | null;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "BankView".
+ */
+export interface BankView {
+  accountId: string;
+  accountName: string;
+  bookLines: BookLineRow[];
+  from: string;
+  hasProfile: boolean;
+  matchDays: number;
+  statementLines: StatementLineRow[];
+  to: string;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
  * via the `definition` "Brand".
  */
 export interface Brand {
@@ -1244,6 +1786,114 @@ export interface CategoryInput {
   id?: string | null;
   name: string;
   parentId?: string | null;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "ChequeStatusInput".
+ */
+export interface ChequeStatusInput {
+  id: string;
+  reason: string;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "Cheque".
+ */
+export interface Cheque {
+  accountId: string;
+  accountName: string;
+  amount: number;
+  bankName?: string | null;
+  chequeDate: string;
+  chequeNo: string;
+  clearedDate?: string | null;
+  /**
+   * Days until the cheque's date (negative: overdue).
+   */
+  daysLeft: number;
+  /**
+   * "in" (received from a customer) or "out" (given to a supplier).
+   */
+  direction: string;
+  id: string;
+  notes?: string | null;
+  partyId: string;
+  partyName: string;
+  paymentDocNo?: string | null;
+  paymentId?: string | null;
+  /**
+   * pending, cleared, bounced or cancelled.
+   */
+  status: string;
+  statusNote?: string | null;
+  updatedAt: string;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "ChequeClearInput".
+ */
+export interface ChequeClearInput {
+  /**
+   * Apply the receipt to the party's oldest open bills.
+   */
+  autoAllocate?: boolean;
+  /**
+   * The day the bank credited (or debited) it; default today.
+   */
+  clearedDate?: string | null;
+  id: string;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "ChequeQuery".
+ */
+export interface ChequeQuery {
+  /**
+   * Sort the other way round.
+   */
+  descending?: boolean;
+  direction?: string | null;
+  /**
+   * Pending cheques dated on or before this day.
+   */
+  dueBy?: string | null;
+  page?: number | null;
+  pageSize?: number | null;
+  /**
+   * Which column to sort by: one of the keys the list documents (unknown keys are refused).
+   */
+  sort?: string | null;
+  status?: string | null;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "Page_for_Cheque".
+ */
+export interface PageFor_Cheque {
+  items: Cheque[];
+  page: number;
+  pageSize: number;
+  total: number;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "ChequeInput".
+ */
+export interface ChequeInput {
+  /**
+   * The bank account it is (or will be) deposited into or paid from.
+   */
+  accountId: string;
+  amount: number;
+  bankName?: string | null;
+  chequeDate: string;
+  chequeNo: string;
+  direction: string;
+  expectedUpdatedAt?: string | null;
+  id?: string | null;
+  idempotencyKey?: string | null;
+  notes?: string | null;
+  partyId: string;
 }
 /**
  * This interface was referenced by `ApiContract`'s JSON-Schema
@@ -1308,6 +1958,10 @@ export interface DaySummary {
   closedBy?: string | null;
   discountTotal: number;
   expensesTotal: number;
+  /**
+   * Documents dated this day need `period.override`.
+   */
+  locked?: boolean;
   notes?: string | null;
   /**
    * Till sessions still open (they must be closed before the day can be).
@@ -1316,6 +1970,11 @@ export interface DaySummary {
   paid: ModeAmount[];
   purchasesTotal: number;
   received: ModeAmount[];
+  reopenReason?: string | null;
+  /**
+   * The owner reopened this day (documents can be dated in it until it is closed again).
+   */
+  reopened?: boolean;
   returnsTotal: number;
   salesTotal: number;
   taxTotal: number;
@@ -1334,10 +1993,19 @@ export interface ModeAmount {
  * via the `definition` "TillSummary".
  */
 export interface TillSummary {
+  /**
+   * The manager who approved a difference above the limit.
+   */
+  approvedBy?: string | null;
   countedBy?: string | null;
   countedCash: number;
   difference: number;
+  /**
+   * Why the cash was short or over (a reason code, see `payments::DIFFERENCE_REASONS`).
+   */
+  differenceReason?: string | null;
   expectedCash: number;
+  notes?: string | null;
   register: string;
 }
 /**
@@ -1350,7 +2018,22 @@ export interface DayCloseRow {
   closedAt: string;
   closedBy: string;
   notes?: string | null;
+  reopenReason?: string | null;
+  reopenedAt?: string | null;
+  reopenedBy?: string | null;
   salesTotal: number;
+  /**
+   * "closed" or "reopened".
+   */
+  status: string;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "ReopenDayInput".
+ */
+export interface ReopenDayInput {
+  businessDate: string;
+  reason: string;
 }
 /**
  * This interface was referenced by `ApiContract`'s JSON-Schema
@@ -1889,6 +2572,169 @@ export interface ValuationSwitchResult {
 }
 /**
  * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "JournalActionInput".
+ */
+export interface JournalActionInput {
+  expectedUpdatedAt?: string | null;
+  id: string;
+  /**
+   * Sending back: why. Allowing control accounts: why.
+   */
+  note?: string | null;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "JournalDetail".
+ */
+export interface JournalDetail {
+  allowRestricted: boolean;
+  approvedAt?: string | null;
+  approvedByName?: string | null;
+  attachments: AttachmentInfo[];
+  businessDate: string;
+  createdAt: string;
+  createdBy?: string | null;
+  createdByName?: string | null;
+  docNo: string;
+  id: string;
+  lines: JournalLineRow[];
+  narration: string;
+  postedAt?: string | null;
+  postedByName?: string | null;
+  restrictedByName?: string | null;
+  restrictedReason?: string | null;
+  reversalOf?: DocRef | null;
+  reversedBy?: DocRef | null;
+  reviewNote?: string | null;
+  /**
+   * draft, submitted, approved, posted or reversed.
+   */
+  status: string;
+  submittedAt?: string | null;
+  submittedByName?: string | null;
+  totalCredit: number;
+  totalDebit: number;
+  updatedAt: string;
+  /**
+   * Lines on control accounts (they need `allow_restricted`).
+   */
+  usesRestricted: boolean;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "JournalLineRow".
+ */
+export interface JournalLineRow {
+  accountCode: string;
+  accountId: string;
+  accountName: string;
+  accountSubtype: string;
+  credit: number;
+  debit: number;
+  lineNo: number;
+  memo?: string | null;
+  partyId?: string | null;
+  partyName?: string | null;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "DocRef".
+ */
+export interface DocRef {
+  docNo: string;
+  id: string;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "JournalListQuery".
+ */
+export interface JournalListQuery {
+  /**
+   * Sort the other way round.
+   */
+  descending?: boolean;
+  from?: string | null;
+  page?: number | null;
+  pageSize?: number | null;
+  search?: string | null;
+  /**
+   * Which column to sort by: one of the keys the list documents (unknown keys are refused).
+   */
+  sort?: string | null;
+  status?: string | null;
+  to?: string | null;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "Page_for_JournalListItem".
+ */
+export interface PageFor_JournalListItem {
+  items: JournalListItem[];
+  page: number;
+  pageSize: number;
+  total: number;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "JournalListItem".
+ */
+export interface JournalListItem {
+  attachmentCount: number;
+  businessDate: string;
+  createdByName?: string | null;
+  docNo: string;
+  id: string;
+  narration: string;
+  status: string;
+  total: number;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "ReverseJournalInput".
+ */
+export interface ReverseJournalInput {
+  /**
+   * Default: today.
+   */
+  businessDate?: string | null;
+  id: string;
+  idempotencyKey: string;
+  reason: string;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "JournalInput".
+ */
+export interface JournalInput {
+  /**
+   * Default: today.
+   */
+  businessDate?: string | null;
+  expectedUpdatedAt?: string | null;
+  /**
+   * None creates a draft (with `idempotency_key`); an id edits a draft.
+   */
+  id?: string | null;
+  idempotencyKey?: string | null;
+  lines: JournalLineInput[];
+  narration: string;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "JournalLineInput".
+ */
+export interface JournalLineInput {
+  accountId: string;
+  credit?: number;
+  debit?: number;
+  memo?: string | null;
+  /**
+   * Required on receivable and payable lines (and only allowed there).
+   */
+  partyId?: string | null;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
  * via the `definition` "LabelSourceInput".
  */
 export interface LabelSourceInput {
@@ -2338,6 +3184,20 @@ export interface VoidPaymentInput {
 }
 /**
  * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "PeriodStatus".
+ */
+export interface PeriodStatus {
+  canManage: boolean;
+  canOverride: boolean;
+  lockClosedDays: boolean;
+  /**
+   * Documents on or before this day are locked (reopened days excepted).
+   */
+  lockedThrough?: string | null;
+  reopenedDays: string[];
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
  * via the `definition` "PermissionInfo".
  */
 export interface PermissionInfo {
@@ -2590,8 +3450,11 @@ export interface RegisterSession {
   closedAt?: string | null;
   countedCash?: number | null;
   difference?: number | null;
+  differenceApprovedBy?: string | null;
+  differenceReason?: string | null;
   expectedCash: number;
   id: string;
+  notes?: string | null;
   openedAt: string;
   openedByName?: string | null;
   openingFloat: number;
@@ -3484,6 +4347,10 @@ export interface VoidBillInput {
  */
 export interface CloseRegisterInput {
   countedCash: number;
+  /**
+   * Why the cash is short or over; required when it is (one of `DIFFERENCE_REASONS`).
+   */
+  differenceReason?: string | null;
   notes?: string | null;
   sessionId: string;
 }
@@ -3497,6 +4364,80 @@ export interface OpenRegisterInput {
 }
 /**
  * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "ReportView".
+ */
+export interface ReportView {
+  id: string;
+  name: string;
+  params: ViewParams;
+  report: string;
+  schedule?: ScheduleInfo | null;
+  updatedAt: string;
+}
+/**
+ * What a view remembers. `period` is one of the screen's presets or "custom" (then `from` and `to`); the rest are the report's own options.
+ *
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "ViewParams".
+ */
+export interface ViewParams {
+  accountId?: string | null;
+  categoryId?: string | null;
+  from?: string | null;
+  groupBy?: string | null;
+  partyId?: string | null;
+  partyType?: string | null;
+  period?: string;
+  to?: string | null;
+  userId?: string | null;
+  variantId?: string | null;
+  warehouseId?: string | null;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "ScheduleInfo".
+ */
+export interface ScheduleInfo {
+  folder: string;
+  /**
+   * daily (yesterday), weekly (last Monday to Sunday) or monthly (last month).
+   */
+  frequency: string;
+  isActive: boolean;
+  lastError?: string | null;
+  lastPeriod?: string | null;
+  lastRunAt?: string | null;
+  lastStatus?: string | null;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "ReportViewInput".
+ */
+export interface ReportViewInput {
+  expectedUpdatedAt?: string | null;
+  id?: string | null;
+  name: string;
+  params: ViewParams;
+  report: string;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "ScheduleInput".
+ */
+export interface ScheduleInput {
+  /**
+   * A folder on the hub PC (full path, must exist).
+   */
+  folder?: string | null;
+  /**
+   * daily, weekly or monthly; None removes the schedule.
+   */
+  frequency?: string | null;
+  isActive?: boolean;
+  viewId: string;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
  * via the `definition` "ReportQuery".
  */
 export interface ReportQuery {
@@ -3505,9 +4446,21 @@ export interface ReportQuery {
    */
   accountId?: string | null;
   /**
+   * …one category (product category, or expense category on the expenses report)…
+   */
+  categoryId?: string | null;
+  /**
    * First day (YYYY-MM-DD); default: the start of the current month.
    */
   from?: string | null;
+  /**
+   * How rows are grouped (the report's `groupOptions`; default: the first).
+   */
+  groupBy?: string | null;
+  /**
+   * Drill-down filters: one customer or supplier ("walk_in" = bills without one)…
+   */
+  partyId?: string | null;
   /**
    * Party balances: "customer" or "supplier".
    */
@@ -3517,6 +4470,14 @@ export interface ReportQuery {
    * Last day; default: today.
    */
   to?: string | null;
+  /**
+   * …one cashier…
+   */
+  userId?: string | null;
+  /**
+   * …one item.
+   */
+  variantId?: string | null;
   /**
    * Stock reports: one store only.
    */
@@ -3529,6 +4490,15 @@ export interface ReportQuery {
 export interface ReportTable {
   columns: Column[];
   from: string;
+  /**
+   * The grouping used, and the ones this report offers.
+   */
+  groupBy?: string | null;
+  groupOptions?: GroupOption[];
+  /**
+   * Where each row leads (same order as `rows`; empty when rows lead nowhere).
+   */
+  links?: (RowLink | null)[];
   report: string;
   rows: unknown[][];
   title: string;
@@ -3553,6 +4523,35 @@ export interface Column {
    */
   kind: string;
   label: string;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "GroupOption".
+ */
+export interface GroupOption {
+  key: string;
+  label: string;
+}
+/**
+ * Where a row leads: another report (with these parameters) or a document.
+ *
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "RowLink".
+ */
+export interface RowLink {
+  categoryId?: string | null;
+  from?: string | null;
+  groupBy?: string | null;
+  id?: string | null;
+  /**
+   * "report", or a document: "sales_invoice", "sales_return", "purchase_bill", "goods_receipt", "purchase_return", "payment", "manual_journal".
+   */
+  kind: string;
+  partyId?: string | null;
+  report?: string | null;
+  to?: string | null;
+  userId?: string | null;
+  variantId?: string | null;
 }
 /**
  * This interface was referenced by `ApiContract`'s JSON-Schema
@@ -3988,6 +4987,7 @@ export interface VoidInput {
  * via the `definition` "Settings".
  */
 export interface Settings {
+  accounting?: AccountingSettings;
   backup: BackupSettings;
   business: BusinessSettings;
   inventory: InventorySettings;
@@ -3995,6 +4995,20 @@ export interface Settings {
   network: NetworkSettings;
   security: SecuritySettings;
   tax: TaxSettings;
+}
+export interface AccountingSettings {
+  /**
+   * Bank matching looks this many days either side of the book date.
+   */
+  bankMatchDays?: number;
+  /**
+   * Documents dated on or before the latest closed day need `period.override`.
+   */
+  lockClosedDays?: boolean;
+  /**
+   * A till difference larger than this (minor units, either way) needs a manager's approval.
+   */
+  tillDifferenceApproval?: number;
 }
 /**
  * This interface was referenced by `ApiContract`'s JSON-Schema
@@ -4847,6 +5861,107 @@ export interface WarehouseInput {
   code: string;
   id?: string | null;
   name: string;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "YearCloseInput".
+ */
+export interface YearCloseInput {
+  /**
+   * Any day of the year; the year is the financial year containing it.
+   */
+  endDate: string;
+  /**
+   * The net profit the owner saw in the preview; a different figure means something was posted meanwhile, and nothing is closed.
+   */
+  expectedNetProfit: number;
+  reason?: string | null;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "YearRow".
+ */
+export interface YearRow {
+  /**
+   * The year has ended and every earlier year with entries is closed.
+   */
+  canClose: boolean;
+  closedAt?: string | null;
+  closedBy?: string | null;
+  endDate: string;
+  fyLabel: string;
+  /**
+   * Profit (or loss, negative) of the year as booked now; the closing figure once closed.
+   */
+  netProfit: number;
+  reopenReason?: string | null;
+  reopenedAt?: string | null;
+  startDate: string;
+  /**
+   * "open", "closed" or "reopened".
+   */
+  status: string;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "YearPreviewInput".
+ */
+export interface YearPreviewInput {
+  endDate: string;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "YearClosePreview".
+ */
+export interface YearClosePreview {
+  /**
+   * Reasons the year can't be closed yet (empty = it can).
+   */
+  blockers: string[];
+  endDate: string;
+  expenses: YearCloseLine[];
+  fyLabel: string;
+  income: YearCloseLine[];
+  netProfit: number;
+  startDate: string;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "YearCloseLine".
+ */
+export interface YearCloseLine {
+  /**
+   * The account's balance moved out (income credit-positive, expense debit-positive).
+   */
+  amount: number;
+  code: string;
+  name: string;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "YearReopenInput".
+ */
+export interface YearReopenInput {
+  endDate: string;
+  reason: string;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "AccountingSettings".
+ */
+export interface AccountingSettings1 {
+  /**
+   * Bank matching looks this many days either side of the book date.
+   */
+  bankMatchDays?: number;
+  /**
+   * Documents dated on or before the latest closed day need `period.override`.
+   */
+  lockClosedDays?: boolean;
+  /**
+   * A till difference larger than this (minor units, either way) needs a manager's approval.
+   */
+  tillDifferenceApproval?: number;
 }
 /**
  * This interface was referenced by `ApiContract`'s JSON-Schema

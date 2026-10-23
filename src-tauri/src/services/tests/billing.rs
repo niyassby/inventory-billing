@@ -642,6 +642,7 @@ fn till_cash_up() {
             session_id: session.id,
             counted_cash: 61_700,
             notes: None,
+            difference_reason: Some("counting_error".into()),
         },
     )
     .unwrap();

@@ -129,6 +129,7 @@ fn targets_hold_with_50k_products_and_150k_movements() {
                     warehouse_id: None,
                     party_type: None,
                     account_id: None,
+                    ..ReportQuery::default()
                 },
             )
             .unwrap()

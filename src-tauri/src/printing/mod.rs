@@ -32,6 +32,7 @@ use self::labels::{LabelItem, LabelTemplate};
 use self::raster::TextRaster;
 use self::templates::HeldSlip;
 use crate::error::{AppError, AppResult};
+use crate::services::accounting::DaySummary;
 use crate::services::payments::RegisterSession;
 use crate::services::sales::{InvoiceDetail, ReturnDetail};
 use crate::services::settings::PublicSettings;
@@ -55,6 +56,10 @@ pub enum PrintDocument {
     TillClose {
         session: Box<RegisterSession>,
     },
+    /// The day-close summary (printed on the till-close route).
+    DayClose {
+        summary: Box<DaySummary>,
+    },
     HeldSlip {
         slip: HeldSlip,
     },
@@ -72,7 +77,9 @@ impl PrintDocument {
         match self {
             PrintDocument::Receipt { .. } => Some(DocKind::Receipt),
             PrintDocument::ReturnSlip { .. } => Some(DocKind::ReturnSlip),
-            PrintDocument::TillClose { .. } => Some(DocKind::TillClose),
+            PrintDocument::TillClose { .. } | PrintDocument::DayClose { .. } => {
+                Some(DocKind::TillClose)
+            }
             PrintDocument::HeldSlip { .. } => Some(DocKind::HeldSlip),
             PrintDocument::Labels { .. } => Some(DocKind::Labels),
             PrintDocument::Test => None,
@@ -87,6 +94,7 @@ impl PrintDocument {
                 format!("Credit note {}", sales_return.doc_no)
             }
             PrintDocument::TillClose { session } => format!("Till close {}", session.register_name),
+            PrintDocument::DayClose { summary } => format!("Day close {}", summary.business_date),
             PrintDocument::HeldSlip { slip } => format!("Held bill {}", slip.label),
             PrintDocument::Labels { items, .. } => {
                 let count: i64 = items.iter().map(|i| i.copies.max(0)).sum();
@@ -157,6 +165,7 @@ pub fn render(
             invoice_no,
         } => templates::return_slip(sales_return, invoice_no.as_deref(), settings),
         PrintDocument::TillClose { session } => templates::till_close(session, settings, now),
+        PrintDocument::DayClose { summary } => templates::day_close(summary, settings, now),
         PrintDocument::HeldSlip { slip } => templates::held_slip(slip, settings),
         PrintDocument::Labels { template, items } => {
             return labels::render(

@@ -385,6 +385,7 @@ fn closing_the_day_needs_closed_tills_and_happens_once() {
             session_id: session.id,
             counted_cash: 1_000,
             notes: None,
+            difference_reason: Some("counting_error".into()),
         },
     )
     .unwrap();

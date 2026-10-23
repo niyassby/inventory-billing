@@ -20,8 +20,9 @@ use crate::error::{AppError, AppResult};
 /// Reports stop at this many rows (and say so) rather than freezing the screen.
 const MAX_ROWS: usize = 5_000;
 
-pub const REPORTS: [&str; 14] = [
+pub const REPORTS: [&str; 15] = [
     "sales_summary",
+    "sales_invoices",
     "sales_by_item",
     "purchases",
     "stock_valuation",
@@ -51,6 +52,78 @@ pub struct ReportQuery {
     pub party_type: Option<String>,
     /// Cash and bank book: one account (default: all cash, or all bank, accounts).
     pub account_id: Option<String>,
+    /// How rows are grouped (the report's `groupOptions`; default: the first).
+    #[serde(default)]
+    pub group_by: Option<String>,
+    /// Drill-down filters: one customer or supplier ("walk_in" = bills without one)…
+    #[serde(default)]
+    pub party_id: Option<String>,
+    /// …one cashier…
+    #[serde(default)]
+    pub user_id: Option<String>,
+    /// …one category (product category, or expense category on the expenses report)…
+    #[serde(default)]
+    pub category_id: Option<String>,
+    /// …one item.
+    #[serde(default)]
+    pub variant_id: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct GroupOption {
+    pub key: String,
+    pub label: String,
+}
+
+/// Where a row leads: another report (with these parameters) or a document.
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct RowLink {
+    /// "report", or a document: "sales_invoice", "sales_return", "purchase_bill",
+    /// "goods_receipt", "purchase_return", "payment", "manual_journal".
+    pub kind: String,
+    pub id: Option<String>,
+    pub report: Option<String>,
+    pub from: Option<String>,
+    pub to: Option<String>,
+    pub group_by: Option<String>,
+    pub party_id: Option<String>,
+    pub user_id: Option<String>,
+    pub category_id: Option<String>,
+    pub variant_id: Option<String>,
+}
+
+impl RowLink {
+    fn doc(kind: &str, id: &Value) -> Option<Self> {
+        id.as_str().map(|id| Self {
+            kind: kind.into(),
+            id: Some(id.into()),
+            report: None,
+            from: None,
+            to: None,
+            group_by: None,
+            party_id: None,
+            user_id: None,
+            category_id: None,
+            variant_id: None,
+        })
+    }
+
+    fn report(report: &str, range: (&str, &str)) -> Self {
+        Self {
+            kind: "report".into(),
+            id: None,
+            report: Some(report.into()),
+            from: Some(range.0.into()),
+            to: Some(range.1.into()),
+            group_by: None,
+            party_id: None,
+            user_id: None,
+            category_id: None,
+            variant_id: None,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
@@ -75,6 +148,14 @@ pub struct ReportTable {
     pub totals: Option<Vec<Value>>,
     /// More rows existed than are shown.
     pub truncated: bool,
+    /// The grouping used, and the ones this report offers.
+    #[serde(default)]
+    pub group_by: Option<String>,
+    #[serde(default)]
+    pub group_options: Vec<GroupOption>,
+    /// Where each row leads (same order as `rows`; empty when rows lead nowhere).
+    #[serde(default)]
+    pub links: Vec<Option<RowLink>>,
 }
 
 fn col(key: &str, label: &str, kind: &str) -> Column {
@@ -117,6 +198,316 @@ fn finish(
         rows,
         totals,
         truncated,
+        group_by: None,
+        group_options: Vec::new(),
+        links: Vec::new(),
+    }
+}
+
+/// The groupings each report offers (first = default).
+fn group_options(report: &str) -> &'static [(&'static str, &'static str)] {
+    match report {
+        "sales_summary" => &[
+            ("day", "Day"),
+            ("month", "Month"),
+            ("customer", "Customer"),
+            ("user", "Cashier"),
+            ("item", "Item"),
+            ("category", "Category"),
+        ],
+        "sales_by_item" => &[("item", "Item"), ("category", "Category")],
+        "purchases" => &[
+            ("bill", "Bill"),
+            ("supplier", "Supplier"),
+            ("month", "Month"),
+        ],
+        "expenses" => &[("category", "Category"), ("month", "Month")],
+        _ => &[],
+    }
+}
+
+/// Adds the grouping and the row links (cut to the rows kept) to a finished table.
+fn grouped(mut table: ReportTable, group: &str, links: Vec<Option<RowLink>>) -> ReportTable {
+    let options = group_options(&table.report);
+    table.group_by = (!options.is_empty()).then(|| group.to_string());
+    table.group_options = options
+        .iter()
+        .map(|(key, label)| GroupOption {
+            key: (*key).into(),
+            label: (*label).into(),
+        })
+        .collect();
+    let mut links = links;
+    links.truncate(table.rows.len());
+    if links.iter().any(Option::is_some) {
+        table.links = links;
+    }
+    table
+}
+
+/// First and last day of a "YYYY-MM" month, kept inside the report's range.
+fn month_range(month: &str, range: (&str, &str)) -> (String, String) {
+    let start = format!("{month}-01");
+    let end = chrono::NaiveDate::parse_from_str(&start, "%Y-%m-%d")
+        .ok()
+        .and_then(|d| d.checked_add_months(chrono::Months::new(1)))
+        .and_then(|d| d.pred_opt())
+        .map_or_else(|| range.1.to_string(), |d| d.format("%Y-%m-%d").to_string());
+    (start.max(range.0.to_string()), end.min(range.1.to_string()))
+}
+
+/// SQL conditions (and their arguments, numbered after `first`) for the drill-down filters on
+/// sales invoices `i` (and their lines `l` / products `pr` when the query joins them).
+fn invoice_filters(q: &ReportQuery, first: usize, lines: bool) -> (String, Vec<Sql>) {
+    let mut sql = String::new();
+    let mut args: Vec<Sql> = Vec::new();
+    let next = |cond: &str, value: Option<String>, sql: &mut String, args: &mut Vec<Sql>| {
+        let n = first + args.len();
+        match value {
+            Some(v) => {
+                sql.push_str(&format!(" AND {}", cond.replace('?', &format!("?{n}"))));
+                args.push(v.into());
+            }
+            None => sql.push_str(&format!(" AND {cond}")),
+        }
+    };
+    match q.party_id.as_deref().filter(|p| !p.is_empty()) {
+        Some("walk_in") => next("i.party_id IS NULL", None, &mut sql, &mut args),
+        Some(p) => next("i.party_id = ?", Some(p.into()), &mut sql, &mut args),
+        None => {}
+    }
+    if let Some(u) = q.user_id.as_deref().filter(|u| !u.is_empty()) {
+        next("i.created_by = ?", Some(u.into()), &mut sql, &mut args);
+    }
+    if let Some(v) = q.variant_id.as_deref().filter(|v| !v.is_empty()) {
+        let cond = if lines {
+            "l.variant_id = ?"
+        } else {
+            "EXISTS (SELECT 1 FROM sales_invoice_items x WHERE x.invoice_id = i.id AND x.variant_id = ?)"
+        };
+        next(cond, Some(v.into()), &mut sql, &mut args);
+    }
+    if let Some(c) = q.category_id.as_deref().filter(|c| !c.is_empty()) {
+        let cond = if lines {
+            "l.variant_id IN (SELECT v.id FROM product_variants v JOIN products p ON p.id = v.product_id WHERE p.category_id = ?)"
+        } else {
+            "EXISTS (SELECT 1 FROM sales_invoice_items x JOIN product_variants v ON v.id = x.variant_id JOIN products p ON p.id = v.product_id
+                     WHERE x.invoice_id = i.id AND p.category_id = ?)"
+        };
+        next(cond, Some(c.into()), &mut sql, &mut args);
+    }
+    (sql, args)
+}
+
+/// Every finalized invoice in the range, with the drill-down filters; each row opens the bill.
+fn sales_invoices(
+    conn: &Connection,
+    q: &ReportQuery,
+    range: (&str, &str),
+) -> AppResult<ReportTable> {
+    let (filters, extra) = invoice_filters(q, 3, false);
+    let mut args: Vec<Sql> = vec![range.0.to_string().into(), range.1.to_string().into()];
+    args.extend(extra);
+    let raw = query_rows(
+        conn,
+        &format!(
+            "SELECT i.id, i.business_date, i.doc_no, i.customer_name, u.name, i.taxable, i.tax_total, i.total, i.total - i.amount_paid
+             FROM sales_invoices i LEFT JOIN users u ON u.id = i.created_by
+             WHERE i.status = 'finalized' AND i.business_date BETWEEN ?1 AND ?2{filters}
+             ORDER BY i.business_date, i.doc_no LIMIT 5001"
+        ),
+        &args,
+        9,
+    )?;
+    let links = raw
+        .iter()
+        .map(|r| RowLink::doc("sales_invoice", &r[0]))
+        .collect();
+    let rows = raw.into_iter().map(|r| r[1..].to_vec()).collect();
+    let table = finish(
+        q,
+        "Sales invoices",
+        range,
+        vec![
+            col("date", "Date", "date"),
+            col("docNo", "Invoice", "text"),
+            col("customer", "Customer", "text"),
+            col("user", "Cashier", "text"),
+            col("taxable", "Taxable value", "money"),
+            col("tax", "Tax", "money"),
+            col("total", "Total", "money"),
+            col("due", "Balance due", "money"),
+        ],
+        rows,
+        &[4, 5, 6, 7],
+    );
+    Ok(grouped(table, "", links))
+}
+
+/// Sales summary grouped by customer, cashier, item or category; each row opens its invoices.
+fn sales_summary_by(
+    conn: &Connection,
+    q: &ReportQuery,
+    range: (&str, &str),
+    group: &str,
+) -> AppResult<ReportTable> {
+    let args: Vec<Sql> = vec![range.0.to_string().into(), range.1.to_string().into()];
+    let (label, rows, links): (&str, Vec<Vec<Value>>, Vec<Option<RowLink>>) = match group {
+        "customer" | "user" => {
+            let (key, name, ret_key) = if group == "customer" {
+                (
+                    "coalesce(i.party_id, 'walk_in')",
+                    "CASE WHEN i.party_id IS NULL THEN 'Walk-in customers' ELSE max(i.customer_name) END",
+                    "coalesce(s.party_id, 'walk_in')",
+                )
+            } else {
+                (
+                    "i.created_by",
+                    "coalesce(max(u.name), '(unknown)')",
+                    "s.created_by",
+                )
+            };
+            let sales = query_rows(
+                conn,
+                &format!(
+                    "SELECT {key}, {name}, count(*), sum(i.taxable), sum(i.tax_total), sum(i.total)
+                     FROM sales_invoices i LEFT JOIN users u ON u.id = i.created_by
+                     WHERE i.status = 'finalized' AND i.business_date BETWEEN ?1 AND ?2
+                     GROUP BY {key} ORDER BY sum(i.total) DESC"
+                ),
+                &args,
+                6,
+            )?;
+            let returns: BTreeMap<String, i64> = query_rows(
+                conn,
+                &format!(
+                    "SELECT {ret_key}, sum(s.total) FROM sales_returns s
+                     WHERE s.status = 'finalized' AND s.business_date BETWEEN ?1 AND ?2 GROUP BY {ret_key}"
+                ),
+                &args,
+                2,
+            )?
+            .into_iter()
+            .filter_map(|r| Some((r[0].as_str()?.to_string(), r[1].as_i64().unwrap_or(0))))
+            .collect();
+            let mut links = Vec::new();
+            let rows = sales
+                .into_iter()
+                .map(|r| {
+                    let k = r[0].as_str().unwrap_or_default().to_string();
+                    let total = r[5].as_i64().unwrap_or(0);
+                    let back = returns.get(&k).copied().unwrap_or(0);
+                    let mut link = RowLink::report("sales_invoices", range);
+                    if group == "customer" {
+                        link.party_id = Some(k);
+                    } else {
+                        link.user_id = Some(k);
+                    }
+                    links.push(Some(link));
+                    vec![
+                        r[1].clone(),
+                        r[2].clone(),
+                        r[3].clone(),
+                        r[4].clone(),
+                        json!(total),
+                        json!(back),
+                        json!(total - back),
+                    ]
+                })
+                .collect();
+            (
+                if group == "customer" {
+                    "Customer"
+                } else {
+                    "Cashier"
+                },
+                rows,
+                links,
+            )
+        }
+        _ => {
+            // item or category: from the invoice lines (returns are not split by item here).
+            let (key, name) = if group == "item" {
+                ("l.variant_id", "max(l.item_name)")
+            } else {
+                (
+                    "coalesce(p.category_id, '')",
+                    "coalesce(max(c.name), 'No category')",
+                )
+            };
+            let raw = query_rows(
+                conn,
+                &format!(
+                    "SELECT {key}, {name}, count(DISTINCT i.id), sum(l.taxable), sum(l.tax_total), sum(l.line_total)
+                     FROM sales_invoice_items l JOIN sales_invoices i ON i.id = l.invoice_id
+                     JOIN product_variants v ON v.id = l.variant_id JOIN products p ON p.id = v.product_id
+                     LEFT JOIN categories c ON c.id = p.category_id
+                     WHERE i.status = 'finalized' AND i.business_date BETWEEN ?1 AND ?2
+                     GROUP BY {key} ORDER BY sum(l.line_total) DESC"
+                ),
+                &args,
+                6,
+            )?;
+            let mut links = Vec::new();
+            let rows = raw
+                .into_iter()
+                .map(|r| {
+                    let k = r[0].as_str().unwrap_or_default().to_string();
+                    let mut link = RowLink::report("sales_invoices", range);
+                    if group == "item" {
+                        link.variant_id = Some(k);
+                    } else {
+                        link.category_id = Some(k).filter(|c| !c.is_empty());
+                    }
+                    links.push(Some(link));
+                    let total = r[5].as_i64().unwrap_or(0);
+                    vec![
+                        r[1].clone(),
+                        r[2].clone(),
+                        r[3].clone(),
+                        r[4].clone(),
+                        json!(total),
+                        Value::Null,
+                        json!(total),
+                    ]
+                })
+                .collect();
+            (
+                if group == "item" { "Item" } else { "Category" },
+                rows,
+                links,
+            )
+        }
+    };
+    let table = finish(
+        q,
+        "Sales summary",
+        range,
+        vec![
+            col("group", label, "text"),
+            col("bills", "Bills", "count"),
+            col("taxable", "Taxable value", "money"),
+            col("tax", "Tax", "money"),
+            col("total", "Sales", "money"),
+            col("returns", "Returns", "money"),
+            col("net", "Net sales", "money"),
+        ],
+        rows,
+        &[2, 3, 4, 5, 6],
+    );
+    Ok(grouped(table, group, links))
+}
+
+/// The report's grouping: the one asked for (checked) or its default.
+fn group_of(q: &ReportQuery) -> AppResult<String> {
+    let options = group_options(&q.report);
+    match q.group_by.as_deref().filter(|g| !g.is_empty()) {
+        None => Ok(options.first().map_or("", |o| o.0).to_string()),
+        Some(g) if options.iter().any(|o| o.0 == g) => Ok(g.to_string()),
+        Some(_) => Err(AppError::field(
+            "groupBy",
+            "This report can't be grouped that way.",
+        )),
     }
 }
 
@@ -147,11 +538,23 @@ fn query_rows(
 
 pub fn run(ctx: &Ctx<'_>, q: &ReportQuery) -> AppResult<ReportTable> {
     ctx.require("reports.view")?;
+    let settings = super::settings::load(ctx.conn)?;
+    let today = settings.business_date(ctx.now);
+    run_on(ctx.conn, &settings, &today, q)
+}
+
+/// Runs a report (no permission check: `run` and the scheduled exports check first).
+pub fn run_on(
+    conn: &Connection,
+    settings: &super::settings::Settings,
+    today: &str,
+    q: &ReportQuery,
+) -> AppResult<ReportTable> {
     if !REPORTS.contains(&q.report.as_str()) {
         return Err(AppError::field("report", "Unknown report."));
     }
-    let settings = super::settings::load(ctx.conn)?;
-    let today = settings.business_date(ctx.now);
+    let today = today.to_string();
+    let group = group_of(q)?;
     let to = match &q.to {
         Some(d) => date("to", d)?,
         None => today.clone(),
@@ -163,15 +566,18 @@ pub fn run(ctx: &Ctx<'_>, q: &ReportQuery) -> AppResult<ReportTable> {
     if from > to {
         return Err(AppError::field("from", "The start is after the end."));
     }
-    let conn: &Connection = ctx.conn;
     let range = (from.as_str(), to.as_str());
     let dates: Vec<Sql> = vec![from.clone().into(), to.clone().into()];
     match q.report.as_str() {
-        "sales_summary" => sales_summary(conn, q, range),
-        "sales_by_item" => sales_by_item(conn, q, range, &dates),
-        "purchases" => purchases(conn, q, range, &dates),
+        "sales_summary" if matches!(group.as_str(), "day" | "month") => {
+            sales_summary(conn, q, range, &group)
+        }
+        "sales_summary" => sales_summary_by(conn, q, range, &group),
+        "sales_invoices" => sales_invoices(conn, q, range),
+        "sales_by_item" => sales_by_item(conn, q, range, &dates, &group),
+        "purchases" => purchases(conn, q, range, &dates, &group),
         "stock_valuation" => stock_valuation(conn, q, range),
-        "expiry" => expiry(conn, q, range, &settings, &today),
+        "expiry" => expiry(conn, q, range, settings, &today),
         "stock_movement" => stock_movement(conn, q, range, &dates),
         "party_balances" => party_balances(conn, q, range),
         "tax_summary" => tax_summary(conn, q, range, &dates),
@@ -179,7 +585,7 @@ pub fn run(ctx: &Ctx<'_>, q: &ReportQuery) -> AppResult<ReportTable> {
         "profit_loss" => profit_loss(conn, q, range, &dates),
         "trial_balance" => trial_balance(conn, q, range),
         "cash_book" | "bank_book" => books(conn, q, range),
-        "expenses" => expenses(conn, q, range, &dates),
+        "expenses" => expenses(conn, q, range, &dates, &group),
         _ => unreachable!("checked above"),
     }
 }
@@ -188,14 +594,22 @@ fn sales_summary(
     conn: &Connection,
     q: &ReportQuery,
     range: (&str, &str),
+    group: &str,
 ) -> AppResult<ReportTable> {
     let args: Vec<Sql> = vec![range.0.to_string().into(), range.1.to_string().into()];
+    let period = if group == "month" {
+        "substr(business_date, 1, 7)"
+    } else {
+        "business_date"
+    };
     // day → [bills, taxable, tax, round_off, total, returns]
     let mut days: BTreeMap<String, [i64; 6]> = BTreeMap::new();
     for r in query_rows(
         conn,
-        "SELECT business_date, count(*), sum(taxable), sum(tax_total), sum(round_off), sum(total)
-         FROM sales_invoices WHERE status = 'finalized' AND business_date BETWEEN ?1 AND ?2 GROUP BY business_date",
+        &format!(
+            "SELECT {period}, count(*), sum(taxable), sum(tax_total), sum(round_off), sum(total)
+             FROM sales_invoices WHERE status = 'finalized' AND business_date BETWEEN ?1 AND ?2 GROUP BY {period}"
+        ),
         &args,
         6,
     )? {
@@ -206,12 +620,25 @@ fn sales_summary(
     }
     for r in query_rows(
         conn,
-        "SELECT business_date, sum(total) FROM sales_returns WHERE status = 'finalized' AND business_date BETWEEN ?1 AND ?2 GROUP BY business_date",
+        &format!(
+            "SELECT {period}, sum(total) FROM sales_returns WHERE status = 'finalized' AND business_date BETWEEN ?1 AND ?2 GROUP BY {period}"
+        ),
         &args,
         2,
     )? {
         days.entry(r[0].as_str().unwrap_or_default().into()).or_default()[5] = r[1].as_i64().unwrap_or(0);
     }
+    let links = days
+        .keys()
+        .map(|key| {
+            let (from, to) = if group == "month" {
+                month_range(key, range)
+            } else {
+                (key.clone(), key.clone())
+            };
+            Some(RowLink::report("sales_invoices", (&from, &to)))
+        })
+        .collect();
     let rows = days
         .into_iter()
         .map(|(day, d)| {
@@ -227,12 +654,16 @@ fn sales_summary(
             ]
         })
         .collect();
-    Ok(finish(
+    let table = finish(
         q,
         "Sales summary",
         range,
         vec![
-            col("date", "Date", "date"),
+            if group == "month" {
+                col("month", "Month", "text")
+            } else {
+                col("date", "Date", "date")
+            },
             col("bills", "Bills", "count"),
             col("taxable", "Taxable value", "money"),
             col("tax", "Tax", "money"),
@@ -243,7 +674,8 @@ fn sales_summary(
         ],
         rows,
         &[1, 2, 3, 4, 5, 6, 7],
-    ))
+    );
+    Ok(grouped(table, group, links))
 }
 
 /// Item profit: what each item sold for (after discounts, before tax), what it cost, and the
@@ -253,23 +685,66 @@ fn sales_by_item(
     q: &ReportQuery,
     range: (&str, &str),
     dates: &[Sql],
+    group: &str,
 ) -> AppResult<ReportTable> {
+    let by_category = group == "category";
+    let mut args = dates.to_vec();
+    let category_filter = match q.category_id.as_deref().filter(|c| !c.is_empty()) {
+        Some(c) => {
+            args.push(c.to_string().into());
+            " WHERE category = ?3"
+        }
+        None => "",
+    };
+    let (key, name, code) = if by_category {
+        (
+            "category",
+            "coalesce(max(category_name), 'No category')",
+            "''",
+        )
+    } else {
+        ("variant", "max(item)", "max(sku)")
+    };
     let raw = query_rows(
         conn,
-        "SELECT item, sku, sum(qty), sum(revenue), sum(cost) FROM (
-            SELECT l.item_name AS item, l.sku AS sku, l.base_qty AS qty, l.taxable AS revenue,
+        &format!(
+            "SELECT {key}, {name}, {code}, sum(qty), sum(revenue), sum(cost) FROM (
+            SELECT l.variant_id AS variant, coalesce(p.category_id, '') AS category, c.name AS category_name,
+                   l.item_name AS item, l.sku AS sku, l.base_qty AS qty, l.taxable AS revenue,
                    coalesce(l.cost_value, (l.unit_cost * l.base_qty + 500) / 1000) AS cost
             FROM sales_invoice_items l JOIN sales_invoices i ON i.id = l.invoice_id
+            JOIN product_variants v ON v.id = l.variant_id JOIN products p ON p.id = v.product_id
+            LEFT JOIN categories c ON c.id = p.category_id
             WHERE i.status = 'finalized' AND i.business_date BETWEEN ?1 AND ?2
             UNION ALL
-            SELECT r.item_name, r.sku, -r.base_qty, -r.taxable,
+            SELECT r.variant_id, coalesce(p.category_id, ''), c.name, r.item_name, r.sku, -r.base_qty, -r.taxable,
                    -CASE WHEN r.restock = 1 THEN (r.unit_cost * r.base_qty + 500) / 1000 ELSE 0 END
             FROM sales_return_items r JOIN sales_returns s ON s.id = r.return_id
+            JOIN product_variants v ON v.id = r.variant_id JOIN products p ON p.id = v.product_id
+            LEFT JOIN categories c ON c.id = p.category_id
             WHERE s.status = 'finalized' AND s.business_date BETWEEN ?1 AND ?2
-         ) GROUP BY item, sku ORDER BY sum(revenue) DESC",
-        dates,
-        5,
+         ){category_filter} GROUP BY {key} ORDER BY sum(revenue) DESC"
+        ),
+        &args,
+        6,
     )?;
+    let links: Vec<Option<RowLink>> = raw
+        .iter()
+        .map(|r| {
+            let k = r[0].as_str().unwrap_or_default().to_string();
+            if by_category {
+                let mut link = RowLink::report("sales_by_item", range);
+                link.group_by = Some("item".into());
+                link.category_id = Some(k);
+                Some(link)
+            } else {
+                let mut link = RowLink::report("sales_invoices", range);
+                link.variant_id = Some(k);
+                Some(link)
+            }
+        })
+        .collect();
+    let raw: Vec<Vec<Value>> = raw.into_iter().map(|r| r[1..].to_vec()).collect();
     let rows = raw
         .into_iter()
         .map(|r| {
@@ -299,7 +774,11 @@ fn sales_by_item(
         },
         range,
         vec![
-            col("item", "Item", "text"),
+            if by_category {
+                col("category", "Category", "text")
+            } else {
+                col("item", "Item", "text")
+            },
             col("sku", "SKU", "text"),
             col("qty", "Qty sold", "qty"),
             col("revenue", "Sales (before tax)", "money"),
@@ -314,7 +793,7 @@ fn sales_by_item(
         let (rev, profit) = (t[3].as_i64().unwrap_or(0), t[5].as_i64().unwrap_or(0));
         t[6] = json!(if rev > 0 { profit * 1_000_000 / rev } else { 0 });
     }
-    Ok(table)
+    Ok(grouped(table, group, links))
 }
 
 fn purchases(
@@ -322,16 +801,87 @@ fn purchases(
     q: &ReportQuery,
     range: (&str, &str),
     dates: &[Sql],
+    group: &str,
 ) -> AppResult<ReportTable> {
-    let rows = query_rows(
+    if group != "bill" {
+        let (key, name, label) = if group == "supplier" {
+            ("party_id", "max(supplier_name)", "Supplier")
+        } else {
+            (
+                "substr(business_date, 1, 7)",
+                "substr(business_date, 1, 7)",
+                "Month",
+            )
+        };
+        let raw = query_rows(
+            conn,
+            &format!(
+                "SELECT {key}, {name}, count(*), sum(taxable), sum(tax_total), sum(total), sum(amount_paid)
+                 FROM purchase_bills WHERE status = 'finalized' AND business_date BETWEEN ?1 AND ?2
+                 GROUP BY {key} ORDER BY {}",
+                if group == "supplier" { "sum(total) DESC" } else { "1" }
+            ),
+            dates,
+            7,
+        )?;
+        let links = raw
+            .iter()
+            .map(|r| {
+                let k = r[0].as_str().unwrap_or_default();
+                let mut link = if group == "supplier" {
+                    let mut l = RowLink::report("purchases", range);
+                    l.party_id = Some(k.into());
+                    l
+                } else {
+                    let (from, to) = month_range(k, range);
+                    RowLink::report("purchases", (&from, &to))
+                };
+                link.group_by = Some("bill".into());
+                Some(link)
+            })
+            .collect();
+        let rows = raw.into_iter().map(|r| r[1..].to_vec()).collect();
+        let table = finish(
+            q,
+            "Purchases",
+            range,
+            vec![
+                col("group", label, "text"),
+                col("bills", "Bills", "count"),
+                col("taxable", "Taxable value", "money"),
+                col("tax", "Tax", "money"),
+                col("total", "Total", "money"),
+                col("paid", "Paid", "money"),
+            ],
+            rows,
+            &[1, 2, 3, 4, 5],
+        );
+        return Ok(grouped(table, group, links));
+    }
+    let mut args = dates.to_vec();
+    let party = match q.party_id.as_deref().filter(|p| !p.is_empty()) {
+        Some(p) => {
+            args.push(p.to_string().into());
+            " AND party_id = ?3"
+        }
+        None => "",
+    };
+    let raw = query_rows(
         conn,
-        "SELECT business_date, doc_no, supplier_name, supplier_invoice_no, taxable, tax_total, total, amount_paid
-         FROM purchase_bills WHERE status = 'finalized' AND business_date BETWEEN ?1 AND ?2
-         ORDER BY business_date, doc_no",
-        dates,
-        8,
+        &format!(
+            "SELECT id, business_date, doc_no, supplier_name, supplier_invoice_no, taxable, tax_total, total, amount_paid
+             FROM purchase_bills WHERE status = 'finalized' AND business_date BETWEEN ?1 AND ?2{party}
+             ORDER BY business_date, doc_no"
+        ),
+        &args,
+        9,
     )?;
-    Ok(finish(
+    let links = raw
+        .iter()
+        .map(|r| RowLink::doc("purchase_bill", &r[0]))
+        .collect();
+    let rows = raw.into_iter().map(|r| r[1..].to_vec()).collect();
+    let table = finish(
         q,
         "Purchases",
         range,
@@ -347,7 +897,8 @@ fn purchases(
         ],
         rows,
         &[4, 5, 6, 7],
-    ))
+    );
+    Ok(grouped(table, group, links))
 }
 
 fn stock_valuation(
@@ -689,16 +1240,30 @@ fn day_book(
     range: (&str, &str),
     dates: &[Sql],
 ) -> AppResult<ReportTable> {
-    let rows = query_rows(
+    let raw = query_rows(
         conn,
-        "SELECT e.business_date, e.source_type, e.narration, sum(l.debit),
+        "SELECT e.source_type, e.source_id, e.business_date,
+                CASE e.source_type WHEN 'manual_journal' THEN 'manual journal' WHEN 'year_close' THEN 'year close'
+                  ELSE replace(e.source_type, '_', ' ') END,
+                e.narration, sum(l.debit),
                 CASE WHEN e.reversal_of IS NOT NULL THEN 'reversal' WHEN e.status = 'reversed' THEN 'reversed' ELSE 'posted' END
          FROM journal_entries e JOIN journal_lines l ON l.entry_id = e.id
          WHERE e.business_date BETWEEN ?1 AND ?2 GROUP BY e.id ORDER BY e.business_date, e.created_at LIMIT 5001",
         dates,
-        5,
+        7,
     )?;
-    Ok(finish(
+    let links = raw
+        .iter()
+        .map(|r| match r[0].as_str() {
+            Some(
+                kind @ ("sales_invoice" | "sales_return" | "purchase_bill" | "goods_receipt"
+                | "purchase_return" | "payment" | "manual_journal"),
+            ) => RowLink::doc(kind, &r[1]),
+            _ => None,
+        })
+        .collect();
+    let rows = raw.into_iter().map(|r| r[2..].to_vec()).collect();
+    let table = finish(
         q,
         "Day book",
         range,
@@ -711,7 +1276,8 @@ fn day_book(
         ],
         rows,
         &[],
-    ))
+    );
+    Ok(grouped(table, "", links))
 }
 
 /// Net balance of accounts of one type in the range: (code, name, subtype, signed amount), where
@@ -733,7 +1299,7 @@ fn account_balances(
         &format!(
             "SELECT a.code, a.name, a.subtype, sum({sign}) FROM journal_lines l
              JOIN journal_entries e ON e.id = l.entry_id JOIN accounts a ON a.id = l.account_id
-             WHERE e.business_date BETWEEN ?1 AND ?2 AND a.account_type = ?3
+             WHERE e.business_date BETWEEN ?1 AND ?2 AND a.account_type = ?3 AND e.source_type <> 'year_close'
              GROUP BY a.id HAVING sum({sign}) <> 0 ORDER BY a.code"
         ),
         &args,
@@ -936,21 +1502,68 @@ fn expenses(
     q: &ReportQuery,
     range: (&str, &str),
     dates: &[Sql],
+    group: &str,
 ) -> AppResult<ReportTable> {
-    let rows = query_rows(
+    let by_month = group == "month";
+    let mut args = dates.to_vec();
+    let category = match q.category_id.as_deref().filter(|c| !c.is_empty()) {
+        Some(c) => {
+            args.push(c.to_string().into());
+            " AND e.category_id = ?3"
+        }
+        None => "",
+    };
+    let (key, name, order) = if by_month {
+        (
+            "substr(e.business_date, 1, 7)",
+            "substr(e.business_date, 1, 7)",
+            "1",
+        )
+    } else {
+        ("c.id", "c.name", "sum(e.total) DESC")
+    };
+    let raw = query_rows(
         conn,
-        "SELECT c.name, count(*), sum(e.amount), sum(e.tax_total), sum(e.total) FROM expenses e
-         JOIN expense_categories c ON c.id = e.category_id
-         WHERE e.status = 'finalized' AND e.business_date BETWEEN ?1 AND ?2 GROUP BY c.id ORDER BY sum(e.total) DESC",
-        dates,
-        5,
+        &format!(
+            "SELECT {key}, {name}, count(*), sum(e.amount), sum(e.tax_total), sum(e.total) FROM expenses e
+             JOIN expense_categories c ON c.id = e.category_id
+             WHERE e.status = 'finalized' AND e.business_date BETWEEN ?1 AND ?2{category} GROUP BY {key} ORDER BY {order}"
+        ),
+        &args,
+        6,
     )?;
-    Ok(finish(
+    let links = raw
+        .iter()
+        .map(|r| {
+            let k = r[0].as_str().unwrap_or_default();
+            if by_month {
+                let (from, to) = month_range(k, range);
+                let mut l = RowLink::report("expenses", (&from, &to));
+                l.group_by = Some("category".into());
+                Some(l)
+            } else {
+                let mut l = RowLink::report("expenses", range);
+                l.group_by = Some("month".into());
+                l.category_id = Some(k.into());
+                Some(l)
+            }
+        })
+        .collect();
+    let rows = raw.into_iter().map(|r| r[1..].to_vec()).collect();
+    let table = finish(
         q,
-        "Expenses by category",
+        if by_month {
+            "Expenses by month"
+        } else {
+            "Expenses by category"
+        },
         range,
         vec![
-            col("category", "Category", "text"),
+            if by_month {
+                col("month", "Month", "text")
+            } else {
+                col("category", "Category", "text")
+            },
             col("count", "Entries", "count"),
             col("amount", "Amount", "money"),
             col("tax", "Tax", "money"),
@@ -958,5 +1571,6 @@ fn expenses(
         ],
         rows,
         &[1, 2, 3, 4],
-    ))
+    );
+    Ok(grouped(table, group, links))
 }

@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 use super::config::PrinterProfile;
 use super::raster::Placement;
 use super::text::{self, money};
+use crate::services::accounting::DaySummary;
 use crate::services::payments::RegisterSession;
 use crate::services::sales::{InvoiceDetail, ReturnDetail};
 use crate::services::settings::PublicSettings;
@@ -390,6 +391,15 @@ pub fn till_close(session: &RegisterSession, settings: &PublicSettings, now: Dat
         };
         doc.total(label, f.total(diff.abs()));
     }
+    if let Some(reason) = &session.difference_reason {
+        doc.pair("Reason", difference_reason(reason));
+    }
+    if let Some(by) = &session.difference_approved_by {
+        doc.pair("Approved by", by.clone());
+    }
+    if let Some(notes) = &session.notes {
+        doc.text(notes.clone(), Placement::Left);
+    }
     doc.rule();
     doc.text(
         format!("Printed {}", f.date_time(&now.to_rfc3339())),
@@ -400,6 +410,103 @@ pub fn till_close(session: &RegisterSession, settings: &PublicSettings, now: Dat
     doc.blank();
     doc.text("Manager  ____________", Placement::Left);
     doc
+}
+
+/// A till difference reason in words.
+fn difference_reason(code: &str) -> String {
+    match code {
+        "counting_error" => "Counting error",
+        "wrong_change" => "Wrong change given",
+        "float_error" => "Opening float wrong",
+        "unrecorded_sale" => "Sale not recorded",
+        "unrecorded_payout" => "Payout not recorded",
+        "loss_or_theft" => "Loss or theft",
+        _ => "Other",
+    }
+    .into()
+}
+
+/// The day-close summary: sales, money in and out by mode, and every till's cash-up.
+pub fn day_close(summary: &DaySummary, settings: &PublicSettings, now: DateTime<Utc>) -> Doc {
+    let f = Fmt::new(settings);
+    let mut doc = Doc::default();
+    doc.heading(settings.business.name.clone());
+    doc.strong("DAY CLOSE", Placement::Center);
+    doc.text(text::date(&summary.business_date), Placement::Center);
+    doc.rule();
+    doc.pair("Bills", summary.bills.to_string());
+    doc.pair("Sales", f.m(summary.sales_total));
+    doc.pair("Tax in sales", f.m(summary.tax_total));
+    doc.pair("Discounts", f.m(summary.discount_total));
+    doc.pair("Returns", format!("-{}", f.m(summary.returns_total)));
+    doc.total(
+        "NET SALES",
+        f.total(summary.sales_total - summary.returns_total),
+    );
+    doc.pair("Purchases", f.m(summary.purchases_total));
+    doc.pair("Expenses", f.m(summary.expenses_total));
+    if !summary.received.is_empty() {
+        doc.rule();
+        doc.strong("Received", Placement::Left);
+        for m in &summary.received {
+            doc.pair(mode_name(&m.mode), f.m(m.amount));
+        }
+    }
+    if !summary.paid.is_empty() {
+        doc.strong("Paid out", Placement::Left);
+        for m in &summary.paid {
+            doc.pair(mode_name(&m.mode), f.m(m.amount));
+        }
+    }
+    if !summary.tills.is_empty() {
+        doc.rule();
+        doc.strong("Tills", Placement::Left);
+        for t in &summary.tills {
+            doc.pair(t.register.clone(), f.m(t.counted_cash));
+            if t.difference != 0 {
+                let label = if t.difference < 0 {
+                    "  Short"
+                } else {
+                    "  Over"
+                };
+                doc.pair(label, f.m(t.difference.abs()));
+                if let Some(reason) = &t.difference_reason {
+                    doc.pair("  Reason", difference_reason(reason));
+                }
+                if let Some(by) = &t.approved_by {
+                    doc.pair("  Approved by", by.clone());
+                }
+            }
+        }
+    }
+    doc.rule();
+    if let (Some(at), Some(by)) = (&summary.closed_at, &summary.closed_by) {
+        doc.pair("Closed", f.date_time(at));
+        doc.pair("Closed by", by.clone());
+    }
+    if let Some(notes) = &summary.notes {
+        doc.text(notes.clone(), Placement::Left);
+    }
+    doc.text(
+        format!("Printed {}", f.date_time(&now.to_rfc3339())),
+        Placement::Left,
+    );
+    doc.blank();
+    doc.text("Signature  ____________", Placement::Left);
+    doc
+}
+
+fn mode_name(mode: &str) -> String {
+    match mode {
+        "cash" => "Cash",
+        "card" => "Card",
+        "upi" => "UPI",
+        "bank_transfer" => "Bank transfer",
+        "cheque" => "Cheque",
+        "wallet" => "Wallet",
+        _ => "Other",
+    }
+    .into()
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]

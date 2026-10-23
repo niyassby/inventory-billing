@@ -1,6 +1,7 @@
 //! Service integration tests against a real SQLite database (see `testkit`).
 
 mod access;
+mod accounting_depth;
 mod accounts_audit;
 mod accounts_audit_edge;
 mod accounts_audit_more;

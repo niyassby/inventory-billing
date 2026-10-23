@@ -11,22 +11,26 @@ use crate::app::AppState;
 use crate::domain::ids::new_id;
 use crate::error::{AppError, AppResult};
 use crate::services::settings::{self, Settings};
-use crate::services::{backup, images, printing};
+use crate::services::{backup, cheques, images, printing, report_views};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Job {
     Backup,
     LowStock,
     Expiry,
+    Cheques,
+    ReportExports,
     Integrity,
     Cleanup,
 }
 
 impl Job {
-    pub const ALL: [Job; 5] = [
+    pub const ALL: [Job; 7] = [
         Job::Backup,
         Job::LowStock,
         Job::Expiry,
+        Job::Cheques,
+        Job::ReportExports,
         Job::Integrity,
         Job::Cleanup,
     ];
@@ -36,6 +40,8 @@ impl Job {
             Job::Backup => "backup",
             Job::LowStock => "low_stock",
             Job::Expiry => "expiry",
+            Job::Cheques => "cheques",
+            Job::ReportExports => "report_exports",
             Job::Integrity => "integrity",
             Job::Cleanup => "cleanup",
         }
@@ -111,6 +117,8 @@ pub fn is_due(
         }
         Job::LowStock => settings.inventory.low_stock_alerts && since(chrono::Duration::hours(1)),
         Job::Expiry => settings.inventory.expiry_alerts && since(chrono::Duration::hours(1)),
+        Job::Cheques => since(chrono::Duration::hours(6)),
+        Job::ReportExports => since(chrono::Duration::hours(1)),
         Job::Integrity => since(chrono::Duration::days(7)),
         Job::Cleanup => since(chrono::Duration::days(1)),
     }
@@ -190,6 +198,51 @@ fn low_stock(conn: &Connection, now: DateTime<Utc>) -> AppResult<String> {
         "{} low, {raised} new, {cleared} cleared",
         low.len()
     ))
+}
+
+/// A notice per pending cheque whose date has come (deposit it, or pay it in), raised once.
+fn cheques_due(conn: &Connection, settings: &Settings, now: DateTime<Utc>) -> AppResult<String> {
+    let today = settings.business_date(now);
+    let now_str = now.to_rfc3339();
+    let mut raised = 0;
+    for (id, direction, number, party, amount) in cheques::due(conn, &today)? {
+        let (title, body) = if direction == "in" {
+            (
+                format!("Deposit cheque {number} from {party}"),
+                format!(
+                    "Its date has come ({}). Mark it cleared when the bank credits it.",
+                    crate::domain::money::format_minor(
+                        amount,
+                        settings.business.currency_minor_digits
+                    )
+                ),
+            )
+        } else {
+            (
+                format!("Cheque {number} to {party} is due"),
+                format!(
+                    "Keep {} in the bank for it. Mark it cleared when it is paid.",
+                    crate::domain::money::format_minor(
+                        amount,
+                        settings.business.currency_minor_digits
+                    )
+                ),
+            )
+        };
+        if notify(
+            conn,
+            "cheque_due",
+            "warning",
+            &title,
+            &body,
+            &format!("cheque:{id}"),
+            Some(("cheques", &id)),
+            &now_str,
+        )? {
+            raised += 1;
+        }
+    }
+    Ok(format!("{raised} cheque notice(s) raised"))
 }
 
 /// Hourly: a notice per batch that has expired or expires within the alert window while there is
@@ -351,6 +404,18 @@ fn run(state: &AppState, job: Job) -> AppResult<String> {
         }
         Job::LowStock => low_stock(&*state.conn()?, now),
         Job::Expiry => expiry(&*state.conn()?, &settings::load(&*state.conn()?)?, now),
+        Job::Cheques => cheques_due(&*state.conn()?, &settings::load(&*state.conn()?)?, now),
+        Job::ReportExports => {
+            let conn = state.conn()?;
+            let settings = settings::load(&conn)?;
+            let (written, failed) = report_views::run_due(
+                &conn,
+                &settings,
+                &now.to_rfc3339(),
+                &settings.business_date(now),
+            )?;
+            Ok(format!("{written} report(s) exported, {failed} failed"))
+        }
         Job::Integrity => integrity(&*state.conn()?, now),
         Job::Cleanup => {
             let report = cleanup(&*state.conn()?, now)?;

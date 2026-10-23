@@ -2,7 +2,7 @@
 //! end-of-day summary and day close, and the audit log viewer.
 
 use rusqlite::types::Value as Sql;
-use rusqlite::{params, params_from_iter, Connection};
+use rusqlite::{params, params_from_iter, Connection, OptionalExtension};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -161,6 +161,14 @@ pub struct TillSummary {
     pub expected_cash: i64,
     pub counted_cash: i64,
     pub difference: i64,
+    /// Why the cash was short or over (a reason code, see `payments::DIFFERENCE_REASONS`).
+    #[serde(default)]
+    pub difference_reason: Option<String>,
+    #[serde(default)]
+    pub notes: Option<String>,
+    /// The manager who approved a difference above the limit.
+    #[serde(default)]
+    pub approved_by: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
@@ -182,6 +190,14 @@ pub struct DaySummary {
     pub closed_at: Option<String>,
     pub closed_by: Option<String>,
     pub notes: Option<String>,
+    /// The owner reopened this day (documents can be dated in it until it is closed again).
+    #[serde(default)]
+    pub reopened: bool,
+    #[serde(default)]
+    pub reopen_reason: Option<String>,
+    /// Documents dated this day need `period.override`.
+    #[serde(default)]
+    pub locked: bool,
 }
 
 fn one(conn: &Connection, sql: &str, day: &str) -> AppResult<i64> {
@@ -208,8 +224,10 @@ pub fn day_summary_of(
     )?;
     let tills = conn
         .prepare(
-            "SELECT c.name, u.name, s.expected_cash, s.counted_cash, s.counted_cash - s.expected_cash, s.closed_at
+            "SELECT c.name, u.name, s.expected_cash, s.counted_cash, s.counted_cash - s.expected_cash, s.closed_at,
+                s.difference_reason, s.notes, ap.name
              FROM register_sessions s JOIN cash_registers c ON c.id = s.register_id LEFT JOIN users u ON u.id = s.closed_by
+             LEFT JOIN users ap ON ap.id = s.difference_approved_by
              WHERE s.status = 'closed' ORDER BY s.closed_at",
         )?
         .query_map([], |r| {
@@ -220,6 +238,9 @@ pub fn day_summary_of(
                     expected_cash: r.get(2)?,
                     counted_cash: r.get(3)?,
                     difference: r.get(4)?,
+                    difference_reason: r.get(6)?,
+                    notes: r.get(7)?,
+                    approved_by: r.get(8)?,
                 },
                 r.get::<_, String>(5)?,
             ))
@@ -232,13 +253,18 @@ pub fn day_summary_of(
         })
         .map(|(t, _)| t)
         .collect();
-    let closed: Option<(String, String, Option<String>)> = conn
+    // closed at, closed by, notes, status, reopen reason
+    type CloseRow = (String, String, Option<String>, String, Option<String>);
+    let row: Option<CloseRow> = conn
         .query_row(
-            "SELECT d.closed_at, u.name, d.notes FROM day_closes d JOIN users u ON u.id = d.closed_by WHERE d.business_date = ?1",
+            "SELECT d.closed_at, u.name, d.notes, d.status, d.reopen_reason FROM day_closes d JOIN users u ON u.id = d.closed_by WHERE d.business_date = ?1",
             [day],
-            |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+            |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?)),
         )
-        .ok();
+        .optional()?;
+    let reopened = row.as_ref().is_some_and(|r| r.3 == "reopened");
+    let reopen_reason = row.as_ref().and_then(|r| r.4.clone());
+    let closed = row.filter(|r| r.3 == "closed").map(|r| (r.0, r.1, r.2));
     Ok(DaySummary {
         business_date: day.to_string(),
         bills,
@@ -255,6 +281,9 @@ pub fn day_summary_of(
         closed_at: closed.as_ref().map(|c| c.0.clone()),
         closed_by: closed.as_ref().map(|c| c.1.clone()),
         notes: closed.and_then(|c| c.2),
+        reopened,
+        reopen_reason,
+        locked: super::period::is_locked(conn, &super::settings::load(conn)?, day)?,
     })
 }
 
@@ -307,11 +336,20 @@ pub fn close_day(ctx: &mut Ctx<'_>, input: &DayInput) -> AppResult<DaySummary> {
             ));
         }
         let (branch_id, _) = super::setup::default_location(tx)?;
-        tx.execute(
-            "INSERT INTO day_closes (id, branch_id, business_date, closed_at, closed_by, summary_json, notes, created_at, updated_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?4, ?4)",
-            params![new_id(), branch_id, day, now, actor.user_id, json!(summary).to_string(), notes],
-        )?;
+        if summary.reopened {
+            // Closing a reopened day again: the new summary replaces the old one.
+            tx.execute(
+                "UPDATE day_closes SET status = 'closed', closed_at = ?1, closed_by = ?2, summary_json = ?3, notes = ?4, updated_at = ?1
+                 WHERE business_date = ?5",
+                params![now, actor.user_id, json!(summary).to_string(), notes, day],
+            )?;
+        } else {
+            tx.execute(
+                "INSERT INTO day_closes (id, branch_id, business_date, closed_at, closed_by, summary_json, notes, created_at, updated_at)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?4, ?4)",
+                params![new_id(), branch_id, day, now, actor.user_id, json!(summary).to_string(), notes],
+            )?;
+        }
         AuditEntry::new("DAY_CLOSED", "day_closes", Some(&day))
             .by(actor)
             .summary(format!(
@@ -332,6 +370,11 @@ pub struct DayCloseRow {
     pub sales_total: i64,
     pub bills: i64,
     pub notes: Option<String>,
+    /// "closed" or "reopened".
+    pub status: String,
+    pub reopened_at: Option<String>,
+    pub reopened_by: Option<String>,
+    pub reopen_reason: Option<String>,
 }
 
 pub fn list_day_closes(ctx: &Ctx<'_>) -> AppResult<Vec<DayCloseRow>> {
@@ -340,8 +383,9 @@ pub fn list_day_closes(ctx: &Ctx<'_>) -> AppResult<Vec<DayCloseRow>> {
         .conn
         .prepare(
             "SELECT d.business_date, d.closed_at, u.name, coalesce(json_extract(d.summary_json, '$.salesTotal'), 0),
-                coalesce(json_extract(d.summary_json, '$.bills'), 0), d.notes
-             FROM day_closes d JOIN users u ON u.id = d.closed_by ORDER BY d.business_date DESC LIMIT 90",
+                coalesce(json_extract(d.summary_json, '$.bills'), 0), d.notes, d.status, d.reopened_at, ru.name, d.reopen_reason
+             FROM day_closes d JOIN users u ON u.id = d.closed_by LEFT JOIN users ru ON ru.id = d.reopened_by
+             ORDER BY d.business_date DESC LIMIT 90",
         )?
         .query_map([], |r| {
             Ok(DayCloseRow {
@@ -351,6 +395,10 @@ pub fn list_day_closes(ctx: &Ctx<'_>) -> AppResult<Vec<DayCloseRow>> {
                 sales_total: r.get(3)?,
                 bills: r.get(4)?,
                 notes: r.get(5)?,
+                status: r.get(6)?,
+                reopened_at: r.get(7)?,
+                reopened_by: r.get(8)?,
+                reopen_reason: r.get(9)?,
             })
         })?
         .collect::<Result<_, _>>()?)
@@ -384,8 +432,8 @@ pub struct AuditRow {
     pub summary: Option<String>,
 }
 
-pub fn list_audit(ctx: &Ctx<'_>, query: &AuditQuery) -> AppResult<Page<AuditRow>> {
-    ctx.require("audit.view")?;
+/// The audit log filtered like the viewer: (WHERE clause, its arguments).
+fn audit_filters(query: &AuditQuery) -> AppResult<(String, Vec<Sql>)> {
     let mut filters = vec!["1 = 1".to_string()];
     let mut args: Vec<Sql> = Vec::new();
     if let Some(a) = query.action.as_deref().filter(|a| !a.is_empty()) {
@@ -414,8 +462,29 @@ pub fn list_audit(ctx: &Ctx<'_>, query: &AuditQuery) -> AppResult<Page<AuditRow>
         args.push(like_pattern(s).into());
         args.push(like_pattern(s).into());
     }
-    let where_sql = filters.join(" AND ");
-    let from_sql = "audit_log a LEFT JOIN users u ON u.id = a.user_id LEFT JOIN users ap ON ap.id = a.approved_by LEFT JOIN devices d ON d.id = a.device_id";
+    Ok((filters.join(" AND "), args))
+}
+
+const AUDIT_FROM: &str = "audit_log a LEFT JOIN users u ON u.id = a.user_id LEFT JOIN users ap ON ap.id = a.approved_by LEFT JOIN devices d ON d.id = a.device_id";
+
+fn audit_row(r: &rusqlite::Row<'_>) -> rusqlite::Result<AuditRow> {
+    Ok(AuditRow {
+        id: r.get(0)?,
+        occurred_at: r.get(1)?,
+        user_name: r.get(2)?,
+        approved_by_name: r.get(3)?,
+        device_name: r.get(4)?,
+        action: r.get(5)?,
+        entity_type: r.get(6)?,
+        entity_id: r.get(7)?,
+        summary: r.get(8)?,
+    })
+}
+
+pub fn list_audit(ctx: &Ctx<'_>, query: &AuditQuery) -> AppResult<Page<AuditRow>> {
+    ctx.require("audit.view")?;
+    let (where_sql, mut args) = audit_filters(query)?;
+    let from_sql = AUDIT_FROM;
     let total: i64 = ctx.conn.query_row(
         &format!("SELECT count(*) FROM {from_sql} WHERE {where_sql}"),
         params_from_iter(args.iter()),
@@ -439,21 +508,60 @@ pub fn list_audit(ctx: &Ctx<'_>, query: &AuditQuery) -> AppResult<Page<AuditRow>
             "SELECT a.id, a.occurred_at, u.name, ap.name, d.name, a.action, a.entity_type, a.entity_id, a.summary
              FROM {from_sql} WHERE {where_sql} ORDER BY {order} LIMIT ? OFFSET ?"
         ))?
-        .query_map(params_from_iter(args.iter()), |r| {
-            Ok(AuditRow {
-                id: r.get(0)?,
-                occurred_at: r.get(1)?,
-                user_name: r.get(2)?,
-                approved_by_name: r.get(3)?,
-                device_name: r.get(4)?,
-                action: r.get(5)?,
-                entity_type: r.get(6)?,
-                entity_id: r.get(7)?,
-                summary: r.get(8)?,
-            })
-        })?
+        .query_map(params_from_iter(args.iter()), audit_row)?
         .collect::<Result<_, _>>()?;
     Ok(Page::new(items, total, &query.page))
+}
+
+/// The most rows one export holds; narrow the filters for more.
+pub const AUDIT_EXPORT_MAX: usize = 50_000;
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct AuditExport {
+    pub rows: Vec<AuditRow>,
+    /// More rows matched than were exported.
+    pub truncated: bool,
+}
+
+/// Every row matching the viewer's filters (oldest first), for CSV or Excel. The export itself
+/// is audited, with the filters used.
+pub fn export_audit(ctx: &mut Ctx<'_>, query: &AuditQuery) -> AppResult<AuditExport> {
+    ctx.require("audit.export")?;
+    let (where_sql, mut args) = audit_filters(query)?;
+    args.push(
+        i64::try_from(AUDIT_EXPORT_MAX + 1)
+            .unwrap_or(i64::MAX)
+            .into(),
+    );
+    let mut rows: Vec<AuditRow> = ctx
+        .conn
+        .prepare(&format!(
+            "SELECT a.id, a.occurred_at, u.name, ap.name, d.name, a.action, a.entity_type, a.entity_id, a.summary
+             FROM {AUDIT_FROM} WHERE {where_sql} ORDER BY a.occurred_at, a.id LIMIT ?"
+        ))?
+        .query_map(params_from_iter(args.iter()), audit_row)?
+        .collect::<Result<_, _>>()?;
+    let truncated = rows.len() > AUDIT_EXPORT_MAX;
+    rows.truncate(AUDIT_EXPORT_MAX);
+    let now = ctx.now_str();
+    let actor = ctx.actor;
+    let filters = json!({
+        "search": query.search, "action": query.action, "userId": query.user_id,
+        "from": query.from, "to": query.to,
+    });
+    write(ctx.conn, |tx| {
+        AuditEntry::new("AUDIT_EXPORTED", "audit_log", None)
+            .by(actor)
+            .summary(format!(
+                "{} row(s){}",
+                rows.len(),
+                if truncated { " (cut short)" } else { "" }
+            ))
+            .after(filters)
+            .write(tx, &now)
+    })?;
+    Ok(AuditExport { rows, truncated })
 }
 
 /// The distinct actions in the log (for the filter box).

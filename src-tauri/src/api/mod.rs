@@ -223,9 +223,10 @@ macro_rules! commands {
 
 use crate::printing::labels::{LabelItem, LabelTemplate};
 use crate::services::{
-    accounting, backup, catalog, common::Page, devices, documents, expenses, images, inventory,
-    notifications, parties, payments, price_lists, printing, purchases, reports, sales, settings,
-    setup, stock, sync, upgrade, users,
+    accounting, attachments, backup, bank, catalog, cheques, common::Page, devices, documents,
+    expenses, images, inventory, manual_journals as journals, notifications, parties, payments,
+    period, price_lists, printing, purchases, report_views, reports, sales, settings, setup, stock,
+    sync, upgrade, users,
 };
 
 fn legacy_database_found(state: &AppState) -> bool {
@@ -352,6 +353,48 @@ commands! {
     authed day_closes_list(NoInput) -> Vec<accounting::DayCloseRow> = |ctx: &mut Ctx<'_>, _: &NoInput| accounting::list_day_closes(ctx);
     authed audit_list(accounting::AuditQuery) -> Page<accounting::AuditRow> = |ctx: &mut Ctx<'_>, q: &accounting::AuditQuery| accounting::list_audit(ctx, q);
     authed audit_actions(NoInput) -> Vec<String> = |ctx: &mut Ctx<'_>, _: &NoInput| accounting::audit_actions(ctx);
+    authed audit_export(accounting::AuditQuery) -> accounting::AuditExport = accounting::export_audit;
+
+    authed period_status(NoInput) -> period::PeriodStatus = |ctx: &mut Ctx<'_>, _: &NoInput| period::status(ctx);
+    authed day_reopen(period::ReopenDayInput) -> () = period::reopen_day;
+    authed years_list(NoInput) -> Vec<period::YearRow> = |ctx: &mut Ctx<'_>, _: &NoInput| period::years(ctx);
+    authed year_close_preview(period::YearPreviewInput) -> period::YearClosePreview = |ctx: &mut Ctx<'_>, i: &period::YearPreviewInput| period::year_close_preview(ctx, i);
+    authed year_close(period::YearCloseInput) -> period::YearRow = period::close_year;
+    authed year_reopen(period::YearReopenInput) -> period::YearRow = period::reopen_year;
+
+    authed journals_list(journals::JournalListQuery) -> Page<journals::JournalListItem> = |ctx: &mut Ctx<'_>, q: &journals::JournalListQuery| journals::list(ctx, q);
+    authed journals_get(users::IdInput) -> journals::JournalDetail = |ctx: &mut Ctx<'_>, i: &users::IdInput| journals::get(ctx, &i.id);
+    authed journals_save(journals::JournalInput) -> journals::JournalDetail = journals::save;
+    authed journals_delete(journals::JournalActionInput) -> () = journals::delete;
+    authed journals_submit(journals::JournalActionInput) -> journals::JournalDetail = journals::submit;
+    authed journals_send_back(journals::JournalActionInput) -> journals::JournalDetail = journals::send_back;
+    authed journals_approve(journals::JournalActionInput) -> journals::JournalDetail = journals::approve;
+    authed journals_allow_restricted(journals::JournalActionInput) -> journals::JournalDetail = journals::allow_restricted;
+    authed journals_post(journals::JournalActionInput) -> journals::JournalDetail = journals::post;
+    authed journals_reverse(journals::ReverseJournalInput) -> journals::JournalDetail = journals::reverse;
+
+    authed bank_import(bank::StatementImportInput) -> bank::StatementImportResult = bank::import;
+    authed bank_view(bank::BankQuery) -> bank::BankView = |ctx: &mut Ctx<'_>, q: &bank::BankQuery| bank::view(ctx, q);
+    authed bank_auto_match(bank::AccountInput) -> bank::AutoMatchResult = bank::auto_match;
+    authed bank_match(bank::MatchInput) -> () = bank::match_lines;
+    authed bank_unmatch(bank::UnmatchInput) -> () = bank::unmatch;
+    authed bank_ignore(bank::IgnoreInput) -> () = bank::ignore;
+    authed bank_tick(bank::TickInput) -> () = bank::tick;
+    authed bank_reconciliation(bank::ReconcileQuery) -> bank::Reconciliation = |ctx: &mut Ctx<'_>, q: &bank::ReconcileQuery| bank::reconciliation(ctx, q);
+    authed bank_finish(bank::FinishInput) -> bank::ReconciliationRecord = bank::finish;
+    authed bank_history(bank::AccountInput) -> Vec<bank::ReconciliationRecord> = |ctx: &mut Ctx<'_>, i: &bank::AccountInput| bank::history(ctx, i);
+
+    authed cheques_list(cheques::ChequeQuery) -> Page<cheques::Cheque> = |ctx: &mut Ctx<'_>, q: &cheques::ChequeQuery| cheques::list(ctx, q);
+    authed cheques_save(cheques::ChequeInput) -> cheques::Cheque = cheques::save;
+    authed cheques_clear(cheques::ChequeClearInput) -> cheques::Cheque = cheques::clear;
+    authed cheques_bounce(cheques::ChequeStatusInput) -> cheques::Cheque = cheques::bounce;
+    authed cheques_cancel(cheques::ChequeStatusInput) -> cheques::Cheque = cheques::cancel;
+
+    authed report_views_list(NoInput) -> Vec<report_views::ReportView> = |ctx: &mut Ctx<'_>, _: &NoInput| report_views::list(ctx);
+    authed report_views_save(report_views::ReportViewInput) -> report_views::ReportView = report_views::save;
+    authed report_views_delete(users::IdInput) -> () = report_views::delete;
+    authed report_views_schedule(report_views::ScheduleInput) -> report_views::ReportView = report_views::set_schedule;
+    authed report_views_run_now(users::IdInput) -> String = report_views::run_now;
 
     authed devices_pairing_code(NoInput) -> devices::PairingCode = |ctx: &mut Ctx<'_>, _: &NoInput| devices::create_pairing_code(ctx);
     authed devices_list(NoInput) -> Vec<devices::DeviceSummary> = |ctx: &mut Ctx<'_>, _: &NoInput| devices::list(ctx);
@@ -410,6 +453,9 @@ commands! {
     stateful printers_shared(NoInput) -> Vec<printing::SharedPrinter> = |state: &AppState, _: &mut Ctx<'_>, _: &NoInput| Ok(printing::shared_printers(state));
     stateful print_jobs_submit(printing::SubmitPrintJobInput) -> printing::PrintJob = printing::submit;
     stateful print_jobs_retry(users::IdInput) -> printing::PrintJob = printing::retry_job;
+    stateful attachments_add(attachments::AttachmentAddInput) -> attachments::AttachmentInfo = attachments::add;
+    stateful attachments_get(attachments::AttachmentRef) -> attachments::AttachmentFile = attachments::get;
+    stateful attachments_remove(attachments::AttachmentRef) -> () = attachments::remove;
 }
 
 /// A command sent by a paired device over the LAN (crate::hub). Same commands, same checks; the

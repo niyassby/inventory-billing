@@ -351,7 +351,7 @@ fn jobs_run_when_due_and_not_twice() {
     let ran = jobs::tick(&kit.state).unwrap();
     assert_eq!(
         ran.iter().map(|(j, _)| *j).collect::<Vec<_>>(),
-        vec![Job::Backup, Job::LowStock, Job::Expiry]
+        vec![Job::Backup, Job::LowStock, Job::Expiry, Job::ReportExports]
     );
     let low_again: i64 = kit
         .conn()

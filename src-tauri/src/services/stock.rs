@@ -12,6 +12,7 @@ use super::common::{date, optional, positive, required, PageQuery};
 use super::idempotency;
 use super::journal::{self, Entry, JLine};
 use super::numbering;
+use super::period;
 use super::settings::{self, Settings};
 use super::setup::default_location;
 use super::stock_posting::{self, Move, StockWarning};
@@ -182,6 +183,7 @@ pub fn adjust(ctx: &mut Ctx<'_>, input: &AdjustInput) -> AppResult<StockDocResul
     }
     let settings = settings::load(ctx.conn)?;
     let today = settings.business_date(ctx.now);
+    let lock = period::check(ctx, &settings, &today, "a stock adjustment")?;
     let now = ctx.now_str();
     let actor = ctx.actor;
     write(ctx.conn, |tx| {
@@ -319,6 +321,7 @@ pub fn adjust(ctx: &mut Ctx<'_>, input: &AdjustInput) -> AppResult<StockDocResul
                     &actor.user_id,
                     &now,
                 )?;
+                period::audit(&lock, tx, actor, "stock_adjustments", &id, &now)?;
                 AuditEntry::new("STOCK_ADJUSTMENT", "stock_adjustments", Some(&id))
                     .by(actor)
                     .summary(format!("{} — {reason}", number.doc_no))
@@ -369,6 +372,7 @@ pub fn transfer(ctx: &mut Ctx<'_>, input: &TransferInput) -> AppResult<StockDocR
     let notes = optional("notes", input.notes.as_deref(), 1000)?;
     let settings = settings::load(ctx.conn)?;
     let today = settings.business_date(ctx.now);
+    let lock = period::check(ctx, &settings, &today, "a stock transfer")?;
     let now = ctx.now_str();
     let actor = ctx.actor;
     write(ctx.conn, |tx| {
@@ -469,6 +473,7 @@ pub fn transfer(ctx: &mut Ctx<'_>, input: &TransferInput) -> AppResult<StockDocR
                         value,
                     });
                 }
+                period::audit(&lock, tx, actor, "stock_transfers", &id, &now)?;
                 AuditEntry::new("STOCK_TRANSFER", "stock_transfers", Some(&id))
                     .by(actor)
                     .summary(number.doc_no.clone())
@@ -889,6 +894,7 @@ pub fn finalize_count(ctx: &mut Ctx<'_>, input: &CountFinalizeInput) -> AppResul
     ctx.require("stock.adjust")?;
     let settings: Settings = settings::load(ctx.conn)?;
     let today = settings.business_date(ctx.now);
+    let lock = period::check(ctx, &settings, &today, "a stock count")?;
     let now = ctx.now_str();
     let actor = ctx.actor;
     write(ctx.conn, |tx| {
@@ -949,6 +955,7 @@ pub fn finalize_count(ctx: &mut Ctx<'_>, input: &CountFinalizeInput) -> AppResul
                     &actor.user_id,
                     &now,
                 )?;
+                period::audit(&lock, tx, actor, "stock_counts", &detail.id, &now)?;
                 AuditEntry::new("STOCK_COUNT_FINALIZED", "stock_counts", Some(&detail.id))
                     .by(actor)
                     .summary(format!(

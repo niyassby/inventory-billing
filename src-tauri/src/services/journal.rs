@@ -97,6 +97,19 @@ fn insert(
     Ok(Some(id))
 }
 
+/// Posts `entry` as the reversal of journal entry `original` (its own lines, which must undo the
+/// original's) and marks the original reversed. Used by manual journals, whose reversal is a
+/// reviewed document of its own.
+pub fn post_reversal(conn: &Connection, entry: Entry<'_>, original: &str) -> AppResult<String> {
+    let id = insert(conn, entry, Some(original))?
+        .ok_or_else(|| AppError::internal("a reversal with no lines"))?;
+    conn.execute(
+        "UPDATE journal_entries SET status = 'reversed' WHERE id = ?1 AND status = 'posted'",
+        [original],
+    )?;
+    Ok(id)
+}
+
 /// Reverses every posted entry of a source document (swapped debits/credits) and marks the
 /// originals reversed.
 pub fn reverse_source(

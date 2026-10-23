@@ -135,6 +135,7 @@ fn a_till_session_adds_up_the_float_cash_sales_refunds_and_expenses() {
             session_id: session.id.clone(),
             counted_cash: 16_500,
             notes: None,
+            difference_reason: Some("counting_error".into()),
         },
     )
     .unwrap();

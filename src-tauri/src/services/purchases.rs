@@ -17,6 +17,7 @@ use super::idempotency;
 use super::journal::{self, Entry, JLine};
 use super::numbering;
 use super::party_ledger::{self, PartyRef, Posting};
+use super::period;
 use super::sales::{
     branch_of, record_payment, resolve_line, tax_columns, tax_components, validate_payments,
     void_payment, PaymentInput, ResolvedLine,
@@ -489,6 +490,7 @@ pub fn receive_goods(
     }
     let settings = settings::load(ctx.conn)?;
     let today = settings.business_date(ctx.now);
+    let lock = period::check(ctx, &settings, &today, "a goods receipt")?;
     let (party, branch_id, warehouse_id, _) = supplier_and_states(
         ctx.conn,
         &settings,
@@ -598,6 +600,7 @@ pub fn receive_goods(
                         now: &now,
                     },
                 )?;
+                period::audit(&lock, tx, actor, "goods_receipts", &id, &now)?;
                 AuditEntry::new("GOODS_RECEIVED", "goods_receipts", Some(&id))
                     .by(actor)
                     .summary(format!("{} from {}", number.doc_no, party.name))
@@ -704,6 +707,7 @@ pub fn create_bill(ctx: &mut Ctx<'_>, input: &PurchaseBillInput) -> AppResult<Pu
             "A bill can't be dated in the future.",
         ));
     }
+    let lock = period::check(ctx, &settings, &business_date, "a purchase bill")?;
     let (party, branch_id, warehouse_id, own_state) = supplier_and_states(
         ctx.conn,
         &settings,
@@ -1023,6 +1027,7 @@ pub fn create_bill(ctx: &mut Ctx<'_>, input: &PurchaseBillInput) -> AppResult<Pu
                         &now,
                     )?;
                 }
+                period::audit(&lock, tx, actor, "purchase_bills", &id, &now)?;
                 AuditEntry::new("PURCHASE_BILL", "purchase_bills", Some(&id))
                     .by(actor)
                     .summary(format!("{} {} total {total}", number.doc_no, party.name))
@@ -1048,6 +1053,16 @@ pub fn void_bill(ctx: &mut Ctx<'_>, input: &VoidBillInput) -> AppResult<Purchase
     let reason = required("reason", &input.reason, 300)?;
     let settings = settings::load(ctx.conn)?;
     let today = settings.business_date(ctx.now);
+    let dated: String = ctx
+        .conn
+        .query_row(
+            "SELECT business_date FROM purchase_bills WHERE id = ?1",
+            [&input.id],
+            |r| r.get(0),
+        )
+        .optional()?
+        .ok_or_else(|| AppError::not_found("The bill"))?;
+    let lock = period::check_void(ctx, &settings, &dated, &today, "voiding a purchase bill")?;
     let now = ctx.now_str();
     let actor = ctx.actor;
     write(ctx.conn, |tx| {
@@ -1114,6 +1129,7 @@ pub fn void_bill(ctx: &mut Ctx<'_>, input: &VoidBillInput) -> AppResult<Purchase
             "UPDATE purchase_bills SET status = 'voided', voided_at = ?1, voided_by = ?2, void_reason = ?3, updated_at = ?1, updated_by = ?2 WHERE id = ?4",
             params![now, actor.user_id, reason, bill.id],
         )?;
+        period::audit(&lock, tx, actor, "purchase_bills", &bill.id, &now)?;
         AuditEntry::new("PURCHASE_BILL_VOIDED", "purchase_bills", Some(&bill.id))
             .by(actor)
             .approved_by(approved_by.as_deref())
@@ -1161,6 +1177,7 @@ pub fn create_return(
     }
     let settings = settings::load(ctx.conn)?;
     let today = settings.business_date(ctx.now);
+    let lock = period::check(ctx, &settings, &today, "a goods receipt")?;
     let (party, branch_id, warehouse_id, _) = supplier_and_states(
         ctx.conn,
         &settings,
@@ -1435,6 +1452,7 @@ pub fn create_return(
                         &now,
                     )?;
                 }
+                period::audit(&lock, tx, actor, "purchase_returns", &id, &now)?;
                 AuditEntry::new("PURCHASE_RETURN", "purchase_returns", Some(&id))
                     .by(actor)
                     .summary(format!("{}: {reason}", number.doc_no))

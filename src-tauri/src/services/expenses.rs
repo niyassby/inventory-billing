@@ -11,6 +11,7 @@ use super::idempotency;
 use super::journal::{self, Entry, JLine};
 use super::numbering;
 use super::party_ledger::{self, Posting};
+use super::period;
 use super::sales::{record_payment, validate_payments, void_payment, PaymentInput};
 use super::settings;
 use super::{accounts, write, Ctx};
@@ -177,6 +178,7 @@ pub fn create(ctx: &mut Ctx<'_>, input: &ExpenseInput) -> AppResult<ExpenseDetai
             "An expense can't be dated in the future.",
         ));
     }
+    let lock = period::check(ctx, &settings, &business_date, "an expense")?;
     let party = input
         .party_id
         .as_deref()
@@ -275,6 +277,7 @@ pub fn create(ctx: &mut Ctx<'_>, input: &ExpenseInput) -> AppResult<ExpenseDetai
                         &now,
                     )?;
                 }
+                period::audit(&lock, tx, actor, "expenses", &id, &now)?;
                 AuditEntry::new("EXPENSE", "expenses", Some(&id))
                     .by(actor)
                     .summary(format!("{} {title} {total}", number.doc_no))
@@ -297,6 +300,8 @@ pub fn void(ctx: &mut Ctx<'_>, input: &VoidExpenseInput) -> AppResult<ExpenseDet
     let reason = required("reason", &input.reason, 300)?;
     let settings = settings::load(ctx.conn)?;
     let today = settings.business_date(ctx.now);
+    let dated = detail(ctx.conn, &input.id)?.business_date;
+    let lock = period::check_void(ctx, &settings, &dated, &today, "voiding an expense")?;
     let now = ctx.now_str();
     let actor = ctx.actor;
     write(ctx.conn, |tx| {
@@ -340,6 +345,7 @@ pub fn void(ctx: &mut Ctx<'_>, input: &VoidExpenseInput) -> AppResult<ExpenseDet
             "UPDATE expenses SET status = 'voided', voided_at = ?1, voided_by = ?2, void_reason = ?3, updated_at = ?1, updated_by = ?2 WHERE id = ?4",
             params![now, actor.user_id, reason, expense.id],
         )?;
+        period::audit(&lock, tx, actor, "expenses", &expense.id, &now)?;
         AuditEntry::new("EXPENSE_VOIDED", "expenses", Some(&expense.id))
             .by(actor)
             .summary(reason.clone())

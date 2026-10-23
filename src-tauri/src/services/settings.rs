@@ -267,6 +267,27 @@ impl Default for BackupSettings {
     }
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
+#[serde(rename_all = "camelCase", default)]
+pub struct AccountingSettings {
+    /// Documents dated on or before the latest closed day need `period.override`.
+    pub lock_closed_days: bool,
+    /// A till difference larger than this (minor units, either way) needs a manager's approval.
+    pub till_difference_approval: i64,
+    /// Bank matching looks this many days either side of the book date.
+    pub bank_match_days: i64,
+}
+
+impl Default for AccountingSettings {
+    fn default() -> Self {
+        Self {
+            lock_closed_days: false,
+            till_difference_approval: 10_000,
+            bank_match_days: 3,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Default, Serialize, Deserialize, JsonSchema, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct Settings {
@@ -277,6 +298,8 @@ pub struct Settings {
     pub invoice: InvoiceSettings,
     pub network: NetworkSettings,
     pub backup: BackupSettings,
+    #[serde(default)]
+    pub accounting: AccountingSettings,
 }
 
 impl Settings {
@@ -300,7 +323,7 @@ impl Settings {
     }
 }
 
-const SECTIONS: [&str; 7] = [
+const SECTIONS: [&str; 8] = [
     "business",
     "tax",
     "inventory",
@@ -308,6 +331,7 @@ const SECTIONS: [&str; 7] = [
     "invoice",
     "network",
     "backup",
+    "accounting",
 ];
 
 fn section<T: for<'de> Deserialize<'de> + Default>(conn: &Connection, key: &str) -> AppResult<T> {
@@ -338,6 +362,7 @@ pub fn load(conn: &Connection) -> AppResult<Settings> {
         invoice: section(conn, "invoice")?,
         network: section(conn, "network")?,
         backup: section(conn, "backup")?,
+        accounting: section(conn, "accounting")?,
     })
 }
 
@@ -469,6 +494,22 @@ fn validate(section: &str, value: &Value) -> AppResult<Value> {
             }
             serde_json::to_value(s)?
         }
+        "accounting" => {
+            let s: AccountingSettings = serde_json::from_value(value.clone()).map_err(invalid)?;
+            if !(0..=100_000_000).contains(&s.till_difference_approval) {
+                return Err(AppError::field(
+                    "tillDifferenceApproval",
+                    "Use an amount between 0 and 10,00,000.",
+                ));
+            }
+            if !(0..=30).contains(&s.bank_match_days) {
+                return Err(AppError::field(
+                    "bankMatchDays",
+                    "Look 0 to 30 days either side.",
+                ));
+            }
+            serde_json::to_value(s)?
+        }
         other => {
             return Err(AppError::validation(format!(
                 "Unknown settings section '{other}'."
@@ -528,6 +569,16 @@ pub fn update(ctx: &mut Ctx<'_>, input: &UpdateSettingsInput) -> AppResult<Setti
                 "valuationMethod",
                 "Change the valuation method with Inventory → Valuation method (it checks and converts the stock).",
             ));
+        }
+        // Turning the closed-day lock on or off is an owner's decision (it guards the books).
+        if input.section == "accounting"
+            && input
+                .value
+                .get("lockClosedDays")
+                .is_some_and(|m| *m != before["lockClosedDays"])
+            && !actor.can("period.manage")
+        {
+            return Err(AppError::forbidden("period.manage"));
         }
         let after = store(tx, &input.section, &input.value, Some(&actor.user_id), &now)?;
         AuditEntry::new("SETTINGS_UPDATE", "settings", Some(&input.section))

@@ -94,3 +94,34 @@ pub fn mark_read(ctx: &mut Ctx<'_>, input: &IdInput) -> AppResult<()> {
     )?;
     Ok(())
 }
+
+/// A notice raised by the app itself. `key` de-duplicates: while a notice with the same key is
+/// unread, raising it again does nothing.
+pub(crate) struct Notice<'a> {
+    pub kind: &'a str,
+    pub severity: &'a str,
+    pub title: &'a str,
+    pub body: &'a str,
+    pub key: &'a str,
+    pub entity: Option<(&'a str, &'a str)>,
+}
+
+/// Raises a notice; returns whether a new one was written.
+pub(crate) fn raise(conn: &rusqlite::Connection, n: &Notice<'_>, now: &str) -> AppResult<bool> {
+    let inserted = conn.execute(
+        "INSERT INTO notifications (id, kind, severity, title, body, entity_type, entity_id, dedupe_key, created_at)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9) ON CONFLICT DO NOTHING",
+        rusqlite::params![
+            crate::domain::ids::new_id(),
+            n.kind,
+            n.severity,
+            n.title,
+            n.body,
+            n.entity.map(|e| e.0),
+            n.entity.map(|e| e.1),
+            n.key,
+            now
+        ],
+    )?;
+    Ok(inserted > 0)
+}

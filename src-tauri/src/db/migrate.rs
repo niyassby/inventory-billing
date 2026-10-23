@@ -73,6 +73,11 @@ pub const MIGRATIONS: &[Migration] = &[
         name: "inventory_depth",
         sql: include_str!("migrations/0011_inventory_depth.sql"),
     },
+    Migration {
+        version: 12,
+        name: "accounting_depth",
+        sql: include_str!("migrations/0012_accounting_depth.sql"),
+    },
 ];
 
 pub fn latest_version() -> i64 {

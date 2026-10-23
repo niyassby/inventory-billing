@@ -144,9 +144,34 @@ pub fn from_legacy_float(major: f64, minor_digits: u32) -> Option<(i64, bool)> {
     Some((amount, (scaled - rounded).abs() > 0.001))
 }
 
+/// Minor units as plain text for messages: 12345 with 2 digits is "123.45", -5 is "-0.05".
+pub fn format_minor(amount: i64, minor_digits: u32) -> String {
+    let sign = if amount < 0 { "-" } else { "" };
+    let abs = amount.unsigned_abs();
+    if minor_digits == 0 {
+        return format!("{sign}{abs}");
+    }
+    let scale = 10u64.pow(minor_digits.min(6));
+    let width = minor_digits.min(6) as usize;
+    format!("{sign}{}.{:0width$}", abs / scale, abs % scale)
+}
+
 /// Legacy REAL quantity (e.g. 2.5 kg) to thousandths.
 pub fn qty_from_legacy_float(qty: f64) -> Option<(i64, bool)> {
     from_legacy_float(qty, 3)
+}
+
+#[cfg(test)]
+mod format_tests {
+    use super::format_minor;
+
+    #[test]
+    fn formats_minor_units() {
+        assert_eq!(format_minor(12_345, 2), "123.45");
+        assert_eq!(format_minor(-5, 2), "-0.05");
+        assert_eq!(format_minor(7, 0), "7");
+        assert_eq!(format_minor(1_000, 3), "1.000");
+    }
 }
 
 #[cfg(test)]

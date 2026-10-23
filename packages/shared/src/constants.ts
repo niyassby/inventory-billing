@@ -61,6 +61,13 @@ export const PERMISSIONS = [
   "sales.open_drawer",
   "price_lists.manage",
   "inventory.valuation",
+  "journal.manage",
+  "journal.approve",
+  "journal.restricted",
+  "period.override",
+  "period.manage",
+  "audit.export",
+  "bank.reconcile",
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
 
@@ -70,7 +77,16 @@ const ALL: readonly Permission[] = PERMISSIONS;
 export const DEFAULT_ROLE_PERMISSIONS: Readonly<Record<Role, readonly Permission[]>> = {
   owner: ALL,
   manager: ALL.filter(
-    (p) => p !== "users.manage" && p !== "backup.manage" && p !== "inventory.valuation",
+    (p) =>
+      ![
+        "users.manage",
+        "backup.manage",
+        "inventory.valuation",
+        "journal.approve",
+        "journal.restricted",
+        "period.manage",
+        "audit.export",
+      ].includes(p),
   ),
   cashier: [
     "dashboard.view",
@@ -113,6 +129,9 @@ export const DEFAULT_ROLE_PERMISSIONS: Readonly<Record<Role, readonly Permission
     "reports.view",
     "reports.export",
     "audit.view",
+    "journal.manage",
+    "audit.export",
+    "bank.reconcile",
   ],
 };
 

@@ -187,6 +187,21 @@ fn return_slip_till_close_and_held_slip() {
         session: Box::new(session()),
     };
     check_snapshot("till_close_80mm.txt", &job(&close, PaperWidth::Mm80, false));
+    let day = PrintDocument::DayClose {
+        summary: Box::new(
+            serde_json::from_value(json!({
+                "businessDate": "2026-10-22", "bills": 41, "salesTotal": 1824500, "taxTotal": 98200,
+                "discountTotal": 12000, "returnsTotal": 25000, "purchasesTotal": 600000, "expensesTotal": 45000,
+                "received": [{ "mode": "cash", "amount": 1229500 }, { "mode": "upi", "amount": 595000 }],
+                "paid": [{ "mode": "cash", "amount": 11800 }],
+                "tills": [{ "register": "Till 1", "countedBy": "Asha", "expectedCash": 1417700, "countedCash": 1417200,
+                            "difference": -500, "differenceReason": "wrong_change", "approvedBy": null }],
+                "openTills": 0, "closedAt": "2026-10-22T15:00:00Z", "closedBy": "Ravi", "notes": "Festival rush"
+            }))
+            .unwrap(),
+        ),
+    };
+    check_snapshot("day_close_80mm.txt", &job(&day, PaperWidth::Mm80, false));
     let held = PrintDocument::HeldSlip {
         slip: HeldSlip {
             label: "Table 4".into(),

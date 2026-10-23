@@ -2,6 +2,17 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "additionalProperties": false,
   "definitions": {
+    "AccountInput": {
+      "properties": {
+        "accountId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "accountId"
+      ],
+      "type": "object"
+    },
     "AccountRow": {
       "properties": {
         "accountType": {
@@ -54,6 +65,28 @@
         "name",
         "subtype"
       ],
+      "type": "object"
+    },
+    "AccountingSettings": {
+      "properties": {
+        "bankMatchDays": {
+          "default": 3,
+          "description": "Bank matching looks this many days either side of the book date.",
+          "format": "int64",
+          "type": "integer"
+        },
+        "lockClosedDays": {
+          "default": false,
+          "description": "Documents dated on or before the latest closed day need `period.override`.",
+          "type": "boolean"
+        },
+        "tillDifferenceApproval": {
+          "default": 10000,
+          "description": "A till difference larger than this (minor units, either way) needs a manager's approval.",
+          "format": "int64",
+          "type": "integer"
+        }
+      },
       "type": "object"
     },
     "AdjustInput": {
@@ -243,6 +276,115 @@
       ],
       "type": "object"
     },
+    "AttachmentAddInput": {
+      "properties": {
+        "data": {
+          "description": "The file, base64 encoded (no `data:` prefix).",
+          "type": "string"
+        },
+        "entityId": {
+          "type": "string"
+        },
+        "entityType": {
+          "description": "\"manual_journal\".",
+          "type": "string"
+        },
+        "fileName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "data",
+        "entityId",
+        "entityType",
+        "fileName"
+      ],
+      "type": "object"
+    },
+    "AttachmentFile": {
+      "properties": {
+        "contentType": {
+          "type": "string"
+        },
+        "data": {
+          "description": "The file, base64 encoded.",
+          "type": "string"
+        },
+        "fileName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "contentType",
+        "data",
+        "fileName"
+      ],
+      "type": "object"
+    },
+    "AttachmentInfo": {
+      "properties": {
+        "contentType": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string"
+        },
+        "createdByName": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "fileName": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "sizeBytes": {
+          "format": "int64",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "contentType",
+        "createdAt",
+        "fileName",
+        "id",
+        "sizeBytes"
+      ],
+      "type": "object"
+    },
+    "AttachmentRef": {
+      "properties": {
+        "id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "type": "object"
+    },
+    "AuditExport": {
+      "properties": {
+        "rows": {
+          "items": {
+            "$ref": "#/definitions/AuditRow"
+          },
+          "type": "array"
+        },
+        "truncated": {
+          "description": "More rows matched than were exported.",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "rows",
+        "truncated"
+      ],
+      "type": "object"
+    },
     "AuditQuery": {
       "properties": {
         "action": {
@@ -379,6 +521,32 @@
         "mustChangePassword",
         "token",
         "user"
+      ],
+      "type": "object"
+    },
+    "AutoMatchResult": {
+      "properties": {
+        "ambiguous": {
+          "description": "Lines with more than one equally good candidate (left for a person to choose).",
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "matched": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "unmatched": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "ambiguous",
+        "matched",
+        "unmatched"
       ],
       "type": "object"
     },
@@ -635,6 +803,77 @@
       ],
       "type": "object"
     },
+    "BankQuery": {
+      "properties": {
+        "accountId": {
+          "type": "string"
+        },
+        "from": {
+          "description": "Cleared items and matched lines from this day (default: 60 days before `to`).",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "to": {
+          "description": "Default: today.",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "accountId"
+      ],
+      "type": "object"
+    },
+    "BankView": {
+      "properties": {
+        "accountId": {
+          "type": "string"
+        },
+        "accountName": {
+          "type": "string"
+        },
+        "bookLines": {
+          "items": {
+            "$ref": "#/definitions/BookLineRow"
+          },
+          "type": "array"
+        },
+        "from": {
+          "type": "string"
+        },
+        "hasProfile": {
+          "type": "boolean"
+        },
+        "matchDays": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "statementLines": {
+          "items": {
+            "$ref": "#/definitions/StatementLineRow"
+          },
+          "type": "array"
+        },
+        "to": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "accountId",
+        "accountName",
+        "bookLines",
+        "from",
+        "hasProfile",
+        "matchDays",
+        "statementLines",
+        "to"
+      ],
+      "type": "object"
+    },
     "BatchQuery": {
       "properties": {
         "variantId": {
@@ -703,6 +942,73 @@
         "expired",
         "pickedFirst",
         "qty"
+      ],
+      "type": "object"
+    },
+    "BookLineRow": {
+      "properties": {
+        "amount": {
+          "description": "Positive = money in.",
+          "format": "int64",
+          "type": "integer"
+        },
+        "businessDate": {
+          "type": "string"
+        },
+        "clearedDate": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "docNo": {
+          "description": "The payment's number and reference, when the line is a payment.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "journalLineId": {
+          "type": "string"
+        },
+        "method": {
+          "description": "auto, manual or ticked.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "narration": {
+          "type": "string"
+        },
+        "reference": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "sourceId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "sourceType": {
+          "type": "string"
+        },
+        "statementLineId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "amount",
+        "businessDate",
+        "journalLineId",
+        "narration",
+        "sourceType"
       ],
       "type": "object"
     },
@@ -1049,6 +1355,255 @@
       ],
       "type": "object"
     },
+    "Cheque": {
+      "properties": {
+        "accountId": {
+          "type": "string"
+        },
+        "accountName": {
+          "type": "string"
+        },
+        "amount": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "bankName": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "chequeDate": {
+          "type": "string"
+        },
+        "chequeNo": {
+          "type": "string"
+        },
+        "clearedDate": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "daysLeft": {
+          "description": "Days until the cheque's date (negative: overdue).",
+          "format": "int64",
+          "type": "integer"
+        },
+        "direction": {
+          "description": "\"in\" (received from a customer) or \"out\" (given to a supplier).",
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "notes": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "partyId": {
+          "type": "string"
+        },
+        "partyName": {
+          "type": "string"
+        },
+        "paymentDocNo": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "paymentId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "status": {
+          "description": "pending, cleared, bounced or cancelled.",
+          "type": "string"
+        },
+        "statusNote": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "updatedAt": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "accountId",
+        "accountName",
+        "amount",
+        "chequeDate",
+        "chequeNo",
+        "daysLeft",
+        "direction",
+        "id",
+        "partyId",
+        "partyName",
+        "status",
+        "updatedAt"
+      ],
+      "type": "object"
+    },
+    "ChequeClearInput": {
+      "properties": {
+        "autoAllocate": {
+          "default": false,
+          "description": "Apply the receipt to the party's oldest open bills.",
+          "type": "boolean"
+        },
+        "clearedDate": {
+          "description": "The day the bank credited (or debited) it; default today.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "type": "object"
+    },
+    "ChequeInput": {
+      "properties": {
+        "accountId": {
+          "description": "The bank account it is (or will be) deposited into or paid from.",
+          "type": "string"
+        },
+        "amount": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "bankName": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "chequeDate": {
+          "type": "string"
+        },
+        "chequeNo": {
+          "type": "string"
+        },
+        "direction": {
+          "type": "string"
+        },
+        "expectedUpdatedAt": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "idempotencyKey": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "notes": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "partyId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "accountId",
+        "amount",
+        "chequeDate",
+        "chequeNo",
+        "direction",
+        "partyId"
+      ],
+      "type": "object"
+    },
+    "ChequeQuery": {
+      "properties": {
+        "descending": {
+          "default": false,
+          "description": "Sort the other way round.",
+          "type": "boolean"
+        },
+        "direction": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "dueBy": {
+          "description": "Pending cheques dated on or before this day.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "page": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "pageSize": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "sort": {
+          "description": "Which column to sort by: one of the keys the list documents (unknown keys are refused).",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "status": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "type": "object"
+    },
+    "ChequeStatusInput": {
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "reason"
+      ],
+      "type": "object"
+    },
     "ClientStatus": {
       "properties": {
         "businessName": {
@@ -1115,6 +1670,14 @@
         "countedCash": {
           "format": "int64",
           "type": "integer"
+        },
+        "differenceReason": {
+          "default": null,
+          "description": "Why the cash is short or over; required when it is (one of `DIFFERENCE_REASONS`).",
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "notes": {
           "type": [
@@ -1493,9 +2056,31 @@
             "null"
           ]
         },
+        "reopenReason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "reopenedAt": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "reopenedBy": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "salesTotal": {
           "format": "int64",
           "type": "integer"
+        },
+        "status": {
+          "description": "\"closed\" or \"reopened\".",
+          "type": "string"
         }
       },
       "required": [
@@ -1503,7 +2088,8 @@
         "businessDate",
         "closedAt",
         "closedBy",
-        "salesTotal"
+        "salesTotal",
+        "status"
       ],
       "type": "object"
     },
@@ -1554,6 +2140,11 @@
           "format": "int64",
           "type": "integer"
         },
+        "locked": {
+          "default": false,
+          "description": "Documents dated this day need `period.override`.",
+          "type": "boolean"
+        },
         "notes": {
           "type": [
             "string",
@@ -1580,6 +2171,18 @@
             "$ref": "#/definitions/ModeAmount"
           },
           "type": "array"
+        },
+        "reopenReason": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "reopened": {
+          "default": false,
+          "description": "The owner reopened this day (documents can be dated in it until it is closed again).",
+          "type": "boolean"
         },
         "returnsTotal": {
           "format": "int64",
@@ -1817,6 +2420,21 @@
         "serialPorts",
         "windowsQueues",
         "windowsSupported"
+      ],
+      "type": "object"
+    },
+    "DocRef": {
+      "properties": {
+        "docNo": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "docNo",
+        "id"
       ],
       "type": "object"
     },
@@ -2317,6 +2935,33 @@
       ],
       "type": "object"
     },
+    "FinishInput": {
+      "properties": {
+        "accountId": {
+          "type": "string"
+        },
+        "notes": {
+          "description": "Required when a difference remains.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "statementBalance": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "statementDate": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "accountId",
+        "statementBalance",
+        "statementDate"
+      ],
+      "type": "object"
+    },
     "FoundHub": {
       "properties": {
         "fingerprintShort": {
@@ -2454,6 +3099,21 @@
         "idempotencyKey",
         "lines",
         "partyId"
+      ],
+      "type": "object"
+    },
+    "GroupOption": {
+      "properties": {
+        "key": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "key",
+        "label"
       ],
       "type": "object"
     },
@@ -2669,6 +3329,24 @@
       },
       "required": [
         "id"
+      ],
+      "type": "object"
+    },
+    "IgnoreInput": {
+      "properties": {
+        "note": {
+          "description": "A note ignores the line (not a real movement: an opening-balance row, a duplicate); none brings it back.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "statementLineId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "statementLineId"
       ],
       "type": "object"
     },
@@ -3280,6 +3958,419 @@
       },
       "type": "object"
     },
+    "JournalActionInput": {
+      "properties": {
+        "expectedUpdatedAt": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "id": {
+          "type": "string"
+        },
+        "note": {
+          "description": "Sending back: why. Allowing control accounts: why.",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "type": "object"
+    },
+    "JournalDetail": {
+      "properties": {
+        "allowRestricted": {
+          "type": "boolean"
+        },
+        "approvedAt": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "approvedByName": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "attachments": {
+          "items": {
+            "$ref": "#/definitions/AttachmentInfo"
+          },
+          "type": "array"
+        },
+        "businessDate": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string"
+        },
+        "createdBy": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "createdByName": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "docNo": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "lines": {
+          "items": {
+            "$ref": "#/definitions/JournalLineRow"
+          },
+          "type": "array"
+        },
+        "narration": {
+          "type": "string"
+        },
+        "postedAt": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "postedByName": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "restrictedByName": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "restrictedReason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "reversalOf": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/DocRef"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "reversedBy": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/DocRef"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "reviewNote": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "status": {
+          "description": "draft, submitted, approved, posted or reversed.",
+          "type": "string"
+        },
+        "submittedAt": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "submittedByName": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "totalCredit": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "totalDebit": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "updatedAt": {
+          "type": "string"
+        },
+        "usesRestricted": {
+          "description": "Lines on control accounts (they need `allow_restricted`).",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "allowRestricted",
+        "attachments",
+        "businessDate",
+        "createdAt",
+        "docNo",
+        "id",
+        "lines",
+        "narration",
+        "status",
+        "totalCredit",
+        "totalDebit",
+        "updatedAt",
+        "usesRestricted"
+      ],
+      "type": "object"
+    },
+    "JournalInput": {
+      "properties": {
+        "businessDate": {
+          "description": "Default: today.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "expectedUpdatedAt": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "id": {
+          "description": "None creates a draft (with `idempotency_key`); an id edits a draft.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "idempotencyKey": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "lines": {
+          "items": {
+            "$ref": "#/definitions/JournalLineInput"
+          },
+          "type": "array"
+        },
+        "narration": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "lines",
+        "narration"
+      ],
+      "type": "object"
+    },
+    "JournalLineInput": {
+      "properties": {
+        "accountId": {
+          "type": "string"
+        },
+        "credit": {
+          "default": 0,
+          "format": "int64",
+          "type": "integer"
+        },
+        "debit": {
+          "default": 0,
+          "format": "int64",
+          "type": "integer"
+        },
+        "memo": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "partyId": {
+          "description": "Required on receivable and payable lines (and only allowed there).",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "accountId"
+      ],
+      "type": "object"
+    },
+    "JournalLineRow": {
+      "properties": {
+        "accountCode": {
+          "type": "string"
+        },
+        "accountId": {
+          "type": "string"
+        },
+        "accountName": {
+          "type": "string"
+        },
+        "accountSubtype": {
+          "type": "string"
+        },
+        "credit": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "debit": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "lineNo": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "memo": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "partyId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "partyName": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "accountCode",
+        "accountId",
+        "accountName",
+        "accountSubtype",
+        "credit",
+        "debit",
+        "lineNo"
+      ],
+      "type": "object"
+    },
+    "JournalListItem": {
+      "properties": {
+        "attachmentCount": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "businessDate": {
+          "type": "string"
+        },
+        "createdByName": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "docNo": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "narration": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "total": {
+          "format": "int64",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "attachmentCount",
+        "businessDate",
+        "docNo",
+        "id",
+        "narration",
+        "status",
+        "total"
+      ],
+      "type": "object"
+    },
+    "JournalListQuery": {
+      "properties": {
+        "descending": {
+          "default": false,
+          "description": "Sort the other way round.",
+          "type": "boolean"
+        },
+        "from": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "page": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "pageSize": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "search": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "sort": {
+          "description": "Which column to sort by: one of the keys the list documents (unknown keys are refused).",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "status": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "to": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "type": "object"
+    },
     "LabelItem": {
       "description": "One product to label, with how many copies.",
       "properties": {
@@ -3593,6 +4684,25 @@
         "legacyValue",
         "migratedMinor",
         "table"
+      ],
+      "type": "object"
+    },
+    "MatchInput": {
+      "properties": {
+        "journalLineIds": {
+          "description": "One or more uncleared book lines whose amounts add up to the statement line's.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "statementLineId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "journalLineIds",
+        "statementLineId"
       ],
       "type": "object"
     },
@@ -4119,6 +5229,37 @@
       ],
       "type": "object"
     },
+    "Page_for_Cheque": {
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/definitions/Cheque"
+          },
+          "type": "array"
+        },
+        "page": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "pageSize": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "total": {
+          "format": "int64",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "items",
+        "page",
+        "pageSize",
+        "total"
+      ],
+      "type": "object"
+    },
     "Page_for_ExpenseDetail": {
       "properties": {
         "items": {
@@ -4155,6 +5296,37 @@
         "items": {
           "items": {
             "$ref": "#/definitions/InvoiceListItem"
+          },
+          "type": "array"
+        },
+        "page": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "pageSize": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "total": {
+          "format": "int64",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "items",
+        "page",
+        "pageSize",
+        "total"
+      ],
+      "type": "object"
+    },
+    "Page_for_JournalListItem": {
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/definitions/JournalListItem"
           },
           "type": "array"
         },
@@ -5285,6 +6457,39 @@
       ],
       "type": "object"
     },
+    "PeriodStatus": {
+      "properties": {
+        "canManage": {
+          "type": "boolean"
+        },
+        "canOverride": {
+          "type": "boolean"
+        },
+        "lockClosedDays": {
+          "type": "boolean"
+        },
+        "lockedThrough": {
+          "description": "Documents on or before this day are locked (reopened days excepted).",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "reopenedDays": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "canManage",
+        "canOverride",
+        "lockClosedDays",
+        "reopenedDays"
+      ],
+      "type": "object"
+    },
     "PermissionInfo": {
       "properties": {
         "code": {
@@ -5797,6 +7002,25 @@
           },
           "required": [
             "session",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "description": "The day-close summary (printed on the till-close route).",
+          "properties": {
+            "summary": {
+              "$ref": "#/definitions/DaySummary"
+            },
+            "type": {
+              "enum": [
+                "day_close"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "summary",
             "type"
           ],
           "type": "object"
@@ -7468,6 +8692,169 @@
       },
       "type": "object"
     },
+    "ReconcileQuery": {
+      "properties": {
+        "accountId": {
+          "type": "string"
+        },
+        "statementBalance": {
+          "description": "The balance on the bank statement that day; default: the last imported line's balance.",
+          "format": "int64",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "statementDate": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "accountId",
+        "statementDate"
+      ],
+      "type": "object"
+    },
+    "Reconciliation": {
+      "properties": {
+        "accountId": {
+          "type": "string"
+        },
+        "accountName": {
+          "type": "string"
+        },
+        "bookBalance": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "difference": {
+          "description": "Statement balance − expected (zero when reconciled).",
+          "format": "int64",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "expectedStatementBalance": {
+          "description": "What the statement should show: book − uncleared in + uncleared out + not in books.",
+          "format": "int64",
+          "type": "integer"
+        },
+        "notInBooks": {
+          "description": "Statement lines not matched to the books (bank charges, interest…).",
+          "items": {
+            "$ref": "#/definitions/StatementLineRow"
+          },
+          "type": "array"
+        },
+        "notInBooksTotal": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "statementBalance": {
+          "format": "int64",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "statementDate": {
+          "type": "string"
+        },
+        "unclearedIn": {
+          "description": "Money in the books but not yet on the statement (deposits in transit).",
+          "items": {
+            "$ref": "#/definitions/BookLineRow"
+          },
+          "type": "array"
+        },
+        "unclearedInTotal": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "unclearedOut": {
+          "description": "Money out in the books but not yet on the statement (cheques not presented).",
+          "items": {
+            "$ref": "#/definitions/BookLineRow"
+          },
+          "type": "array"
+        },
+        "unclearedOutTotal": {
+          "format": "int64",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "accountId",
+        "accountName",
+        "bookBalance",
+        "expectedStatementBalance",
+        "notInBooks",
+        "notInBooksTotal",
+        "statementDate",
+        "unclearedIn",
+        "unclearedInTotal",
+        "unclearedOut",
+        "unclearedOutTotal"
+      ],
+      "type": "object"
+    },
+    "ReconciliationRecord": {
+      "properties": {
+        "bookBalance": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "createdAt": {
+          "type": "string"
+        },
+        "createdByName": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "difference": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "id": {
+          "type": "string"
+        },
+        "notes": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "statementBalance": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "statementDate": {
+          "type": "string"
+        },
+        "unclearedIn": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "unclearedOut": {
+          "format": "int64",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "bookBalance",
+        "createdAt",
+        "difference",
+        "id",
+        "statementBalance",
+        "statementDate",
+        "unclearedIn",
+        "unclearedOut"
+      ],
+      "type": "object"
+    },
     "RegisterSession": {
       "properties": {
         "cashIn": {
@@ -7498,12 +8885,30 @@
             "null"
           ]
         },
+        "differenceApprovedBy": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "differenceReason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "expectedCash": {
           "format": "int64",
           "type": "integer"
         },
         "id": {
           "type": "string"
+        },
+        "notes": {
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "openedAt": {
           "type": "string"
@@ -7541,6 +8946,21 @@
       ],
       "type": "object"
     },
+    "ReopenDayInput": {
+      "properties": {
+        "businessDate": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "businessDate",
+        "reason"
+      ],
+      "type": "object"
+    },
     "ReportQuery": {
       "properties": {
         "accountId": {
@@ -7550,8 +8970,32 @@
             "null"
           ]
         },
+        "categoryId": {
+          "default": null,
+          "description": "…one category (product category, or expense category on the expenses report)…",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "from": {
           "description": "First day (YYYY-MM-DD); default: the start of the current month.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "groupBy": {
+          "default": null,
+          "description": "How rows are grouped (the report's `groupOptions`; default: the first).",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "partyId": {
+          "default": null,
+          "description": "Drill-down filters: one customer or supplier (\"walk_in\" = bills without one)…",
           "type": [
             "string",
             "null"
@@ -7569,6 +9013,22 @@
         },
         "to": {
           "description": "Last day; default: today.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "userId": {
+          "default": null,
+          "description": "…one cashier…",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "variantId": {
+          "default": null,
+          "description": "…one item.",
           "type": [
             "string",
             "null"
@@ -7597,6 +9057,36 @@
         },
         "from": {
           "type": "string"
+        },
+        "groupBy": {
+          "default": null,
+          "description": "The grouping used, and the ones this report offers.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "groupOptions": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/GroupOption"
+          },
+          "type": "array"
+        },
+        "links": {
+          "default": [],
+          "description": "Where each row leads (same order as `rows`; empty when rows lead nowhere).",
+          "items": {
+            "anyOf": [
+              {
+                "$ref": "#/definitions/RowLink"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "type": "array"
         },
         "report": {
           "type": "string"
@@ -7635,6 +9125,74 @@
         "title",
         "to",
         "truncated"
+      ],
+      "type": "object"
+    },
+    "ReportView": {
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "params": {
+          "$ref": "#/definitions/ViewParams"
+        },
+        "report": {
+          "type": "string"
+        },
+        "schedule": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/ScheduleInfo"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "updatedAt": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "params",
+        "report",
+        "updatedAt"
+      ],
+      "type": "object"
+    },
+    "ReportViewInput": {
+      "properties": {
+        "expectedUpdatedAt": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "params": {
+          "$ref": "#/definitions/ViewParams"
+        },
+        "report": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "params",
+        "report"
       ],
       "type": "object"
     },
@@ -8002,6 +9560,32 @@
       },
       "type": "object"
     },
+    "ReverseJournalInput": {
+      "properties": {
+        "businessDate": {
+          "description": "Default: today.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "id": {
+          "type": "string"
+        },
+        "idempotencyKey": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "idempotencyKey",
+        "reason"
+      ],
+      "type": "object"
+    },
     "RoleInput": {
       "properties": {
         "code": {
@@ -8136,6 +9720,73 @@
           ]
         }
       },
+      "type": "object"
+    },
+    "RowLink": {
+      "description": "Where a row leads: another report (with these parameters) or a document.",
+      "properties": {
+        "categoryId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "from": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "groupBy": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "kind": {
+          "description": "\"report\", or a document: \"sales_invoice\", \"sales_return\", \"purchase_bill\", \"goods_receipt\", \"purchase_return\", \"payment\", \"manual_journal\".",
+          "type": "string"
+        },
+        "partyId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "report": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "to": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "userId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "variantId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "kind"
+      ],
       "type": "object"
     },
     "RupeeStyle": {
@@ -8671,6 +10322,79 @@
       ],
       "type": "object"
     },
+    "ScheduleInfo": {
+      "properties": {
+        "folder": {
+          "type": "string"
+        },
+        "frequency": {
+          "description": "daily (yesterday), weekly (last Monday to Sunday) or monthly (last month).",
+          "type": "string"
+        },
+        "isActive": {
+          "type": "boolean"
+        },
+        "lastError": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "lastPeriod": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "lastRunAt": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "lastStatus": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "folder",
+        "frequency",
+        "isActive"
+      ],
+      "type": "object"
+    },
+    "ScheduleInput": {
+      "properties": {
+        "folder": {
+          "description": "A folder on the hub PC (full path, must exist).",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "frequency": {
+          "description": "daily, weekly or monthly; None removes the schedule.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "isActive": {
+          "default": true,
+          "type": "boolean"
+        },
+        "viewId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "viewId"
+      ],
+      "type": "object"
+    },
     "SearchItem": {
       "description": "One sellable line for the POS: the variant, in the unit the code identified (pack barcodes resolve to the pack, with its factor and pack price).",
       "properties": {
@@ -8992,6 +10716,14 @@
     },
     "Settings": {
       "properties": {
+        "accounting": {
+          "$ref": "#/definitions/AccountingSettings",
+          "default": {
+            "bankMatchDays": 3,
+            "lockClosedDays": false,
+            "tillDifferenceApproval": 10000
+          }
+        },
         "backup": {
           "$ref": "#/definitions/BackupSettings"
         },
@@ -9158,6 +10890,144 @@
       ],
       "type": "object"
     },
+    "StatementImportInput": {
+      "properties": {
+        "accountId": {
+          "type": "string"
+        },
+        "apply": {
+          "default": false,
+          "description": "false: check and show what would be imported; true: import.",
+          "type": "boolean"
+        },
+        "csv": {
+          "description": "The file's text.",
+          "type": "string"
+        },
+        "fileName": {
+          "type": "string"
+        },
+        "mapping": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/StatementMapping"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "None: the mapping saved for this account (if any); without one only the sample comes back."
+        },
+        "saveMapping": {
+          "default": false,
+          "description": "Remember this mapping for the account.",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "accountId",
+        "csv",
+        "fileName"
+      ],
+      "type": "object"
+    },
+    "StatementImportResult": {
+      "properties": {
+        "columns": {
+          "description": "Column names (the header, or \"Column 1\"…).",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "dateFormats": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "duplicates": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "errors": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "fromDate": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "importId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "imported": {
+          "type": "boolean"
+        },
+        "mapping": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/StatementMapping"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "newRows": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "rows": {
+          "description": "The first rows as they would be imported.",
+          "items": {
+            "$ref": "#/definitions/StatementPreviewRow"
+          },
+          "type": "array"
+        },
+        "sample": {
+          "description": "The first rows of the file as read (for choosing columns).",
+          "items": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "type": "array"
+        },
+        "toDate": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "totalRows": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "columns",
+        "dateFormats",
+        "duplicates",
+        "errors",
+        "imported",
+        "newRows",
+        "rows",
+        "sample",
+        "totalRows"
+      ],
+      "type": "object"
+    },
     "StatementLine": {
       "properties": {
         "balance": {
@@ -9205,6 +11075,195 @@
         "entryType",
         "sourceId",
         "sourceType"
+      ],
+      "type": "object"
+    },
+    "StatementLineRow": {
+      "properties": {
+        "amount": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "balance": {
+          "format": "int64",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "description": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "ignoreNote": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "journalLineIds": {
+          "description": "The book lines it is matched to.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "reference": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "status": {
+          "description": "unmatched, matched or ignored.",
+          "type": "string"
+        },
+        "txnDate": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "amount",
+        "description",
+        "id",
+        "journalLineIds",
+        "status",
+        "txnDate"
+      ],
+      "type": "object"
+    },
+    "StatementMapping": {
+      "description": "Which column holds what (0-based), and how dates are written.",
+      "properties": {
+        "amountColumn": {
+          "description": "One signed column (positive = money in)…",
+          "format": "uint",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "balanceColumn": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "dateColumn": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "dateFormat": {
+          "description": "One of `domain::statement::DATE_FORMATS`.",
+          "type": "string"
+        },
+        "depositColumn": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "descriptionColumn": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "hasHeader": {
+          "default": true,
+          "type": "boolean"
+        },
+        "referenceColumn": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "skipRows": {
+          "default": 0,
+          "description": "Lines before the header (bank name, account number…).",
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "withdrawalColumn": {
+          "description": "…or separate withdrawal and deposit columns.",
+          "format": "uint",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "dateColumn",
+        "dateFormat",
+        "descriptionColumn"
+      ],
+      "type": "object"
+    },
+    "StatementPreviewRow": {
+      "properties": {
+        "amount": {
+          "format": "int64",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "balance": {
+          "format": "int64",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "description": {
+          "type": "string"
+        },
+        "duplicate": {
+          "description": "Already imported for this account.",
+          "type": "boolean"
+        },
+        "error": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "reference": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "rowNo": {
+          "description": "Line number in the file (1-based).",
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "txnDate": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "description",
+        "duplicate",
+        "rowNo"
       ],
       "type": "object"
     },
@@ -9885,6 +11944,29 @@
       ],
       "type": "object"
     },
+    "TickInput": {
+      "properties": {
+        "accountId": {
+          "type": "string"
+        },
+        "clearedDate": {
+          "description": "The day the bank cleared them.",
+          "type": "string"
+        },
+        "journalLineIds": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "accountId",
+        "clearedDate",
+        "journalLineIds"
+      ],
+      "type": "object"
+    },
     "TillPriceList": {
       "properties": {
         "priceListId": {
@@ -9908,6 +11990,14 @@
     },
     "TillSummary": {
       "properties": {
+        "approvedBy": {
+          "default": null,
+          "description": "The manager who approved a difference above the limit.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "countedBy": {
           "type": [
             "string",
@@ -9922,9 +12012,24 @@
           "format": "int64",
           "type": "integer"
         },
+        "differenceReason": {
+          "default": null,
+          "description": "Why the cash was short or over (a reason code, see `payments::DIFFERENCE_REASONS`).",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "expectedCash": {
           "format": "int64",
           "type": "integer"
+        },
+        "notes": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "register": {
           "type": "string"
@@ -10218,6 +12323,25 @@
         "decimals",
         "name"
       ],
+      "type": "object"
+    },
+    "UnmatchInput": {
+      "properties": {
+        "journalLineId": {
+          "description": "…or clear the tick of one book line.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "statementLineId": {
+          "description": "Unmatch a statement line (all its book lines)…",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
       "type": "object"
     },
     "UpdateSettingsInput": {
@@ -10652,6 +12776,86 @@
       ],
       "type": "object"
     },
+    "ViewParams": {
+      "description": "What a view remembers. `period` is one of the screen's presets or \"custom\" (then `from` and `to`); the rest are the report's own options.",
+      "properties": {
+        "accountId": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "categoryId": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "from": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "groupBy": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "partyId": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "partyType": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "period": {
+          "default": "",
+          "type": "string"
+        },
+        "to": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "userId": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "variantId": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "warehouseId": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "type": "object"
+    },
     "VoidBillInput": {
       "properties": {
         "id": {
@@ -10810,6 +13014,182 @@
         "variantId"
       ],
       "type": "object"
+    },
+    "YearCloseInput": {
+      "properties": {
+        "endDate": {
+          "description": "Any day of the year; the year is the financial year containing it.",
+          "type": "string"
+        },
+        "expectedNetProfit": {
+          "description": "The net profit the owner saw in the preview; a different figure means something was posted meanwhile, and nothing is closed.",
+          "format": "int64",
+          "type": "integer"
+        },
+        "reason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "endDate",
+        "expectedNetProfit"
+      ],
+      "type": "object"
+    },
+    "YearCloseLine": {
+      "properties": {
+        "amount": {
+          "description": "The account's balance moved out (income credit-positive, expense debit-positive).",
+          "format": "int64",
+          "type": "integer"
+        },
+        "code": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "amount",
+        "code",
+        "name"
+      ],
+      "type": "object"
+    },
+    "YearClosePreview": {
+      "properties": {
+        "blockers": {
+          "description": "Reasons the year can't be closed yet (empty = it can).",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "endDate": {
+          "type": "string"
+        },
+        "expenses": {
+          "items": {
+            "$ref": "#/definitions/YearCloseLine"
+          },
+          "type": "array"
+        },
+        "fyLabel": {
+          "type": "string"
+        },
+        "income": {
+          "items": {
+            "$ref": "#/definitions/YearCloseLine"
+          },
+          "type": "array"
+        },
+        "netProfit": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "startDate": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "blockers",
+        "endDate",
+        "expenses",
+        "fyLabel",
+        "income",
+        "netProfit",
+        "startDate"
+      ],
+      "type": "object"
+    },
+    "YearPreviewInput": {
+      "properties": {
+        "endDate": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "endDate"
+      ],
+      "type": "object"
+    },
+    "YearReopenInput": {
+      "properties": {
+        "endDate": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "endDate",
+        "reason"
+      ],
+      "type": "object"
+    },
+    "YearRow": {
+      "properties": {
+        "canClose": {
+          "description": "The year has ended and every earlier year with entries is closed.",
+          "type": "boolean"
+        },
+        "closedAt": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "closedBy": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "endDate": {
+          "type": "string"
+        },
+        "fyLabel": {
+          "type": "string"
+        },
+        "netProfit": {
+          "description": "Profit (or loss, negative) of the year as booked now; the closing figure once closed.",
+          "format": "int64",
+          "type": "integer"
+        },
+        "reopenReason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "reopenedAt": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "startDate": {
+          "type": "string"
+        },
+        "status": {
+          "description": "\"open\", \"closed\" or \"reopened\".",
+          "type": "string"
+        }
+      },
+      "required": [
+        "canClose",
+        "endDate",
+        "fyLabel",
+        "netProfit",
+        "startDate",
+        "status"
+      ],
+      "type": "object"
     }
   },
   "description": "Generated from src-tauri/src/api (do not edit). Every command takes { token, input, approval? }.",
@@ -10855,6 +13235,54 @@
           ],
           "type": "object"
         },
+        "attachments_add": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/AttachmentAddInput"
+            },
+            "output": {
+              "$ref": "#/definitions/AttachmentInfo"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "attachments_get": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/AttachmentRef"
+            },
+            "output": {
+              "$ref": "#/definitions/AttachmentFile"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "attachments_remove": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/AttachmentRef"
+            },
+            "output": {
+              "type": "null"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
         "audit_actions": {
           "additionalProperties": false,
           "properties": {
@@ -10866,6 +13294,22 @@
                 "type": "string"
               },
               "type": "array"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "audit_export": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/AuditQuery"
+            },
+            "output": {
+              "$ref": "#/definitions/AuditExport"
             }
           },
           "required": [
@@ -11066,6 +13510,169 @@
           ],
           "type": "object"
         },
+        "bank_auto_match": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/AccountInput"
+            },
+            "output": {
+              "$ref": "#/definitions/AutoMatchResult"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "bank_finish": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/FinishInput"
+            },
+            "output": {
+              "$ref": "#/definitions/ReconciliationRecord"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "bank_history": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/AccountInput"
+            },
+            "output": {
+              "items": {
+                "$ref": "#/definitions/ReconciliationRecord"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "bank_ignore": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/IgnoreInput"
+            },
+            "output": {
+              "type": "null"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "bank_import": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/StatementImportInput"
+            },
+            "output": {
+              "$ref": "#/definitions/StatementImportResult"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "bank_match": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/MatchInput"
+            },
+            "output": {
+              "type": "null"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "bank_reconciliation": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/ReconcileQuery"
+            },
+            "output": {
+              "$ref": "#/definitions/Reconciliation"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "bank_tick": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/TickInput"
+            },
+            "output": {
+              "type": "null"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "bank_unmatch": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/UnmatchInput"
+            },
+            "output": {
+              "type": "null"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "bank_view": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/BankQuery"
+            },
+            "output": {
+              "$ref": "#/definitions/BankView"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
         "brands_list": {
           "additionalProperties": false,
           "properties": {
@@ -11152,6 +13759,86 @@
           ],
           "type": "object"
         },
+        "cheques_bounce": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/ChequeStatusInput"
+            },
+            "output": {
+              "$ref": "#/definitions/Cheque"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "cheques_cancel": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/ChequeStatusInput"
+            },
+            "output": {
+              "$ref": "#/definitions/Cheque"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "cheques_clear": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/ChequeClearInput"
+            },
+            "output": {
+              "$ref": "#/definitions/Cheque"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "cheques_list": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/ChequeQuery"
+            },
+            "output": {
+              "$ref": "#/definitions/Page_for_Cheque"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "cheques_save": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/ChequeInput"
+            },
+            "output": {
+              "$ref": "#/definitions/Cheque"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
         "client_cached_customers": {
           "additionalProperties": false,
           "properties": {
@@ -11214,6 +13901,22 @@
                 "$ref": "#/definitions/DayCloseRow"
               },
               "type": "array"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "day_reopen": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/ReopenDayInput"
+            },
+            "output": {
+              "type": "null"
             }
           },
           "required": [
@@ -11578,6 +14281,166 @@
             },
             "output": {
               "$ref": "#/definitions/ValuationSwitchResult"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "journals_allow_restricted": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/JournalActionInput"
+            },
+            "output": {
+              "$ref": "#/definitions/JournalDetail"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "journals_approve": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/JournalActionInput"
+            },
+            "output": {
+              "$ref": "#/definitions/JournalDetail"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "journals_delete": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/JournalActionInput"
+            },
+            "output": {
+              "type": "null"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "journals_get": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/IdInput"
+            },
+            "output": {
+              "$ref": "#/definitions/JournalDetail"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "journals_list": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/JournalListQuery"
+            },
+            "output": {
+              "$ref": "#/definitions/Page_for_JournalListItem"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "journals_post": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/JournalActionInput"
+            },
+            "output": {
+              "$ref": "#/definitions/JournalDetail"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "journals_reverse": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/ReverseJournalInput"
+            },
+            "output": {
+              "$ref": "#/definitions/JournalDetail"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "journals_save": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/JournalInput"
+            },
+            "output": {
+              "$ref": "#/definitions/JournalDetail"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "journals_send_back": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/JournalActionInput"
+            },
+            "output": {
+              "$ref": "#/definitions/JournalDetail"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "journals_submit": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/JournalActionInput"
+            },
+            "output": {
+              "$ref": "#/definitions/JournalDetail"
             }
           },
           "required": [
@@ -11951,6 +14814,22 @@
             },
             "output": {
               "$ref": "#/definitions/PaymentDetail"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "period_status": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/NoInput"
+            },
+            "output": {
+              "$ref": "#/definitions/PeriodStatus"
             }
           },
           "required": [
@@ -12713,6 +15592,89 @@
             },
             "output": {
               "$ref": "#/definitions/RegisterSession"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "report_views_delete": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/IdInput"
+            },
+            "output": {
+              "type": "null"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "report_views_list": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/NoInput"
+            },
+            "output": {
+              "items": {
+                "$ref": "#/definitions/ReportView"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "report_views_run_now": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/IdInput"
+            },
+            "output": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "report_views_save": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/ReportViewInput"
+            },
+            "output": {
+              "$ref": "#/definitions/ReportView"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "report_views_schedule": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/ScheduleInput"
+            },
+            "output": {
+              "$ref": "#/definitions/ReportView"
             }
           },
           "required": [
@@ -13617,12 +16579,83 @@
             "output"
           ],
           "type": "object"
+        },
+        "year_close": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/YearCloseInput"
+            },
+            "output": {
+              "$ref": "#/definitions/YearRow"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "year_close_preview": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/YearPreviewInput"
+            },
+            "output": {
+              "$ref": "#/definitions/YearClosePreview"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "year_reopen": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/YearReopenInput"
+            },
+            "output": {
+              "$ref": "#/definitions/YearRow"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        "years_list": {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/NoInput"
+            },
+            "output": {
+              "items": {
+                "$ref": "#/definitions/YearRow"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "input",
+            "output"
+          ],
+          "type": "object"
         }
       },
       "required": [
         "accounts_list",
         "accounts_save",
+        "attachments_add",
+        "attachments_get",
+        "attachments_remove",
         "audit_actions",
+        "audit_export",
         "audit_list",
         "auth_change_password",
         "auth_login",
@@ -13635,15 +16668,31 @@
         "backup_set_passphrase",
         "backup_status",
         "backup_verify",
+        "bank_auto_match",
+        "bank_finish",
+        "bank_history",
+        "bank_ignore",
+        "bank_import",
+        "bank_match",
+        "bank_reconciliation",
+        "bank_tick",
+        "bank_unmatch",
+        "bank_view",
         "brands_list",
         "brands_save",
         "catalog_delete_master",
         "categories_list",
         "categories_save",
+        "cheques_bounce",
+        "cheques_cancel",
+        "cheques_clear",
+        "cheques_list",
+        "cheques_save",
         "client_cached_customers",
         "client_sync_now",
         "day_close",
         "day_closes_list",
+        "day_reopen",
         "day_summary",
         "device_discover_hubs",
         "device_pair",
@@ -13666,6 +16715,16 @@
         "inventory_expiry_summary",
         "inventory_valuation_preview",
         "inventory_valuation_switch",
+        "journals_allow_restricted",
+        "journals_approve",
+        "journals_delete",
+        "journals_get",
+        "journals_list",
+        "journals_post",
+        "journals_reverse",
+        "journals_save",
+        "journals_send_back",
+        "journals_submit",
         "labels_items",
         "labels_preview",
         "labels_templates_delete",
@@ -13688,6 +16747,7 @@
         "payments_list",
         "payments_record",
         "payments_void",
+        "period_status",
         "permissions_list",
         "price_lists_bulk_update",
         "price_lists_delete",
@@ -13733,6 +16793,11 @@
         "register_close",
         "register_current",
         "register_open",
+        "report_views_delete",
+        "report_views_list",
+        "report_views_run_now",
+        "report_views_save",
+        "report_views_schedule",
         "reports_run",
         "roles_delete",
         "roles_list",
@@ -13786,7 +16851,11 @@
         "users_list",
         "users_reset_password",
         "users_update",
-        "warehouses_save"
+        "warehouses_save",
+        "year_close",
+        "year_close_preview",
+        "year_reopen",
+        "years_list"
       ],
       "type": "object"
     },

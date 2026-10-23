@@ -41,6 +41,7 @@ pub fn print_permissions(doc: &PrintDocument) -> &'static [&'static str] {
         | PrintDocument::ReturnSlip { .. }
         | PrintDocument::HeldSlip { .. } => &["sales.create", "sales.view"],
         PrintDocument::TillClose { .. } => &["sales.create", "day_close.perform"],
+        PrintDocument::DayClose { .. } => &["day_close.perform"],
         PrintDocument::Labels { .. } => &["labels.print"],
         PrintDocument::Test => &["printing.manage"],
     }
@@ -64,6 +65,7 @@ fn doc_type(doc: &PrintDocument) -> &'static str {
         PrintDocument::Receipt { .. } => "receipt",
         PrintDocument::ReturnSlip { .. } => "return_slip",
         PrintDocument::TillClose { .. } => "till_close",
+        PrintDocument::DayClose { .. } => "day_close",
         PrintDocument::HeldSlip { .. } => "held_slip",
         PrintDocument::Labels { .. } => "labels",
         PrintDocument::Test => "test",

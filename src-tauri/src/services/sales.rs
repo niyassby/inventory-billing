@@ -19,6 +19,7 @@ use super::idempotency;
 use super::journal::{self, Entry, JLine};
 use super::numbering;
 use super::party_ledger::{self, PartyRef, Posting};
+use super::period;
 use super::settings::{self, Settings, TaxRegime};
 use super::stock_posting::{self, Move, StockWarning};
 use super::users::IdInput;
@@ -1358,6 +1359,15 @@ pub(crate) fn create_invoice_inner(
         }
         business_date
     };
+    // A locked day needs `period.override`. An offline sale already happened: it is kept and
+    // flagged for the owner instead.
+    let lock = if offline.is_some() {
+        None
+    } else {
+        period::check(ctx, &settings, &business_date, "an invoice")?
+    };
+    let offline_in_locked_day =
+        offline.is_some() && period::is_locked(ctx.conn, &settings, &business_date)?;
     let (branch_id, warehouse_id, branch_state) =
         branch_of(ctx.conn, input.warehouse_id.as_deref())?;
     let party: Option<PartyRef> = input
@@ -1705,6 +1715,27 @@ pub(crate) fn create_invoice_inner(
                         ));
                     }
                 }
+                period::audit(&lock, tx, actor, "sales_invoices", &id, &now)?;
+                if offline_in_locked_day {
+                    AuditEntry::new("OFFLINE_SALE_IN_LOCKED_DAY", "sales_invoices", Some(&id))
+                        .by(actor)
+                        .summary(format!("{} dated {business_date}", number.doc_no))
+                        .write(tx, &now)?;
+                    super::notifications::raise(
+                        tx,
+                        &super::notifications::Notice {
+                            kind: "locked_day",
+                            severity: "warning",
+                            title: &format!("Offline sale {} is in a locked day", number.doc_no),
+                            body: &format!(
+                                "A counter synced a sale dated {business_date}, which is closed. It was kept; check the day's figures."
+                            ),
+                            key: &format!("locked_day:{id}"),
+                            entity: Some(("sales_invoice", &id)),
+                        },
+                        &now,
+                    )?;
+                }
                 let discount = r.line_discount + r.bill_discount;
                 AuditEntry::new("SALE_FINALIZED", "sales_invoices", Some(&id))
                     .by(actor)
@@ -1737,6 +1768,16 @@ pub fn void_invoice(ctx: &mut Ctx<'_>, input: &VoidInput) -> AppResult<InvoiceDe
     let approved_by = ctx.approve("sales.void", "void an invoice")?;
     let settings = settings::load(ctx.conn)?;
     let today = settings.business_date(ctx.now);
+    let dated: String = ctx
+        .conn
+        .query_row(
+            "SELECT business_date FROM sales_invoices WHERE id = ?1",
+            [&input.id],
+            |r| r.get(0),
+        )
+        .optional()?
+        .ok_or_else(|| AppError::not_found("The invoice"))?;
+    let lock = period::check_void(ctx, &settings, &dated, &today, "voiding an invoice")?;
     let now = ctx.now_str();
     let actor = ctx.actor;
     write(ctx.conn, |tx| {
@@ -1802,6 +1843,7 @@ pub fn void_invoice(ctx: &mut Ctx<'_>, input: &VoidInput) -> AppResult<InvoiceDe
             "UPDATE sales_invoices SET status = 'voided', voided_at = ?1, voided_by = ?2, void_reason = ?3, updated_at = ?1, updated_by = ?2 WHERE id = ?4",
             params![now, actor.user_id, reason, invoice.id],
         )?;
+        period::audit(&lock, tx, actor, "sales_invoices", &invoice.id, &now)?;
         AuditEntry::new("SALE_VOIDED", "sales_invoices", Some(&invoice.id))
             .by(actor)
             .approved_by(approved_by.as_deref())
@@ -1966,6 +2008,7 @@ pub fn create_return(ctx: &mut Ctx<'_>, input: &ReturnInput) -> AppResult<Return
     }
     let settings = settings::load(ctx.conn)?;
     let today = settings.business_date(ctx.now);
+    let lock = period::check(ctx, &settings, &today, "a sales return")?;
     let now = ctx.now_str();
     let actor = ctx.actor;
     let refund = input
@@ -2354,6 +2397,7 @@ pub fn create_return(ctx: &mut Ctx<'_>, input: &ReturnInput) -> AppResult<Return
                         &now,
                     )?;
                 }
+                period::audit(&lock, tx, actor, "sales_returns", &id, &now)?;
                 AuditEntry::new("SALE_RETURN", "sales_returns", Some(&id))
                     .by(actor)
                     .approved_by(approved_by.as_deref())
