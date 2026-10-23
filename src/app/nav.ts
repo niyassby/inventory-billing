@@ -20,6 +20,10 @@ import {
   Barcode,
   BadgePercent,
   CalendarClock,
+  BookOpenCheck,
+  Building2,
+  ScrollText,
+  LockKeyhole,
 } from "lucide-react";
 
 export interface NavItem {
@@ -132,6 +136,30 @@ export const NAV: NavGroup[] = [
         to: "/accounting/day-close",
         icon: CalendarCheck,
         permission: "day_close.perform",
+      },
+      {
+        title: "Journals",
+        to: "/accounting/journals",
+        icon: BookOpenCheck,
+        permission: "accounting.view",
+      },
+      {
+        title: "Bank reconciliation",
+        to: "/accounting/bank",
+        icon: Building2,
+        permission: "bank.reconcile",
+      },
+      {
+        title: "Cheques",
+        to: "/accounting/cheques",
+        icon: ScrollText,
+        permission: "payments.receive",
+      },
+      {
+        title: "Periods and year end",
+        to: "/accounting/periods",
+        icon: LockKeyhole,
+        permission: "accounting.view",
       },
     ],
   },

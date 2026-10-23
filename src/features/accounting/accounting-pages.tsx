@@ -5,7 +5,12 @@ import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import type { Api } from "@inventory/shared";
 import { businessDate } from "@inventory/shared";
-import { Ban, Plus } from "lucide-react";
+import { Ban, Lock, Plus, Printer } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Badge } from "@/components/ui/badge";
+import { dayCloseHtml } from "@/features/sales/print";
+import { printDocument } from "@/features/printing/print-service";
+import { reasonLabel } from "@/lib/till";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -565,6 +570,22 @@ export function DayClosePage() {
     <Page
       title="Day close"
       description="Check the day's figures against the tills, then close the day."
+      actions={
+        summary.data && (
+          <Button
+            variant="outline"
+            onClick={() => {
+              const s = summary.data;
+              void printDocument({
+                document: { type: "day_close", summary: s },
+                fallbackHtml: () => dayCloseHtml(s, settings.data),
+              });
+            }}
+          >
+            <Printer /> Print summary
+          </Button>
+        )
+      }
     >
       <Section>
         <Field className="max-w-xs">
@@ -577,9 +598,25 @@ export function DayClosePage() {
           <>
             <Section
               title={
-                s.closedAt
-                  ? `Closed ${showDateTime(s.closedAt)} by ${s.closedBy ?? ""}`
-                  : "Today so far"
+                <span className="flex flex-wrap items-center gap-2">
+                  {s.closedAt
+                    ? `Closed ${showDateTime(s.closedAt)} by ${s.closedBy ?? ""}`
+                    : "Today so far"}
+                  {s.locked && (
+                    <Badge variant="secondary">
+                      <Lock className="size-3" aria-hidden /> Locked
+                    </Badge>
+                  )}
+                  {s.reopened && <Badge variant="warning">Reopened: {s.reopenReason ?? ""}</Badge>}
+                </span>
+              }
+              actions={
+                <Link
+                  className="text-sm text-primary underline-offset-4 hover:underline"
+                  to="/accounting/periods"
+                >
+                  Locked days and year end
+                </Link>
               }
             >
               <Facts
@@ -615,6 +652,7 @@ export function DayClosePage() {
                       <th className="py-1 text-right font-medium">Expected</th>
                       <th className="py-1 text-right font-medium">Counted</th>
                       <th className="py-1 text-right font-medium">Difference</th>
+                      <th className="py-1 pl-3 text-left font-medium">Reason</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -628,6 +666,11 @@ export function DayClosePage() {
                           className={`text-right tabular-nums ${t.difference !== 0 ? "font-medium text-destructive" : ""}`}
                         >
                           {money(t.difference)}
+                        </td>
+                        <td className="pl-3 text-xs text-muted-foreground">
+                          {reasonLabel(t.differenceReason)}
+                          {t.notes && ` · ${t.notes}`}
+                          {t.approvedBy && ` · approved by ${t.approvedBy}`}
                         </td>
                       </tr>
                     ))}
@@ -692,7 +735,14 @@ export function DayClosePage() {
                       className="cursor-pointer border-t border-border/40 first:border-0 hover:bg-muted/40"
                       onClick={() => setDay(c.businessDate)}
                     >
-                      <td className="py-1.5 font-medium">{showDate(c.businessDate)}</td>
+                      <td className="py-1.5 font-medium">
+                        {showDate(c.businessDate)}
+                        {c.status === "reopened" && (
+                          <Badge variant="warning" className="ml-2">
+                            Reopened
+                          </Badge>
+                        )}
+                      </td>
                       <td className="text-muted-foreground">{c.bills} bills</td>
                       <td className="text-right tabular-nums">{money(c.salesTotal)}</td>
                       <td className="text-right text-muted-foreground">{c.closedBy}</td>

@@ -11,6 +11,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Field, FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { DIFFERENCE_REASONS, reasonLabel } from "@/lib/till";
 import { MoneyInput, QtyInput, RateInput } from "@/components/app/inputs";
 import { OfflineBadge } from "@/components/app/badges";
 import { useMoney, usePublicSettings } from "@/lib/business";
@@ -380,12 +382,18 @@ export function TillDialog({
   const money = useMoney();
   const [amount, setAmount] = useState<number | null>(0);
   const [closed, setClosed] = useState<Api.RegisterSession | null>(null);
+  const [reason, setReason] = useState("");
+  const [note, setNote] = useState("");
   useEffect(() => {
     if (open) {
       setAmount(session ? null : 0);
       setClosed(null);
+      setReason("");
+      setNote("");
     }
   }, [open, session]);
+  const difference = session && amount !== null ? amount - session.expectedCash : 0;
+  const needsReason = Boolean(session) && difference !== 0;
   const openTill = useAction("register_open", {
     invalidates: ["register_current"],
     success: "Till opened",
@@ -410,7 +418,14 @@ export function TillDialog({
             e.preventDefault();
             if (amount === null) return;
             if (session)
-              closeTill.mutate({ input: { sessionId: session.id, countedCash: amount } });
+              closeTill.mutate({
+                input: {
+                  sessionId: session.id,
+                  countedCash: amount,
+                  differenceReason: needsReason ? reason : null,
+                  notes: note.trim() || null,
+                },
+              });
             else openTill.mutate({ input: { openingFloat: amount } });
           }}
         >
@@ -432,14 +447,59 @@ export function TillDialog({
               <dd className="text-right font-semibold tabular-nums">
                 {money(closed.difference ?? 0)}
               </dd>
+              {closed.differenceReason && (
+                <>
+                  <dt>Reason</dt>
+                  <dd className="text-right">{reasonLabel(closed.differenceReason)}</dd>
+                </>
+              )}
+              {closed.differenceApprovedBy && (
+                <>
+                  <dt>Approved by</dt>
+                  <dd className="text-right">{closed.differenceApprovedBy}</dd>
+                </>
+              )}
             </dl>
           ) : (
-            <Field>
-              <FieldLabel htmlFor="till-amount">
-                {session ? "Cash counted" : "Opening cash"}
-              </FieldLabel>
-              <MoneyInput id="till-amount" autoFocus value={amount} onValueChange={setAmount} />
-            </Field>
+            <>
+              <Field>
+                <FieldLabel htmlFor="till-amount">
+                  {session ? "Cash counted" : "Opening cash"}
+                </FieldLabel>
+                <MoneyInput id="till-amount" autoFocus value={amount} onValueChange={setAmount} />
+              </Field>
+              {needsReason && (
+                <>
+                  <p className="text-sm font-medium text-warning">
+                    {difference < 0 ? "Short" : "Over"} by {money(Math.abs(difference))} (expected{" "}
+                    {money(session?.expectedCash ?? 0)}).
+                  </p>
+                  <Field>
+                    <FieldLabel htmlFor="till-reason">Why</FieldLabel>
+                    <SelectField
+                      id="till-reason"
+                      value={reason}
+                      onValueChange={setReason}
+                      options={[{ value: "", label: "Choose a reason" }, ...DIFFERENCE_REASONS]}
+                    />
+                  </Field>
+                  <Field>
+                    <FieldLabel htmlFor="till-note">
+                      Note{reason === "other" ? "" : " (optional)"}
+                    </FieldLabel>
+                    <Input
+                      id="till-note"
+                      value={note}
+                      maxLength={500}
+                      onChange={(e) => setNote(e.target.value)}
+                    />
+                  </Field>
+                  <p className="text-xs text-muted-foreground">
+                    A large difference needs a manager's approval.
+                  </p>
+                </>
+              )}
+            </>
           )}
           <DialogFooter>
             {closed ? (
@@ -458,7 +518,12 @@ export function TillDialog({
                 </Button>
                 <Button
                   type="submit"
-                  disabled={amount === null || openTill.isPending || closeTill.isPending}
+                  disabled={
+                    amount === null ||
+                    openTill.isPending ||
+                    closeTill.isPending ||
+                    (needsReason && (!reason || (reason === "other" && !note.trim())))
+                  }
                 >
                   {session ? "Close till" : "Open till"}
                 </Button>

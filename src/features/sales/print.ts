@@ -2,6 +2,7 @@ import type { Api } from "@inventory/shared";
 import type { Locale } from "@/lib/format";
 import { localeOf } from "@/lib/business";
 import { label, showDate, showDateTime, showMoney, showQty, showRate } from "@/lib/format";
+import { reasonLabel } from "@/lib/till";
 
 export type Paper = "a4" | "thermal_80" | "thermal_58";
 
@@ -232,8 +233,53 @@ ${row("Cash out", `−${showMoney(session.cashOut, l)}`)}
 ${row("Expected cash", showMoney(session.expectedCash, l), "b")}
 ${session.countedCash !== null && session.countedCash !== undefined ? row("Counted cash", showMoney(session.countedCash, l)) : ""}
 ${row(diffLabel, showMoney(Math.abs(diff), l), "total")}
-</table><hr>
+${session.differenceReason ? row("Reason", esc(reasonLabel(session.differenceReason))) : ""}
+${session.differenceApprovedBy ? row("Approved by", esc(session.differenceApprovedBy)) : ""}
+</table>${session.notes ? `<p>${esc(session.notes)}</p>` : ""}<hr>
 <p>Cashier ____________</p><p>Manager ____________</p>
+</body></html>`;
+}
+
+/** The day-close summary (80 mm), as the thermal printer's version. */
+export function dayCloseHtml(
+  day: Api.DaySummary,
+  settings: Api.PublicSettings | undefined,
+): string {
+  const l = localeOf(settings);
+  const row = (k: string, v: string, cls = "") =>
+    `<tr class="${cls}"><td>${esc(k)}</td><td class="r">${v}</td></tr>`;
+  const modes = (items: Api.ModeAmount[]) =>
+    items.map((m) => row(label(m.mode), showMoney(m.amount, l))).join("");
+  const tills = day.tills
+    .map(
+      (t) =>
+        row(t.register, showMoney(t.countedCash, l)) +
+        (t.difference !== 0
+          ? row(t.difference < 0 ? "  Short" : "  Over", showMoney(Math.abs(t.difference), l)) +
+            (t.differenceReason ? row("  Reason", esc(reasonLabel(t.differenceReason))) : "") +
+            (t.approvedBy ? row("  Approved by", esc(t.approvedBy)) : "")
+          : ""),
+    )
+    .join("");
+  return `<!doctype html><html><head><meta charset="utf-8"><title>Day close</title><style>${thermalCss(80)}</style></head><body>
+<div class="c b" style="font-size:1.2em">${esc(settings?.business.name)}</div>
+<div class="c b">DAY CLOSE</div><div class="c">${showDate(day.businessDate, l.locale)}</div><hr>
+<table>
+${row("Bills", String(day.bills))}
+${row("Sales", showMoney(day.salesTotal, l))}
+${row("Tax in sales", showMoney(day.taxTotal, l))}
+${row("Discounts", showMoney(day.discountTotal, l))}
+${row("Returns", `−${showMoney(day.returnsTotal, l)}`)}
+${row("Net sales", showMoney(day.salesTotal - day.returnsTotal, l), "total")}
+${row("Purchases", showMoney(day.purchasesTotal, l))}
+${row("Expenses", showMoney(day.expensesTotal, l))}
+</table>
+${day.received.length ? `<hr><div class="b">Received</div><table>${modes(day.received)}</table>` : ""}
+${day.paid.length ? `<div class="b">Paid out</div><table>${modes(day.paid)}</table>` : ""}
+${day.tills.length ? `<hr><div class="b">Tills</div><table>${tills}</table>` : ""}
+<hr>${day.closedAt ? `<table>${row("Closed", showDateTime(day.closedAt, l.locale))}${row("Closed by", esc(day.closedBy ?? ""))}</table>` : ""}
+${day.notes ? `<p>${esc(day.notes)}</p>` : ""}
+<p>Signature ____________</p>
 </body></html>`;
 }
 

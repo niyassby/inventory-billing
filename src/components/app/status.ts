@@ -17,6 +17,20 @@ export const STATUS_TONES: Record<string, StatusTone> = {
   voided: "danger",
   void: "danger",
   cancelled: "danger",
+  // Journals and cheques
+  submitted: "info",
+  approved: "info",
+  posted: "success",
+  reversed: "neutral",
+  pending: "warning",
+  cleared: "success",
+  bounced: "danger",
+  // Bank statement lines
+  matched: "success",
+  unmatched: "warning",
+  ignored: "neutral",
+  reopened: "warning",
+  closed: "neutral",
   // Stock documents
   counting: "info",
   received: "success",

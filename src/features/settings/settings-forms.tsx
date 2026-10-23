@@ -5,7 +5,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { QtyInput, RateInput } from "@/components/app/inputs";
+import { MoneyInput, QtyInput, RateInput } from "@/components/app/inputs";
 import { QueryView, Section } from "@/components/app/page";
 import { SaveBar } from "@/components/app/save-bar";
 import { useAction, useCommand } from "@/lib/queries";
@@ -22,7 +22,7 @@ export type FieldSpec =
       placeholder?: string;
     }
   | { kind: "number"; key: string; label: string; help?: string; min?: number; max?: number }
-  | { kind: "qty" | "rate"; key: string; label: string; help?: string }
+  | { kind: "qty" | "rate" | "money"; key: string; label: string; help?: string }
   | { kind: "bool"; key: string; label: string; help?: string }
   | { kind: "select"; key: string; label: string; help?: string; options: [string, string][] }
   /** A list of strings, one per line. */
@@ -105,6 +105,19 @@ function FieldInput({
         <Field>
           <FieldLabel htmlFor={id}>{spec.label}</FieldLabel>
           <QtyInput
+            id={id}
+            disabled={disabled}
+            value={typeof value === "number" ? value : null}
+            onValueChange={(v) => onChange(v ?? 0)}
+          />
+          {spec.help && <FieldDescription>{spec.help}</FieldDescription>}
+        </Field>
+      );
+    case "money":
+      return (
+        <Field>
+          <FieldLabel htmlFor={id}>{spec.label}</FieldLabel>
+          <MoneyInput
             id={id}
             disabled={disabled}
             value={typeof value === "number" ? value : null}
@@ -445,6 +458,31 @@ export const SECTIONS: Record<
         key: "allowedSubnets",
         label: "Extra networks allowed to connect",
         help: "One per line, like 192.168.5.0/24. Home and office networks are always allowed.",
+      },
+    ],
+  },
+  accounting: {
+    title: "Accounting",
+    description:
+      "Locking closed days, till differences and bank matching. Year end is under Money → Periods and year end.",
+    fields: [
+      {
+        kind: "bool",
+        key: "lockClosedDays",
+        label: "Lock closed days",
+        help: "Documents dated on or before the last closed day need a manager's approval and are audited. Only the owner can change this.",
+      },
+      {
+        kind: "money",
+        key: "tillDifferenceApproval",
+        label: "Till difference that needs a manager",
+        help: "Short or over by more than this when a till is closed.",
+      },
+      {
+        kind: "number",
+        key: "bankMatchDays",
+        label: "Bank matching window (days)",
+        help: "Automatic matching looks this many days either side of the book date.",
       },
     ],
   },

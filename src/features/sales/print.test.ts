@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 import type { Api } from "@inventory/shared";
-import { defaultPaper, documentHtml, returnSlipHtml, salesDocHtml, tillCloseHtml } from "./print";
+import {
+  dayCloseHtml,
+  defaultPaper,
+  documentHtml,
+  returnSlipHtml,
+  salesDocHtml,
+  tillCloseHtml,
+} from "./print";
 
 const settings = {
   business: {
@@ -234,5 +241,68 @@ describe("return slip and till close (print-dialog versions)", () => {
     expect(even).toContain("Difference");
     expect(even).not.toContain("Counted cash");
     expect(even).not.toContain("Opened by");
+  });
+});
+
+describe("till differences and the day close", () => {
+  it("prints the reason and who approved a difference", () => {
+    const session = {
+      id: "s1",
+      registerId: "r1",
+      registerName: "Till 1",
+      status: "closed",
+      openedAt: "2026-10-22T03:30:00Z",
+      openingFloat: 0,
+      cashIn: 0,
+      cashOut: 0,
+      expectedCash: 0,
+      countedCash: 50_000,
+      difference: 50_000,
+      closedAt: "2026-10-22T14:45:00Z",
+      differenceReason: "counting_error",
+      differenceApprovedBy: "Meera",
+      notes: "Recounted <twice>",
+    } as Api.RegisterSession;
+    const html = tillCloseHtml(session, settings);
+    expect(html).toContain("Counting error");
+    expect(html).toContain("Meera");
+    expect(html).toContain("Recounted &lt;twice&gt;");
+  });
+
+  it("makes the day-close summary with tills and money by mode", () => {
+    const day = {
+      businessDate: "2026-10-22",
+      bills: 41,
+      salesTotal: 1_824_500,
+      taxTotal: 98_200,
+      discountTotal: 12_000,
+      returnsTotal: 25_000,
+      purchasesTotal: 600_000,
+      expensesTotal: 45_000,
+      received: [{ mode: "upi", amount: 595_000 }],
+      paid: [],
+      tills: [
+        {
+          register: "Till 1",
+          countedBy: "Asha",
+          expectedCash: 1_417_700,
+          countedCash: 1_417_200,
+          difference: -500,
+          differenceReason: "wrong_change",
+          approvedBy: null,
+        },
+      ],
+      openTills: 0,
+      closedAt: "2026-10-22T15:00:00Z",
+      closedBy: "Ravi",
+      notes: null,
+    } as unknown as Api.DaySummary;
+    const html = dayCloseHtml(day, settings);
+    expect(html).toContain("DAY CLOSE");
+    expect(html).toContain("Upi");
+    expect(html).toContain("Wrong change given");
+    expect(html).toMatch(/Short.*5\.00/s);
+    expect(html).toMatch(/Net sales.*17,995\.00/s);
+    expect(html).not.toContain("Paid out");
   });
 });

@@ -24,6 +24,7 @@ const TABS: Tab[] = [
   { id: "invoice", title: "Invoices and printing", permission: "settings.view" },
   { id: "printers", title: "Printers and drawer" },
   { id: "inventory", title: "Inventory", permission: "settings.view" },
+  { id: "accounting", title: "Accounting", permission: "settings.view" },
   { id: "users", title: "Users and roles", permission: "users.manage" },
   { id: "security", title: "Security", permission: "settings.view" },
   { id: "network", title: "Network and counters", permission: "settings.view" },

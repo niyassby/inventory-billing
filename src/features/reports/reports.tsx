@@ -1,7 +1,6 @@
 import { DatePicker } from "@/components/ui/date-picker";
 import { SelectField } from "@/components/ui/select-field";
-import { useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import type { Api } from "@inventory/shared";
 import { businessDate } from "@inventory/shared";
 import {
@@ -36,6 +35,7 @@ import { cn } from "@/lib/utils";
 import { useCan } from "@/stores/session";
 import { printHtml } from "@/features/sales/print";
 import { reportSeries } from "./chart";
+import { SavedViews } from "./saved-views";
 
 interface Entry {
   id: string;
@@ -56,7 +56,15 @@ const CATALOG: { group: string; entries: Entry[] }[] = [
         id: "sales-summary",
         report: "sales_summary",
         title: "Sales summary",
-        about: "Bills, tax, returns and net sales by day.",
+        about:
+          "Bills, tax, returns and net sales by day, month, customer, cashier, item or category.",
+        permission: "reports.view",
+      },
+      {
+        id: "sales-invoices",
+        report: "sales_invoices",
+        title: "Sales invoices",
+        about: "Every invoice of the period, by customer, cashier or item; open any bill.",
         permission: "reports.view",
       },
       {
@@ -237,7 +245,14 @@ export function ReportsIndex() {
 
 const NUMERIC = new Set(["money", "qty", "rate", "percent", "count"]);
 
-export function ReportTableView({ table }: { table: Api.ReportTable }) {
+export function ReportTableView({
+  table,
+  onRow,
+}: {
+  table: Api.ReportTable;
+  /** A row was chosen (only rows with a link). */
+  onRow?: (index: number) => void;
+}) {
   const settings = usePublicSettings();
   const locale = localeOf(settings.data);
   const total = table.totals;
@@ -271,10 +286,26 @@ export function ReportTableView({ table }: { table: Api.ReportTable }) {
           {table.rows.map((row, i) => {
             // Subtotal lines of the profit and loss are shown in bold.
             const bold = table.report === "profit_loss" && row[1] === "";
+            const linked = Boolean(onRow && table.links?.[i]);
             return (
               <tr
                 key={i}
-                className={cn("border-b border-border/60", bold && "bg-muted/40 font-semibold")}
+                className={cn(
+                  "border-b border-border/60",
+                  bold && "bg-muted/40 font-semibold",
+                  linked &&
+                    "cursor-pointer hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:outline-none",
+                )}
+                {...(linked
+                  ? {
+                      tabIndex: 0,
+                      title: "Open",
+                      onClick: () => onRow?.(i),
+                      onKeyDown: (e: React.KeyboardEvent) => {
+                        if (e.key === "Enter") onRow?.(i);
+                      },
+                    }
+                  : {})}
               >
                 {table.columns.map((c, j) => (
                   <td
@@ -341,18 +372,83 @@ function ReportChart({ table }: { table: Api.ReportTable }) {
   );
 }
 
+/** Where a document link of a report row opens. */
+function documentPath(link: Api.RowLink): string | null {
+  const id = link.id ?? "";
+  switch (link.kind) {
+    case "sales_invoice":
+      return `/sales/invoices/${id}`;
+    case "sales_return":
+      return `/sales/returns/${id}`;
+    case "purchase_bill":
+      return `/purchases/bills/${id}`;
+    case "goods_receipt":
+      return `/purchases/receipts/${id}`;
+    case "purchase_return":
+      return `/purchases/returns/${id}`;
+    case "manual_journal":
+      return `/accounting/journals?open=${id}`;
+    default:
+      return null;
+  }
+}
+
+const FILTERS = ["partyId", "userId", "categoryId", "variantId"] as const;
+const FILTER_LABEL: Record<(typeof FILTERS)[number], string> = {
+  partyId: "One customer or supplier",
+  userId: "One cashier",
+  categoryId: "One category",
+  variantId: "One item",
+};
+
+/** Where a row leads: another report (its id in the catalogue, with the parameters) or a document. */
+function linkPath(link: Api.RowLink): string | null {
+  if (link.kind !== "report") return documentPath(link);
+  const target = ALL.find((e) => e.report === link.report && !e.partyType);
+  if (!target) return null;
+  const params = new URLSearchParams();
+  if (link.from) params.set("from", link.from);
+  if (link.to) params.set("to", link.to);
+  if (link.groupBy) params.set("group", link.groupBy);
+  for (const f of FILTERS) {
+    const v = link[f];
+    if (v) params.set(f, v);
+  }
+  return `/reports/${target.id}?${params.toString()}`;
+}
+
 export function ReportPage() {
   const { name = "" } = useParams();
+  const navigate = useNavigate();
   const entry = ALL.find((e) => e.id === name);
   const settings = usePublicSettings();
   const locale = localeOf(settings.data);
   const canExport = useCan("reports.export");
   const today = businessDate(new Date(), settings.data?.business.timezone ?? "Asia/Kolkata");
   const fyStart = settings.data?.business.fyStartMonth ?? 4;
-  const [range, setRange] = useState(() => presetRange("month", today, fyStart));
-  const [preset, setPreset] = useState<RangePreset | "custom">("month");
-  const [warehouseId, setWarehouseId] = useState("");
-  const [accountId, setAccountId] = useState("");
+  // Everything the report shows is in the address: drill-downs, back and shared links work.
+  const [params, setParams] = useSearchParams();
+  const preset = (params.get("period") ?? (params.get("from") ? "custom" : "month")) as
+    RangePreset | "custom";
+  const range =
+    preset === "custom"
+      ? { from: params.get("from") ?? today, to: params.get("to") ?? today }
+      : presetRange(preset, today, fyStart);
+  const setParam = (patch: Record<string, string | null>) =>
+    setParams(
+      (p) => {
+        const next = new URLSearchParams(p);
+        for (const [k, v] of Object.entries(patch)) {
+          if (v) next.set(k, v);
+          else next.delete(k);
+        }
+        return next;
+      },
+      { replace: true },
+    );
+  const warehouseId = params.get("warehouseId") ?? "";
+  const accountId = params.get("accountId") ?? "";
+  const group = params.get("group") ?? "";
   const accounts = useCommand(
     "accounts_list",
     {},
@@ -368,6 +464,11 @@ export function ReportPage() {
       warehouseId: warehouseId || null,
       partyType: entry?.partyType ?? null,
       accountId: accountId || null,
+      groupBy: group || null,
+      partyId: params.get("partyId"),
+      userId: params.get("userId"),
+      categoryId: params.get("categoryId"),
+      variantId: params.get("variantId"),
     },
     { enabled: Boolean(entry) },
   );
@@ -380,10 +481,37 @@ export function ReportPage() {
   }
   const stockReport = entry.report.startsWith("stock_");
   const bookReport = entry.report === "cash_book" || entry.report === "bank_book";
-  const choose = (p: RangePreset) => {
-    setPreset(p);
-    setRange(presetRange(p, today, fyStart));
+  const choose = (p: RangePreset) => setParam({ period: p, from: null, to: null });
+  const current: Api.ViewParams = {
+    period: preset,
+    from: preset === "custom" ? range.from : null,
+    to: preset === "custom" ? range.to : null,
+    groupBy: group || null,
+    warehouseId: warehouseId || null,
+    partyType: entry.partyType ?? null,
+    accountId: accountId || null,
+    partyId: params.get("partyId"),
+    userId: params.get("userId"),
+    categoryId: params.get("categoryId"),
+    variantId: params.get("variantId"),
   };
+  const apply = (v: Api.ViewParams) => {
+    const next = new URLSearchParams();
+    if (v.period) next.set("period", v.period);
+    if (v.period === "custom") {
+      if (v.from) next.set("from", v.from);
+      if (v.to) next.set("to", v.to);
+    }
+    if (v.groupBy) next.set("group", v.groupBy);
+    if (v.warehouseId) next.set("warehouseId", v.warehouseId);
+    if (v.accountId) next.set("accountId", v.accountId);
+    for (const f of FILTERS) {
+      const value = v[f];
+      if (value) next.set(f, value);
+    }
+    setParams(next, { replace: true });
+  };
+  const activeFilters = FILTERS.filter((f) => params.get(f));
   return (
     <Page
       title={entry.title}
@@ -444,19 +572,13 @@ export function ReportPage() {
                 aria-label="From"
                 className="w-40"
                 value={range.from}
-                onChange={(v) => {
-                  setPreset("custom");
-                  setRange((r) => ({ ...r, from: v }));
-                }}
+                onChange={(v) => setParam({ period: "custom", from: v, to: range.to })}
               />
               <DatePicker
                 aria-label="To"
                 className="w-40"
                 value={range.to}
-                onChange={(v) => {
-                  setPreset("custom");
-                  setRange((r) => ({ ...r, to: v }));
-                }}
+                onChange={(v) => setParam({ period: "custom", from: range.from, to: v })}
               />
             </>
           ) : (
@@ -465,15 +587,27 @@ export function ReportPage() {
                 aria-label="As of"
                 className="w-40"
                 value={range.to}
-                onChange={(v) => setRange((r) => ({ ...r, to: v }))}
+                onChange={(v) => setParam({ period: "custom", from: range.from, to: v })}
               />
             )
+          )}
+          {(query.data?.groupOptions ?? []).length > 0 && (
+            <SelectField
+              aria-label="Group by"
+              className="w-44"
+              value={query.data?.groupBy ?? group}
+              onValueChange={(v) => setParam({ group: v })}
+              options={(query.data?.groupOptions ?? []).map((o) => ({
+                value: o.key,
+                label: `By ${o.label.toLowerCase()}`,
+              }))}
+            />
           )}
           {stockReport && (
             <div className="w-48">
               <WarehouseSelect
                 value={warehouseId}
-                onChange={setWarehouseId}
+                onChange={(v) => setParam({ warehouseId: v })}
                 label="Store"
                 allowDefault={false}
                 emptyLabel="All stores"
@@ -484,7 +618,7 @@ export function ReportPage() {
             <SelectField
               aria-label="Account"
               value={accountId}
-              onValueChange={setAccountId}
+              onValueChange={(v) => setParam({ accountId: v })}
               options={[
                 { value: "", label: `All ${subtype} accounts` },
                 ...(accounts.data ?? [])
@@ -493,13 +627,41 @@ export function ReportPage() {
               ]}
             />
           )}
+          <div className="ml-auto">
+            <SavedViews report={entry.report} current={current} onApply={apply} />
+          </div>
         </div>
+        {activeFilters.length > 0 && (
+          <div
+            className="mt-3 flex flex-wrap gap-2"
+            aria-label="Filters from the report you came from"
+          >
+            {activeFilters.map((f) => (
+              <Button
+                key={f}
+                size="xs"
+                variant="secondary"
+                onClick={() => setParam({ [f]: null })}
+                aria-label={`Remove filter: ${FILTER_LABEL[f]}`}
+              >
+                {FILTER_LABEL[f]} ×
+              </Button>
+            ))}
+          </div>
+        )}
       </Section>
       <QueryView query={query}>
         {(table) => (
           <>
             <ReportChart table={table} />
-            <ReportTableView table={table} />
+            <ReportTableView
+              table={table}
+              onRow={(i) => {
+                const link = table.links?.[i];
+                const path = link ? linkPath(link) : null;
+                if (path) void navigate(path);
+              }}
+            />
             {table.truncated && (
               <p className="text-sm text-warning">
                 Only the first rows are shown. Narrow the period, or export for the full list.
