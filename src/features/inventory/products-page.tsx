@@ -22,7 +22,9 @@ export default function ProductsPage() {
   const navigate = useNavigate();
   const money = useMoney();
   const canManage = useCan("products.manage");
+  // The list starts in name order; saying so lets the Item header show it and the first click reverse it.
   const table = useTableState("products", {
+    sort: "name",
     filters: { q: "", category: "", low: "", inactive: "" },
   });
   const [search, setSearch] = useSearchFilter(table);

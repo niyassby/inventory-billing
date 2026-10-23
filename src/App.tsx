@@ -8,6 +8,8 @@ import { ErrorState } from "@/components/app/page";
 import { ChangePassword, SignIn } from "@/features/auth/sign-in";
 import { Setup } from "@/features/auth/setup";
 import { Shell } from "@/app/shell";
+import { TitleStrip } from "@/components/TitleBar";
+import { isTauri } from "@tauri-apps/api/core";
 import { useSession } from "@/stores/session";
 import "@/stores/approval";
 
@@ -115,6 +117,16 @@ const Purchases = {
   ),
 };
 
+/** Screens outside the app shell get the window's title strip (the shell's header has its own controls). */
+function Framed({ children }: { children: ReactNode }) {
+  return (
+    <div className={isTauri() ? "with-titlebar" : undefined}>
+      <TitleStrip />
+      {children}
+    </div>
+  );
+}
+
 export function FullScreenSpinner({ label }: { label: string }) {
   return (
     <div className="flex h-screen w-screen items-center justify-center bg-background font-sans text-foreground">
@@ -123,6 +135,14 @@ export function FullScreenSpinner({ label }: { label: string }) {
         <p className="text-sm font-medium text-muted-foreground">{label}</p>
       </div>
     </div>
+  );
+}
+
+function FramedSpinner({ label }: { label: string }) {
+  return (
+    <Framed>
+      <FullScreenSpinner label={label} />
+    </Framed>
   );
 }
 
@@ -144,18 +164,37 @@ function Gate() {
     if (status === "checking") void restore();
   }, [status, restore]);
 
-  if (setup.isPending) return <FullScreenSpinner label="Starting…" />;
+  if (setup.isPending) return <FramedSpinner label="Starting…" />;
   if (setup.error) {
     return (
-      <div className="flex h-screen items-center justify-center p-6">
-        <ErrorState error={setup.error} onRetry={() => void setup.refetch()} />
-      </div>
+      <Framed>
+        <div className="flex h-screen items-center justify-center p-6">
+          <ErrorState error={setup.error} onRetry={() => void setup.refetch()} />
+        </div>
+      </Framed>
     );
   }
-  if (setup.data.needsSetup) return <Setup status={setup.data} />;
-  if (status === "checking") return <FullScreenSpinner label="Signing you in…" />;
-  if (status === "signedOut") return <SignIn />;
-  if (mustChange) return <ChangePassword />;
+  if (setup.data.needsSetup)
+    return (
+      <Framed>
+        <Setup status={setup.data} />
+      </Framed>
+    );
+  if (status === "checking") return <FramedSpinner label="Signing you in…" />;
+  if (status === "signedOut") {
+    return (
+      <Framed>
+        <SignIn />
+      </Framed>
+    );
+  }
+  if (mustChange) {
+    return (
+      <Framed>
+        <ChangePassword />
+      </Framed>
+    );
+  }
   return <AppRoutes />;
 }
 
@@ -165,9 +204,11 @@ function AppRoutes() {
       <Route
         path="/pos"
         element={
-          <Lazy>
-            <PosPage />
-          </Lazy>
+          <Framed>
+            <Lazy>
+              <PosPage />
+            </Lazy>
+          </Framed>
         }
       />
       <Route element={<Shell />}>

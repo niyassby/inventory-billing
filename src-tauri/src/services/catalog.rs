@@ -1147,7 +1147,11 @@ pub fn list_products(ctx: &Ctx<'_>, query: &ProductListQuery) -> AppResult<Page<
     )?;
     let stock = "(SELECT coalesce(sum(qty), 0) FROM stock_levels l WHERE l.variant_id = v.id)";
     let keys = [
-        ("name", "lower(p.name), lower(coalesce(v.variant_name, ''))"),
+        // One expression: a sort key with a comma would only reverse its last part when descending.
+        (
+            "name",
+            "lower(p.name) || char(31) || lower(coalesce(v.variant_name, ''))",
+        ),
         ("sku", "lower(v.sku)"),
         ("category", "lower(coalesce(c.name, ''))"),
         ("price", "v.sale_price"),

@@ -34,6 +34,7 @@ import { ThemeButton } from "./appearance-menu";
 import { CommandPalette } from "./command-palette";
 import { activeItem, breadcrumbs, visibleNav } from "./nav";
 import { UserMenu } from "./user-menu";
+import { TitleBar } from "@/components/TitleBar";
 
 function AppSidebar() {
   const { pathname } = useLocation();
@@ -156,7 +157,10 @@ export function Shell() {
       <CommandPalette />
       <AppSidebar />
       <SidebarInset className="min-h-screen font-sans">
-        <header className="sticky top-0 z-40 flex h-12 shrink-0 items-center gap-2 border-b border-border bg-background/85 px-3 backdrop-blur-md">
+        <header
+          data-tauri-drag-region
+          className="sticky top-0 z-40 flex h-12 shrink-0 items-center gap-2 border-b border-border bg-background/85 px-3 backdrop-blur-md"
+        >
           <SidebarTrigger className="-ml-1 text-muted-foreground" />
           <Separator orientation="vertical" className="my-auto h-6" />
           <Crumbs pathname={pathname} />
@@ -194,6 +198,7 @@ export function Shell() {
             )}
             <UserMenu />
           </div>
+          <TitleBar />
         </header>
         <main id="main" tabIndex={-1} className="flex-1 outline-none">
           <Outlet />

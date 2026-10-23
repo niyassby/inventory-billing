@@ -174,6 +174,32 @@ fn products_sort_by_price_and_stock_across_pages() {
 }
 
 #[test]
+fn products_sort_by_name_both_ways() {
+    let (kit, _) = shop();
+    let owner = kit.owner();
+    let mut conn = kit.conn();
+    let mut names = |descending: bool| -> Vec<String> {
+        catalog::list_products(
+            &kit.ctx(&mut conn, &owner),
+            &ProductListQuery {
+                page: page(10, 1, Some("name"), descending),
+                ..Default::default()
+            },
+        )
+        .unwrap()
+        .items
+        .into_iter()
+        .map(|i| i.name)
+        .collect()
+    };
+    let up = names(false);
+    let mut down = names(true);
+    assert_eq!(up, ["Item A", "Item B", "Item C", "Item D", "Item E"]);
+    down.reverse();
+    assert_eq!(down, up, "descending is not the reverse of ascending");
+}
+
+#[test]
 fn parties_sort_by_name_and_balance() {
     let kit = Kit::new();
     for name in ["Moe", "Zed", "Amy", "Kim"] {
